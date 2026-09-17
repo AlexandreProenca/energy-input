@@ -1,0 +1,26 @@
+{
+  "id": "residencial",
+  "label": "Residencial",
+  "description": "Casas e apartamentos. Ocupado principalmente à noite e nos fins de semana.",
+  "icon": "home",
+  "peoplePerArea": 0.04,
+  "activityLevel": 100,
+  "lightingPowerDensity": 5,
+  "equipmentPowerDensity": 4,
+  "infiltrationAch": 1,
+  "heatingSetpoint": 18,
+  "coolingSetpoint": 26,
+  "setback": { "heating": 16, "cooling": 28 },
+  "schedules": {
+    "occupancy": [
+      { "days": "Weekdays SummerDesignDay WinterDesignDay", "steps": [["07:00", 1], ["09:00", 0.5], ["17:00", 0.25], ["22:00", 0.75], ["24:00", 1]] },
+      { "days": "AllOtherDays", "steps": [["09:00", 1], ["18:00", 0.6], ["24:00", 1]] }
+    ],
+    "lighting": [
+      { "days": "AllDays", "steps": [["06:00", 0.05], ["08:00", 0.5], ["17:00", 0.1], ["23:00", 0.8], ["24:00", 0.3]] }
+    ],
+    "equipment": [
+      { "days": "AllDays", "steps": [["06:00", 0.3], ["09:00", 0.6], ["17:00", 0.4], ["23:00", 0.8], ["24:00", 0.4]] }
+    ]
+  }
+}

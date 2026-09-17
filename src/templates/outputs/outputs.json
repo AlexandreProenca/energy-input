@@ -1,0 +1,66 @@
+[
+  {
+    "id": "resumo",
+    "label": "Resumo de consumo por uso final",
+    "description": "Relatórios tabulares (HTML) com áreas, cargas de pico e energia anual por uso: iluminação, equipamentos, aquecimento e resfriamento.",
+    "icon": "gauge",
+    "defaultOn": true,
+    "objects": {
+      "Output:SQLite": { "Output:SQLite 1": { "option_type": "SimpleAndTabular" } }
+    }
+  },
+  {
+    "id": "conforto",
+    "label": "Conforto (temperatura e umidade)",
+    "description": "Temperatura do ar, temperatura operativa e umidade relativa de cada pavimento, hora a hora.",
+    "icon": "thermometer",
+    "defaultOn": false,
+    "objects": {
+      "Output:Variable": {
+        "Temperatura do ar": { "key_value": "*", "variable_name": "Zone Mean Air Temperature", "reporting_frequency": "Hourly" },
+        "Temperatura operativa": { "key_value": "*", "variable_name": "Zone Operative Temperature", "reporting_frequency": "Hourly" },
+        "Umidade relativa": { "key_value": "*", "variable_name": "Zone Air Relative Humidity", "reporting_frequency": "Hourly" },
+        "Temperatura externa": { "key_value": "Environment", "variable_name": "Site Outdoor Air Drybulb Temperature", "reporting_frequency": "Hourly" }
+      }
+    }
+  },
+  {
+    "id": "cargas",
+    "label": "Cargas de aquecimento e resfriamento",
+    "description": "Energia que o sistema ideal precisou fornecer em cada pavimento, hora a hora.",
+    "icon": "flame",
+    "defaultOn": true,
+    "objects": {
+      "Output:Variable": {
+        "Carga de aquecimento": { "key_value": "*", "variable_name": "Zone Ideal Loads Supply Air Total Heating Energy", "reporting_frequency": "Hourly" },
+        "Carga de resfriamento": { "key_value": "*", "variable_name": "Zone Ideal Loads Supply Air Total Cooling Energy", "reporting_frequency": "Hourly" }
+      }
+    }
+  },
+  {
+    "id": "conta",
+    "label": "Estimativa mensal de consumo (conta de energia)",
+    "description": "Medidores mensais de eletricidade e da energia de climatização, base para estimar a conta de luz.",
+    "icon": "receipt",
+    "defaultOn": true,
+    "objects": {
+      "Output:Meter": {
+        "Eletricidade total (mensal)": { "key_name": "Electricity:Facility", "reporting_frequency": "Monthly" },
+        "Iluminação (mensal)": { "key_name": "InteriorLights:Electricity", "reporting_frequency": "Monthly" },
+        "Equipamentos (mensal)": { "key_name": "InteriorEquipment:Electricity", "reporting_frequency": "Monthly" },
+        "Aquecimento (mensal)": { "key_name": "DistrictHeatingWater:Facility", "reporting_frequency": "Monthly" },
+        "Resfriamento (mensal)": { "key_name": "DistrictCooling:Facility", "reporting_frequency": "Monthly" }
+      }
+    }
+  },
+  {
+    "id": "geometria",
+    "label": "Desenho da geometria (DXF)",
+    "description": "Gera um arquivo DXF para conferir a geometria em programas de CAD.",
+    "icon": "box",
+    "defaultOn": false,
+    "objects": {
+      "Output:Surfaces:Drawing": { "Output:Surfaces:Drawing 1": { "report_type": "DXF", "report_specifications_1": "Triangulate3DFace" } }
+    }
+  }
+]

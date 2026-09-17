@@ -1,0 +1,35 @@
+[
+  {
+    "id": "leve",
+    "label": "Leve",
+    "description": "Construção a seco: placas cimentícias e gesso, telha de fibrocimento com forro. Aquece e esfria rápido.",
+    "assemblies": {
+      "wall": { "label": "Parede de placas (steel/wood frame)", "layers": [{ "material": "placa_cimenticia" }, { "material": "camara_ar_parede" }, { "material": "gesso" }] },
+      "roof": { "label": "Telha de fibrocimento + forro de gesso", "layers": [{ "material": "telha_fibrocimento" }, { "material": "camara_ar_cobertura" }, { "material": "gesso" }] },
+      "groundFloor": { "label": "Laje de concreto 8 cm + cerâmica", "layers": [{ "material": "concreto", "thickness": 0.08 }, { "material": "piso_ceramico" }] },
+      "interFloor": { "label": "Laje de concreto 10 cm", "layers": [{ "material": "gesso" }, { "material": "concreto" }, { "material": "contrapiso" }, { "material": "piso_ceramico" }] }
+    }
+  },
+  {
+    "id": "padrao",
+    "label": "Padrão",
+    "description": "Alvenaria de bloco cerâmico rebocada, telha cerâmica sobre laje. O mais comum no Brasil.",
+    "assemblies": {
+      "wall": { "label": "Bloco cerâmico 9 cm rebocado", "layers": [{ "material": "reboco" }, { "material": "bloco_ceramico" }, { "material": "reboco" }] },
+      "roof": { "label": "Telha cerâmica + laje de concreto 10 cm", "layers": [{ "material": "telha_ceramica" }, { "material": "camara_ar_cobertura" }, { "material": "concreto" }] },
+      "groundFloor": { "label": "Laje 10 cm + contrapiso + cerâmica", "layers": [{ "material": "concreto" }, { "material": "contrapiso" }, { "material": "piso_ceramico" }] },
+      "interFloor": { "label": "Laje de concreto 10 cm", "layers": [{ "material": "reboco", "thickness": 0.015 }, { "material": "concreto" }, { "material": "contrapiso" }, { "material": "piso_ceramico" }] }
+    }
+  },
+  {
+    "id": "isolado",
+    "label": "Bem isolado",
+    "description": "Alvenaria com isolamento externo (EPS 5 cm) e lã de rocha no telhado. Menos troca de calor com o exterior.",
+    "assemblies": {
+      "wall": { "label": "Bloco cerâmico + EPS 5 cm externo", "layers": [{ "material": "reboco" }, { "material": "eps" }, { "material": "bloco_ceramico" }, { "material": "reboco" }] },
+      "roof": { "label": "Telha cerâmica + lã de rocha 10 cm + laje", "layers": [{ "material": "telha_ceramica" }, { "material": "camara_ar_cobertura" }, { "material": "la_rocha" }, { "material": "concreto" }] },
+      "groundFloor": { "label": "Laje + EPS 3 cm + contrapiso + cerâmica", "layers": [{ "material": "concreto" }, { "material": "eps", "thickness": 0.03 }, { "material": "contrapiso" }, { "material": "piso_ceramico" }] },
+      "interFloor": { "label": "Laje de concreto 10 cm", "layers": [{ "material": "reboco", "thickness": 0.015 }, { "material": "concreto" }, { "material": "contrapiso" }, { "material": "piso_ceramico" }] }
+    }
+  }
+]

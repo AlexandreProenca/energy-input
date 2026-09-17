@@ -1,0 +1,31 @@
+{
+  "id": "escritorio",
+  "label": "Escritório",
+  "description": "Salas comerciais e sedes administrativas. Horário comercial de segunda a sexta.",
+  "icon": "briefcase",
+  "peoplePerArea": 0.1,
+  "activityLevel": 120,
+  "lightingPowerDensity": 10,
+  "equipmentPowerDensity": 12,
+  "infiltrationAch": 0.3,
+  "heatingSetpoint": 20,
+  "coolingSetpoint": 24,
+  "setback": { "heating": 15, "cooling": 30 },
+  "schedules": {
+    "occupancy": [
+      { "days": "Weekdays SummerDesignDay WinterDesignDay", "steps": [["07:00", 0], ["08:00", 0.1], ["12:00", 0.95], ["13:00", 0.5], ["18:00", 0.95], ["19:00", 0.3], ["24:00", 0]] },
+      { "days": "Saturday", "steps": [["08:00", 0], ["12:00", 0.3], ["24:00", 0]] },
+      { "days": "AllOtherDays", "steps": [["24:00", 0]] }
+    ],
+    "lighting": [
+      { "days": "Weekdays SummerDesignDay WinterDesignDay", "steps": [["07:00", 0.05], ["08:00", 0.3], ["18:00", 0.9], ["20:00", 0.3], ["24:00", 0.05]] },
+      { "days": "Saturday", "steps": [["08:00", 0.05], ["12:00", 0.4], ["24:00", 0.05]] },
+      { "days": "AllOtherDays", "steps": [["24:00", 0.05]] }
+    ],
+    "equipment": [
+      { "days": "Weekdays SummerDesignDay WinterDesignDay", "steps": [["07:00", 0.2], ["08:00", 0.4], ["18:00", 0.9], ["20:00", 0.4], ["24:00", 0.2]] },
+      { "days": "Saturday", "steps": [["08:00", 0.2], ["12:00", 0.4], ["24:00", 0.2]] },
+      { "days": "AllOtherDays", "steps": [["24:00", 0.2]] }
+    ]
+  }
+}

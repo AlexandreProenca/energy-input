@@ -1,0 +1,5 @@
+[
+  { "id": "madeira", "label": "Porta de madeira maciça", "description": "Folha de madeira de 3,5 cm.", "layers": [{ "material": "madeira_macica" }] },
+  { "id": "semi_oca", "label": "Porta de madeira semi-oca", "description": "Duas placas de compensado com miolo de ar.", "layers": [{ "material": "madeira_compensado", "thickness": 0.004 }, { "material": "camara_ar_parede" }, { "material": "madeira_compensado", "thickness": 0.004 }] },
+  { "id": "metalica", "label": "Porta metálica isolada", "description": "Chapas de aço com núcleo de EPS 4 cm.", "layers": [{ "material": "chapa_aco" }, { "material": "eps", "thickness": 0.04 }, { "material": "chapa_aco" }] }
+]

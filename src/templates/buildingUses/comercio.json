@@ -1,0 +1,28 @@
+{
+  "id": "comercio",
+  "label": "Comércio",
+  "description": "Lojas e pequeno varejo. Aberto de segunda a sábado, das 9h às 19h.",
+  "icon": "store",
+  "peoplePerArea": 0.15,
+  "activityLevel": 130,
+  "lightingPowerDensity": 14,
+  "equipmentPowerDensity": 6,
+  "infiltrationAch": 0.5,
+  "heatingSetpoint": 20,
+  "coolingSetpoint": 24,
+  "setback": { "heating": 15, "cooling": 30 },
+  "schedules": {
+    "occupancy": [
+      { "days": "Weekdays Saturday SummerDesignDay WinterDesignDay", "steps": [["09:00", 0], ["11:00", 0.4], ["14:00", 0.8], ["17:00", 0.6], ["19:00", 0.9], ["24:00", 0]] },
+      { "days": "AllOtherDays", "steps": [["24:00", 0]] }
+    ],
+    "lighting": [
+      { "days": "Weekdays Saturday SummerDesignDay WinterDesignDay", "steps": [["08:00", 0.05], ["20:00", 0.95], ["24:00", 0.05]] },
+      { "days": "AllOtherDays", "steps": [["24:00", 0.05]] }
+    ],
+    "equipment": [
+      { "days": "Weekdays Saturday SummerDesignDay WinterDesignDay", "steps": [["08:00", 0.3], ["20:00", 0.9], ["24:00", 0.3]] },
+      { "days": "AllOtherDays", "steps": [["24:00", 0.3]] }
+    ]
+  }
+}

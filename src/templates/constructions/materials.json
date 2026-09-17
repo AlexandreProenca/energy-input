@@ -1,0 +1,170 @@
+{
+  "reboco": {
+    "kind": "Material",
+    "label": "Argamassa de reboco",
+    "roughness": "MediumRough",
+    "thickness": 0.025,
+    "conductivity": 1.15,
+    "density": 2000,
+    "specificHeat": 1000,
+    "color": "#d9cfc1",
+    "pattern": "concrete"
+  },
+  "bloco_ceramico": {
+    "kind": "Material",
+    "label": "Bloco cerâmico (camada equivalente)",
+    "roughness": "Rough",
+    "thickness": 0.09,
+    "conductivity": 0.45,
+    "density": 1000,
+    "specificHeat": 920,
+    "color": "#c8734a",
+    "pattern": "brick"
+  },
+  "concreto": {
+    "kind": "Material",
+    "label": "Concreto maciço",
+    "roughness": "MediumRough",
+    "thickness": 0.1,
+    "conductivity": 1.75,
+    "density": 2200,
+    "specificHeat": 1000,
+    "color": "#a7a9ac",
+    "pattern": "concrete"
+  },
+  "contrapiso": {
+    "kind": "Material",
+    "label": "Contrapiso de argamassa",
+    "roughness": "MediumRough",
+    "thickness": 0.03,
+    "conductivity": 1.15,
+    "density": 2000,
+    "specificHeat": 1000,
+    "color": "#cfc6b8",
+    "pattern": "concrete"
+  },
+  "piso_ceramico": {
+    "kind": "Material",
+    "label": "Revestimento cerâmico",
+    "roughness": "Smooth",
+    "thickness": 0.01,
+    "conductivity": 0.9,
+    "density": 1600,
+    "specificHeat": 920,
+    "color": "#e8e2d6",
+    "pattern": "tile"
+  },
+  "telha_ceramica": {
+    "kind": "Material",
+    "label": "Telha cerâmica",
+    "roughness": "Rough",
+    "thickness": 0.01,
+    "conductivity": 1.05,
+    "density": 2000,
+    "specificHeat": 920,
+    "color": "#b85c38",
+    "pattern": "tile"
+  },
+  "telha_fibrocimento": {
+    "kind": "Material",
+    "label": "Telha de fibrocimento",
+    "roughness": "MediumRough",
+    "thickness": 0.008,
+    "conductivity": 0.65,
+    "density": 1800,
+    "specificHeat": 840,
+    "color": "#9aa3a8",
+    "pattern": "board"
+  },
+  "placa_cimenticia": {
+    "kind": "Material",
+    "label": "Placa cimentícia",
+    "roughness": "MediumRough",
+    "thickness": 0.012,
+    "conductivity": 0.65,
+    "density": 1800,
+    "specificHeat": 840,
+    "color": "#bfc3c4",
+    "pattern": "board"
+  },
+  "gesso": {
+    "kind": "Material",
+    "label": "Placa de gesso",
+    "roughness": "Smooth",
+    "thickness": 0.0125,
+    "conductivity": 0.35,
+    "density": 750,
+    "specificHeat": 840,
+    "color": "#f2f0ea",
+    "pattern": "board"
+  },
+  "eps": {
+    "kind": "Material",
+    "label": "Poliestireno expandido (EPS)",
+    "roughness": "MediumSmooth",
+    "thickness": 0.05,
+    "conductivity": 0.04,
+    "density": 25,
+    "specificHeat": 1420,
+    "color": "#f7f3c8",
+    "pattern": "insulation"
+  },
+  "la_rocha": {
+    "kind": "Material",
+    "label": "Lã de rocha",
+    "roughness": "Rough",
+    "thickness": 0.1,
+    "conductivity": 0.045,
+    "density": 100,
+    "specificHeat": 750,
+    "color": "#e9d27a",
+    "pattern": "insulation"
+  },
+  "camara_ar_parede": {
+    "kind": "AirGap",
+    "label": "Câmara de ar vertical",
+    "thermalResistance": 0.17,
+    "color": "#eaf4fb",
+    "pattern": "air"
+  },
+  "camara_ar_cobertura": {
+    "kind": "AirGap",
+    "label": "Câmara de ar do telhado (ático)",
+    "thermalResistance": 0.21,
+    "color": "#eaf4fb",
+    "pattern": "air"
+  },
+  "madeira_macica": {
+    "kind": "Material",
+    "label": "Madeira maciça",
+    "roughness": "MediumSmooth",
+    "thickness": 0.035,
+    "conductivity": 0.15,
+    "density": 600,
+    "specificHeat": 1340,
+    "color": "#a8743f",
+    "pattern": "board"
+  },
+  "chapa_aco": {
+    "kind": "Material",
+    "label": "Chapa de aço",
+    "roughness": "Smooth",
+    "thickness": 0.002,
+    "conductivity": 55,
+    "density": 7800,
+    "specificHeat": 460,
+    "color": "#7b8794",
+    "pattern": "board"
+  },
+  "madeira_compensado": {
+    "kind": "Material",
+    "label": "Compensado de madeira",
+    "roughness": "MediumSmooth",
+    "thickness": 0.015,
+    "conductivity": 0.15,
+    "density": 550,
+    "specificHeat": 1340,
+    "color": "#c89b63",
+    "pattern": "board"
+  }
+}

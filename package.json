@@ -1,0 +1,46 @@
+{
+  "name": "energy-input",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run schema && vite",
+    "build": "npm run schema && tsc --noEmit -p . && vite build",
+    "preview": "vite preview",
+    "schema": "tsx scripts/build-schema.ts",
+    "climates": "tsx scripts/build-climates.ts",
+    "fetch-schema": "tsx scripts/fetch-schema.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -b --noEmit",
+    "eplus-check": "tsx scripts/eplus-check.ts"
+  },
+  "dependencies": {
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/view": "^6.43.12",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "@uiw/react-codemirror": "^4.25.11",
+    "ajv": "^8.20.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.47.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.169.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@types/three": "^0.169.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^3.4.19",
+    "tsx": "^4.23.13",
+    "typescript": "5.6",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.7"
+  }
+}

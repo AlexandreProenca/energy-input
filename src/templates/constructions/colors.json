@@ -1,0 +1,5 @@
+[
+  { "id": "clara", "label": "Clara", "absorptance": 0.3, "swatch": "#f4efe6" },
+  { "id": "media", "label": "Média", "absorptance": 0.5, "swatch": "#c9b79c" },
+  { "id": "escura", "label": "Escura", "absorptance": 0.8, "swatch": "#6b5a4b" }
+]
