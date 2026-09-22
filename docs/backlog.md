@@ -88,6 +88,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T016 | Destravar a execução de simulações no serviço | — |
 | [x] | T018 | Revisão por IA no PR cai quando o modelo devolve JSON com sobra | — |
 | [x] | T019 | Revisão por IA podia passar em silêncio sem ter lido a revisão | T018 |
+| [x] | T020 | Tirar a revisão por IA do heredoc e pô-la em módulo testado | T019 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -514,3 +515,25 @@ falhava agora passa.
 `ai-pr-review.yml` com roteiro descartável de verificação, porque ele não é exercitado por
 `npm test` nem por `tsc`. Se houver uma terceira, mover a função para `scripts/` com teste de
 verdade deixa de ser preferência e vira o trabalho certo.
+
+#### T020 · Tirar a revisão por IA do heredoc e pô-la em módulo testado — **concluída**
+
+Entregue em [`docs/tasks/T020-revisao-em-modulo-testavel.md`](tasks/T020-revisao-em-modulo-testavel.md).
+**Paga a dívida que a T018 e a T019 registraram.**
+
+Três tarefas seguidas mexeram nas mesmas vinte linhas de Python dentro do `ai-pr-review.yml`,
+cada uma com verificação descartável, e a revisão do PR #13 apontaria uma quarta. O parser, o
+relatório e os prompts viraram `scripts/aiReview/`, com 28 testes no Vitest; o workflow caiu
+de 297 para 143 linhas. O precedente é a T002, que fez o mesmo com o allowlist do proxy.
+
+**Fica registrado:**
+
+- **O sinal de parar de remendar é a repetição, não o defeito.** Estava escrito no doc da
+  T018 antes de a T019 existir, e ainda assim levou mais duas rodadas.
+- **Escrever o teste achou um defeito que ninguém reportou:** o corte em cinco achados era
+  silencioso desde sempre. Nenhuma das três tarefas anteriores o viu, porque nenhuma teve de
+  descrever o comportamento esperado em voz alta.
+- **Ambiguidade reprova, em vez de ser resolvida por heurística.** Duas revisões plausíveis
+  na mesma resposta não são distinguíveis com confiança, e adivinhar errado faz o portão dar
+  verde anunciando zero achado.
+- Se outro workflow ganhar lógica não trivial, o lugar dela é `scripts/`.

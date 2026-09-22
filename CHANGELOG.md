@@ -8,6 +8,10 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- O relatório da revisão por IA cortava em **cinco achados sem avisar**: quem lesse um PR com
+  doze achados veria cinco e concluiria que viu tudo. Agora diz quantos ficaram de fora.
+  Apareceu ao escrever o teste do módulo extraído. (`Refs: T020`)
+
 - A revisão por IA podia **passar em silêncio sem ter lido a revisão**: ao tolerar preâmbulo
   em prosa, passou a aceitar o primeiro objeto JSON da resposta, inclusive um exemplo
   ilustrativo escrito antes do objeto real — `findings` vinha vazio e o check obrigatório
@@ -47,6 +51,10 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
   (`Refs: T002`)
 
 ### Adicionado
+
+- A revisão por IA do PR saiu do heredoc no YAML e virou `scripts/aiReview/`, com 28 testes
+  no Vitest — três tarefas seguidas tinham mexido nas mesmas vinte linhas com verificação
+  descartável. O workflow caiu de 297 para 143 linhas. (`Refs: T020`)
 
 - **Painel de temperatura operativa**: curva anual com banda diária de mínima e máxima,
   carpete 365 × 24 hora a hora e a temperatura externa para comparação. Descobre a zona pelo
