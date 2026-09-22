@@ -78,7 +78,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T006 | Casca do modo Resultados | T003 |
 | [x] | T007 | Componentes de gráfico SVG reutilizáveis | T004, T006 |
 | [x] | T008 | Painel de consumo anual | T007 |
-| [ ] | T009 | Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR** | T001 |
+| [x] | T009 | Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR** | T001 |
 | [ ] | T010 | Painel de temperatura operativa | T007, T009 |
 | [ ] | T011 | Painel de horas de desconforto | T005, T007, T009 |
 | [ ] | T012 | Tipos e métodos de estudo no cliente da API | T002 |
@@ -284,27 +284,19 @@ ficaria vazio diante de dado que existe.
   só tem consumo em iluminação externa. Reconferir quando houver execução com consumo
   distribuído — a T016 produzirá uma, se destravar.
 
-#### T009 · Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR**
+#### T009 · Ligar o preset `conforto` por padrão — **concluída**
 
-**Armadilha:** `defaultOn` em `src/templates/outputs/outputs.json` é **dado morto**. Um
-`grep` por `defaultOn` só encontra o próprio JSON e `src/templates/outputs/types.ts:8` —
-nada lê o campo. O conjunto padrão real é a lista literal em `src/generators/answers.ts:100`:
-`outputs: { selected: ['resumo', 'cargas', 'conta'] }`. As duas fontes coincidem hoje por
-acaso. **Quem tentar "ligar o conforto" editando só o JSON não muda nada.**
+Entregue em [`docs/tasks/T009-preset-conforto-padrao.md`](tasks/T009-preset-conforto-padrao.md),
+com [ADR-0001](adr/0001-preset-de-conforto-ligado-por-padrao.md) — o primeiro ADR do
+repositório.
 
-**Entra:** `answers.ts` passa a derivar o padrão —
-`outputs: { selected: templates.outputs.filter(p => p.defaultOn).map(p => p.id) }` — e o
-`conforto` vira `defaultOn: true`. Isso liga ~4 `Output:Variable` horários; para um modelo
-de 4 zonas são ~140 mil linhas a mais no `.sql`, desprezível.
+O padrão passou de `["resumo","cargas","conta"]` para
+`["resumo","conforto","cargas","conta"]`, e o epJSON gerado agora traz
+`Zone Operative Temperature` e `Site Outdoor Air Drybulb Temperature`.
 
-**Por que exige ADR:** é mudança de comportamento em **todo arquivo gerado**, e mexe nos
-hashes de propriedade do `planWizardSync` — alguém plausivelmente decidiria manter o preset
-opcional e detectar a ausência na interface.
-
-**Verificação:** teste em `src/generators/__tests__/` de que as saídas padrão incluem o
-preset de conforto **e** de que derivam de `defaultOn`, sem lista duplicada — esta segunda
-asserção é a trava de regressão da divergência. Reexecutar
-`src/core/sync/__tests__/wizardSync.test.ts`.
+**A metade que faltava:** `defaultOn` era dado morto — nada o lia, e o padrão real era uma
+lista literal em `answers.ts`. Editar só o JSON não mudaria nada. Agora o padrão **deriva** do
+catálogo, com teste travando isso e prova negativa.
 
 #### T010 · Painel de temperatura operativa
 
@@ -443,13 +435,17 @@ dele — por isso tarefa própria, e não carona numa entrega de dashboards.
 
 Conforme AGENTS.md §4:
 
-- **ADR-0001 — Séries temporais pela API, não por download de artefato.** Estende o PRD §4.5,
-  que só prevê summary, errors, logs e artifacts; alguém plausivelmente decidiria baixar e
-  parsear o `.csv`.
-- **ADR-0002 — Estudo paramétrico como unidade de agrupamento e versionamento.** O conceito
-  não existe no PRD.
-- **ADR-0003 — Ligar o preset `conforto` por padrão** (T009): muda o arquivo gerado por todo
-  projeto e mexe nos hashes do `planWizardSync`.
+ADR recebe número quando é **escrito**, não quando é previsto: reservar número para decisão
+que talvez não se tome deixa buraco na sequência e promete documento que não existe.
+
+- **[ADR-0001 — Preset de conforto ligado por padrão](adr/0001-preset-de-conforto-ligado-por-padrao.md)**
+  (T009). Muda o arquivo gerado por todo projeto.
+- **Estudo paramétrico como unidade de agrupamento e versionamento** — a escrever na T012.
+  O conceito não existe no PRD.
+- **Séries temporais pela API, em vez de download de artefato:** avaliado na T003 e
+  **dispensado**. O PRD §9 já determina o dashboard, e ler a série por uma rota do mesmo
+  serviço é aplicar o que ele determina, não estendê-lo — AGENTS.md §4 diz para não abrir ADR
+  nesse caso. A decisão está registrada no doc da T003.
 - **Sem ADR para os gráficos:** a decisão foi *não* adicionar dependência, e o SVG próprio já
   é o padrão da casa (`illustrations.tsx`).
 - `docs/PRD.md`: **§4 enumera exatamente três MODOs** — a T006 entrega um quarto e precisa

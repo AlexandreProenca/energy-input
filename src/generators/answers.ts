@@ -1,3 +1,4 @@
+import { templates } from '@/templates';
 import type { BioclimaticZone } from '@/templates/climates/types';
 import type { ClimateSummary, DesignDayPair } from '@/core/weather/epw';
 
@@ -97,6 +98,9 @@ export function defaultAnswers(): WizardAnswers {
     windows: { automatic: false, mode: 'uniform', wwr: 20, perFacade: { north: 20, east: 20, south: 20, west: 20 }, glazingId: 'simples' },
     loads: { useId: 'residencial' },
     hvac: { heatingSetpoint: 18, coolingSetpoint: 26, setbackEnabled: false },
-    outputs: { selected: ['resumo', 'cargas', 'conta'] },
+    // Derivado do catálogo, e não repetido aqui. A lista literal anterior coincidia com os
+    // `defaultOn` por acaso: nada lia o campo, então as duas fontes podiam divergir em
+    // silêncio, e quem tentasse mudar o padrão editando só o JSON não mudaria nada.
+    outputs: { selected: templates.outputs.filter((p) => p.defaultOn).map((p) => p.id) },
   };
 }

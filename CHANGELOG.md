@@ -8,6 +8,11 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- `defaultOn`, em `src/templates/outputs/outputs.json`, era **dado morto**: nada o lia, e o
+  conjunto padrão real era uma lista literal em `answers.ts`. As duas fontes coincidiam por
+  acaso, e quem tentasse mudar o padrão editando só o JSON não mudaria nada. O padrão agora
+  deriva do catálogo. (`Refs: T009`)
+
 - O seletor de modo era um encadeamento de ternários em que **qualquer modo não previsto caía
   silenciosamente no Modo Especialista**. Virou uma tabela por modo: omissão fica visível em
   vez de abrir a tela errada. (`Refs: T006`)
@@ -27,6 +32,10 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **O preset de conforto passa a vir ligado por padrão**, e com ele a temperatura operativa e
+  a externa no epJSON gerado — sem elas, os painéis de temperatura e de horas de desconforto
+  não teriam fonte, e a ausência só apareceria depois da execução inteira.
+  [ADR-0001](docs/adr/0001-preset-de-conforto-ligado-por-padrao.md). (`Refs: T009`)
 - **Painel de consumo anual**: indicadores de consumo medido, consumo por uso final e pico de
   demanda; barras mensais por medidor, agregadas da frequência que a execução tiver; e barras
   por uso final. Distingue medidor **ausente** de medidor **registrado marcando zero** — são
