@@ -6,14 +6,14 @@ import { useSimulationStore } from '@/features/simulation/simulationStore';
 import { estadoDoPainel, semAnoCompleto } from './estado';
 import { ConsumoPanel } from './panels/ConsumoPanel';
 import { TemperaturaPanel } from './panels/TemperaturaPanel';
+import { DesconfortoPanel } from './panels/DesconfortoPanel';
 
 /**
  * Casca do modo Resultados.
  *
- * Esta tarefa (T006) entrega só a navegação e os estados de exceção; os painéis entram na
- * T008, T010 e T011. Os estados vêm primeiro de propósito: são eles que decidem o que o
- * painel mostra quando **não** há gráfico para mostrar, e adiá-los produziria três painéis
- * cada um inventando o seu.
+ * A navegação e os estados de exceção vieram na T006, antes dos painéis (T008, T010, T011),
+ * de propósito: são eles que decidem o que o usuário vê quando **não** há gráfico para
+ * mostrar, e adiá-los produziria três painéis cada um inventando o seu.
  */
 
 const STATUS: Record<string, string> = {
@@ -177,9 +177,7 @@ export default function ResultsShell() {
 
       <TemperaturaPanel simulation={simulation} />
 
-      <Callout tone="info" title="Painel em construção">
-        As horas de desconforto entram na próxima tarefa do épico.
-      </Callout>
+      <DesconfortoPanel simulation={simulation} summary={summary} />
     </div>
   );
 }

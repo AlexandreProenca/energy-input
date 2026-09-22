@@ -8,6 +8,15 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- O dicionário de rótulos em `SimulationDialog.tsx` tinha `InteriorLighting` e
+  `InteriorEquipment` grafados **sem espaço**, enquanto a API manda `Interior Lighting` e
+  `Interior Equipment`: as duas entradas nunca casaram. Os três indicadores de conforto e
+  `unconditioned` não tinham entrada nenhuma e apareciam em inglês cru, como
+  `occupied_heating_setpoint_not_met`. (`Refs: T011`)
+- O gráfico de usos finais mostrava a categoria em inglês (`Exterior Lighting`). Os testes de
+  `usosFinaisEmKwh` cobriam a conversão de unidade e não o rótulo, então o texto em inglês
+  não quebrava nada. (`Refs: T011`)
+
 - O eixo de horas do carpete estava invertido: a linha do topo é a hora 1 (intervalo 0h–1h),
   e os rótulos diziam `24h` ali. Só leitura de pixel provou — o desenho parecia plausível nas
   duas orientações. (`Refs: T010`)
@@ -35,6 +44,15 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
   (`Refs: T002`)
 
 ### Adicionado
+
+- **Painel de horas de desconforto**, que fecha os três painéis do PRD §9: horas frias,
+  quentes, confortáveis e **sem dado** lado a lado; barras mensais classificadas; e carpete
+  365 × 24 recolorido por estado de conforto. Dois critérios — a faixa fixa dos setpoints do
+  projeto e a faixa adaptativa da ASHRAE 55 / EN 16798, esta avisando em quantos dias o
+  modelo não valeu e a fixa entrou no lugar. (`Refs: T011`)
+- **Dicionário pt-BR dos nomes do resumo** (`src/core/results/rotulos.ts`): usos finais,
+  recursos, áreas e indicadores de conforto, com cobertura conferida contra a fixture real da
+  API. (`Refs: T011`)
 
 - **Painel de temperatura operativa**: curva anual com banda diária de mínima e máxima,
   carpete 365 × 24 hora a hora e a temperatura externa para comparação. Descobre a zona pelo

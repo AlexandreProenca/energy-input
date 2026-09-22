@@ -74,6 +74,16 @@ describe('usos finais convertidos para kWh', () => {
     ]);
     expect(barras[0].valor).toBeCloseTo(1001, 6);
   });
+
+  it('rotula a categoria em pt-BR', () => {
+    // O gráfico mostrava `Exterior Lighting` em inglês cru. A conversão de unidade estava
+    // coberta por teste e o rótulo não, então traduzi-lo não quebrava nada — que é como ele
+    // ficou em inglês desde a T008.
+    const barras = usosFinaisEmKwh([
+      { category: 'Exterior Lighting', resources: [{ resource: 'Electricity', value: 3.6, units: 'GJ' }] },
+    ]);
+    expect(barras[0].rotulo).toBe('Iluminação externa');
+  });
 });
 
 describe('saldo negativo em uso final', () => {

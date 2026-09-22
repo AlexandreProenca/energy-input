@@ -419,7 +419,12 @@ energy-input/
 
 ## 9. Próximos Passos e Roadmap Futuro
 
-1. **Dashboards de Análise Energética:** Visualização gráfica direta na aplicação das curvas de consumo anual, temperaturas operativas e horas de desconforto geradas pelos artefatos da simulação.
+1. ~~**Dashboards de Análise Energética:** Visualização gráfica direta na aplicação das curvas
+   de consumo anual, temperaturas operativas e horas de desconforto geradas pelos artefatos da
+   simulação.~~ **Entregue** no modo **Resultados** (T006–T011, [`backlog.md`](backlog.md)
+   épico E1): os três painéis desenham a partir das séries que a API devolve em JSON, sem
+   baixar nem interpretar `.csv`/`.sql` no navegador. Falta a **Fase 3** do épico — agrupar e
+   comparar execuções por **estudo paramétrico** (T012–T015).
 2. **Presets HVAC Expandidos:** Criação de templates pré-configurados de expansão direta (Split / Pacote) e ventilação mecânica no assistente.
 3. **Compatibilidade com Schemas Futuros do EnergyPlus:** Automação de pipeline para ingestão contínua de novas versões lançadas pelo NREL/DOE.
 4. **Importação e Conversão de Plantas Arquitetônicas (DXF / SVG):** Permitir upload de linhas de paredes a partir de desenhos CAD ou SketchUp para traçado automático da planta 2D.

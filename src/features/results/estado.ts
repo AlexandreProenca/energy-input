@@ -1,3 +1,4 @@
+import { rotuloDeUsoFinal } from '@/core/results/rotulos';
 import { isEnergyUnit, toKwh } from '@/core/results/units';
 import { terminal, type Simulation } from '@/features/simulation/api';
 
@@ -44,7 +45,7 @@ export function usosFinaisEmKwh(
 ): { rotulo: string; valor: number }[] {
   return endUses
     .map((uso) => ({
-      rotulo: uso.category,
+      rotulo: rotuloDeUsoFinal(uso.category),
       valor: uso.resources
         .filter((r) => isEnergyUnit(r.units))
         .reduce((total, r) => total + (toKwh(r.value, r.units) ?? 0), 0),

@@ -80,7 +80,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T008 | Painel de consumo anual | T007 |
 | [x] | T009 | Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR** | T001 |
 | [x] | T010 | Painel de temperatura operativa | T007, T009 |
-| [ ] | T011 | Painel de horas de desconforto | T005, T007, T009 |
+| [x] | T011 | Painel de horas de desconforto | T005, T007, T009 |
 | [ ] | T012 | Tipos e métodos de estudo no cliente da API | T002 |
 | [ ] | T013 | `studyStore.ts` — acompanhamento do estudo | T012 |
 | [ ] | T014 | Montar cenários e criar o estudo | T013 |
@@ -209,9 +209,10 @@ para a faixa fixa onde o modelo não vale) e `summaryComfortHours`. 20 asserçõ
   `NoLimit` do `IdealLoadsAirSystem` prevê. Exibi-los como "desconforto" mostraria zero para
   sempre — o rótulo honesto é "horas fora do setpoint".
 
-**Pendente da T016:** confirmar se os modelos deste aplicativo produzem
-`simple_ashrae_55_not_comfortable`. Se produzirem, é o fallback quando a série expira (410);
-se não, o cálculo sobre a série é a única fonte e o painel tem de dizer que não há fallback.
+**Respondido na T011, sem depender da T016.** O EnergyPlus local basta: rodando o modelo
+padrão do gerador, anual, a linha "Time Not Comfortable Based on Simple ASHRAE 55-2004" dá
+**7 587 h**, enquanto as duas de setpoint dão 0,00. O ASHRAE 55 simples **é** fallback de
+verdade quando a série expira; os de setpoint não são.
 
 ### Fase 2 — Modo Resultados e gráficos
 
@@ -319,12 +320,30 @@ e `CarpetPlot` receberam dado real.
 - O `StackedBarChart` **continua sem dado não nulo**: depende de vários medidores com
   consumo, e a execução disponível tem um só, zerado.
 
-#### T011 · Painel de horas de desconforto
+#### T011 · Painel de horas de desconforto — **concluída**
 
-**Entra:** indicadores de `Summary.comfort` com o `StatTile` já existente, mais o cálculo
-indicativo da T005 quando a série existir. Inclui o dicionário pt-BR de `comfort` e
-`end_uses` — hoje são **7 entradas** em `SimulationDialog.tsx:10` e todo o resto aparece em
-inglês cru.
+Entregue em [`docs/tasks/T011-painel-desconforto.md`](tasks/T011-painel-desconforto.md).
+**Fecha a Fase 2 e os três painéis do PRD §9.**
+
+Frio e quente separados, com os dois critérios (faixa fixa dos setpoints e faixa adaptativa),
+horas sem dado à vista, `fallbackDays` como aviso e carpete recolorido por estado. O
+dicionário pt-BR virou `src/core/results/rotulos.ts`, com cobertura conferida contra a
+fixture real.
+
+**Para a Fase 3:**
+
+- **Os indicadores de setpoint do resumo são estruturalmente zero nos nossos modelos; o de
+  ASHRAE 55 simples não é** (7 587 h no modelo padrão, medido localmente). Tabela comparativa
+  de estudo que use `comfort` deve preferir `simple_ashrae_55_not_comfortable`.
+- **Antes de acusar o serviço de sub-reportar, conferir se o modelo tinha o que medir.** As
+  execuções da T001 dão 0 h porque o modelo não tem ocupante nem climatização
+  (`conditioned: 0 m²`), não porque a API erre.
+- **Toda tabela de tradução precisa de teste de cobertura derivado de dado real.** Terceiro
+  caso de dado morto no repositório, depois de `defaultOn` e da lista literal de `answers.ts`.
+- `StackedBarChart` recebeu dado não nulo em três séries: a verificação da T007 está fechada.
+- **Pendências que atravessam para a Fase 3:** o seletor de zona nunca foi exercitado com
+  execução multizona, e `SimulationDialog` continua sem teste (é `.tsx`, e o Vitest roda em
+  `environment: 'node'`).
 
 ### Fase 3 — Estudos
 

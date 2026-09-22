@@ -14,7 +14,7 @@ const MESES = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
  * mensais em `sr-only`. O PRD §5.2 compromete acessibilidade, e um elemento que só existe
  * como pixel não a cumpre.
  */
-export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, vazio }: {
+export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, vazio, cor, legenda }: {
   label: string;
   cells: CarpetCell[];
   dominio: Range;
@@ -22,6 +22,15 @@ export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, vazio
   /** Média por mês, para a alternativa textual. */
   resumoMensal?: { mes: number; valor: number }[];
   vazio?: string;
+  /**
+   * Cor de cada célula. O padrão é a escala divergente contínua, que é o que o carpete de
+   * temperatura quer. O painel de desconforto passa uma função **categórica** — frio, ok,
+   * quente —, porque ali o valor da célula é um estado e não uma grandeza: interpolá-lo
+   * produziria tons intermediários entre "frio" e "confortável", que não existem.
+   */
+  cor?: (value: number) => string;
+  /** Legenda visível, necessária quando a cor é categórica e não tem eixo que a explique. */
+  legenda?: { rotulo: string; cor: string }[];
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   // Memoizado porque um ano horário são 8 760 células: sem isto, cada render percorre a
@@ -37,11 +46,11 @@ export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, vazio
     const alturaCelula = canvas.height / 24;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const c of cells) {
-      ctx.fillStyle = divergingColor(c.value, dominio);
+      ctx.fillStyle = cor ? cor(c.value) : divergingColor(c.value, dominio);
       // Meio pixel a mais evita a costura clara entre células vizinhas.
       ctx.fillRect(c.col * larguraCelula, c.row * alturaCelula, larguraCelula + 0.5, alturaCelula + 0.5);
     }
-  }, [cells, colunas, dominio]);
+  }, [cells, colunas, dominio, cor]);
 
   if (vazio || colunas === 0) {
     return (
@@ -78,6 +87,16 @@ export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, vazio
       <div className="ml-8 flex justify-between text-[10px] text-slate-400">
         {MESES.map((m, i) => <span key={i}>{m}</span>)}
       </div>
+      {legenda && legenda.length > 0 && (
+        <div className="ml-8 flex flex-wrap gap-x-4 gap-y-1 pt-1 text-[11px] text-slate-600">
+          {legenda.map((l) => (
+            <span key={l.rotulo} className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: l.cor }} aria-hidden />
+              {l.rotulo}
+            </span>
+          ))}
+        </div>
+      )}
       {resumoMensal && resumoMensal.length > 0 && (
         <table className="sr-only">
           <caption>{`${label} — média por mês`}</caption>
