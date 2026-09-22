@@ -37,7 +37,7 @@ um dos dois vai envelhecer mentindo.
 | `docs/DEVELOPMENT.md` | detalhes técnicos, algoritmos de geometria e notas de dev | a implementação ou arquitetura evolui |
 | `MEMORY.md` | em que pé está, o que já foi decidido, armadilhas encontradas | **a cada tarefa** |
 | `docs/backlog.md` | as tarefas, dependências e estado | a cada tarefa concluída ou criada |
-| `docs/tasks/NNN-*.md` | uma tarefa: escopo, decisões, critérios, verificação | criado com a tarefa; depois é **histórico**, não se reescreve |
+| `docs/tasks/TNNN-*.md` | uma tarefa: escopo, decisões, critérios, verificação | criado com a tarefa; depois é **histórico**, não se reescreve |
 | `docs/adr/NNNN-*.md` | decisões de arquitetura, com os fundamentos que as sustentam | quando uma decisão dessas é tomada ou substituída |
 | `CHANGELOG.md` | o que mudou, por tarefa/versão | a cada tarefa |
 
@@ -68,7 +68,7 @@ gh pr create --base main
 
 O commit precisa conter, além do código e dos testes:
 
-- `docs/tasks/NNN-slug.md`, a partir de [`docs/tasks/_template.md`](docs/tasks/_template.md);
+- `docs/tasks/TNNN-slug.md`, a partir de [`docs/tasks/_template.md`](docs/tasks/_template.md);
 - a linha da tarefa marcada como concluída em `docs/backlog.md`;
 - uma entrada no `CHANGELOG.md`.
 

@@ -1,0 +1,179 @@
+{
+  "itens": [
+    {
+      "name": "eplusout.audit",
+      "type": "diagnostics",
+      "size_bytes": 1525,
+      "sha256": "bc2082910e54528048842590e1aa39593baca3c8feb1b4e3bc4aa6f18675cd7c",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.bnd",
+      "type": "diagnostics",
+      "size_bytes": 6287,
+      "sha256": "78663dc6eacd7f0c9bab3f7808ab9027b13df293c4d9ffed8744da19cc11259a",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.dxf",
+      "type": "diagnostics",
+      "size_bytes": 5428,
+      "sha256": "92e66ec27f8f7f92b7f79e119831400bee0db1d4fa6ebc4da18391548488dd69",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.eio",
+      "type": "diagnostics",
+      "size_bytes": 15245,
+      "sha256": "b83d07eabb5dff032b3ee75a04c316d45ebf7ba2b89213df9e41fcbdb3619f02",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.end",
+      "type": "errors",
+      "size_bytes": 97,
+      "sha256": "75401076d306d95fe0df157edb0fbcab8df5d23cc40ba20d6b1359e655053bc0",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.err",
+      "type": "errors",
+      "size_bytes": 2111,
+      "sha256": "01e4a3a30843582ebb061bbb9adc3f7811db789875850e208d7bc828349f6023",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.eso",
+      "type": "timeseries",
+      "size_bytes": 22092012,
+      "sha256": "3592f0e3107783c4e4405f45701b467e790e8d03650b9abdb24f9968a6e35325",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": "2026-10-16T15:52:43.357371Z",
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.mdd",
+      "type": "diagnostics",
+      "size_bytes": 1460,
+      "sha256": "d0907f87abb5d286c21203a9568386dc0d3f35ee47fd2497b9080fe5fc44ca78",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.mtd",
+      "type": "diagnostics",
+      "size_bytes": 7396,
+      "sha256": "c797766803d2c2af4934c52ff4a8da075f6e74b927476a3c99facfdfab0eac97",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.mtr",
+      "type": "timeseries",
+      "size_bytes": 566151,
+      "sha256": "f20fefe02d543837461589a2c8d005e03a2988e01b5ca716f15c79ed9a2a0798",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": "2026-10-16T15:52:43.357371Z",
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.rdd",
+      "type": "diagnostics",
+      "size_bytes": 20945,
+      "sha256": "6ef40d295228b61c885187af6f86ca4d3869281ecaa7882b121fdd996fd52ca1",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.shd",
+      "type": "diagnostics",
+      "size_bytes": 1523,
+      "sha256": "4ecb006c4810dfd7c549e1d3f041204f837ab12dafcb593f7a3d90877f98ef66",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplusout.sql",
+      "type": "results",
+      "size_bytes": 26296320,
+      "sha256": "812459fced79a5311c29b73de02770b5d9b344c739e261a41da2b755cb183f3e",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": "2026-10-16T15:52:43.357371Z",
+      "expired_at": null
+    },
+    {
+      "name": "eplustbl.csv",
+      "type": "report",
+      "size_bytes": 81439,
+      "sha256": "a5aba873f7231bc237c9c6d912491540726281d281dc34047154fc23055e4f46",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplustbl.htm",
+      "type": "report",
+      "size_bytes": 340361,
+      "sha256": "a3a70b08fe539e1c495d091c8f4728962de2b8273dd3b125c694a6f587ad24d7",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplustbl.tab",
+      "type": "report",
+      "size_bytes": 81436,
+      "sha256": "5f312e3a302239b36dd29c6cfe05ad5b48e00724581f7ccf5f83824d193d9a6e",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplustbl.txt",
+      "type": "report",
+      "size_bytes": 158662,
+      "sha256": "20fc017c78c02edeaa4936118bdb62fa06f75ecaac9af5310d3e69e78a5a6488",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "eplustbl.xml",
+      "type": "report",
+      "size_bytes": 218847,
+      "sha256": "52689ae8b81bbfc88f7176140b29919f5182d5cdd5afed7d882e555849aeee6f",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    },
+    {
+      "name": "sqlite.err",
+      "type": "errors",
+      "size_bytes": 58,
+      "sha256": "9311157d4eda5fdaf20277a4bd7867eaa3f2bd2921195488fcdedb0309bf15bd",
+      "created_at": "2026-09-16T15:52:38.812303Z",
+      "expires_at": null,
+      "expired_at": null
+    }
+  ],
+  "total": 19,
+  "total_bytes": 49897303,
+  "expected_total": 19,
+  "complete": true
+}
