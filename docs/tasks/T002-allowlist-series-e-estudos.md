@@ -32,8 +32,10 @@ O regex também não tinha teste nenhum — um controle de segurança sem teste 
   recusa.
 - `docker/nginx.conf`: `gzip_proxied`, HTTP/1.1 no upstream, buffers e timeout compatíveis
   com páginas de série de ~1 MB.
-- `docker/nginx.conf`: **`proxy_ssl_verify_depth 3`** — correção de um defeito
-  pré-existente que deixava *toda* chamada a `/simulation-api` em 502 na imagem Docker.
+- `docker/nginx.conf`: **`proxy_ssl_verify_depth`** — correção de um defeito pré-existente
+  que deixava *toda* chamada a `/simulation-api` em 502 na imagem Docker.
+- **T017**, o portão de regressão desse defeito no CI. Aberta como tarefa separada e
+  fechada aqui mesmo (veja §3).
 
 ### O que NÃO entra (deliberadamente postergado)
 
@@ -68,6 +70,19 @@ O regex também não tinha teste nenhum — um controle de segurança sem teste 
 - **Nenhuma rota liberada no nginx.** O `location` de produção é de prefixo e já repassava
   tudo. O que faltava era desempenho, não acesso.
 
+- **A T017 entrou nesta tarefa, em vez de virar PR próprio.** Ela foi aberta como tarefa
+  separada e a revisão automática insistiu duas vezes que a correção seguia sem portão.
+  Procede: mandar para a `main` o conserto de uma falha *silenciosa* sem o teste que a
+  detecta deixa a próxima regressão igualmente silenciosa — e o AGENTS.md §8 diz que
+  apontamento aceito se corrige acompanhado de teste. São cinco linhas no job que já existe,
+  no mesmo arquivo que o defeito.
+
+- **O portão do CI olha o log, não o código de status.** Sem credencial o serviço responde
+  401, o que já prova que o handshake TLS aconteceu. Reprovar por 502 puro faria o CI cair
+  sempre que o serviço estivesse fora do ar — falha alheia a este repositório. A reprovação
+  é `SSL certificate verify error` no log do nginx, que é exatamente a regressão em questão;
+  502 sem esse erro vira aviso.
+
 - **Não abrir ADR.** Nada aqui contraria ou estende o PRD; o épico e o modo de estudo já
   estão decididos no backlog (AGENTS.md §4).
 
@@ -83,8 +98,9 @@ O regex também não tinha teste nenhum — um controle de segurança sem teste 
   `isSimulationId`.
 - `scripts/__tests__/simulationRoutes.test.ts`: novo, 30 testes.
 - `docker/nginx.conf`: `gzip_proxied any`, `proxy_http_version 1.1` + `Connection ""`,
-  buffers de 32k/16×64k/128k, `proxy_read_timeout 120s`, e o comentário explicando que o
-  allowlist é controle só de desenvolvimento.
+  buffers de 32k/16×64k/128k, `proxy_read_timeout 120s`, `proxy_ssl_verify_depth 5`, e o
+  comentário explicando que o allowlist é controle só de desenvolvimento.
+- `.github/workflows/ci.yml`: novo passo "Verificar o proxy de simulação no contêiner".
 
 ---
 
@@ -98,6 +114,10 @@ O regex também não tinha teste nenhum — um controle de segurança sem teste 
       `results/timeseries` com query string e `/v1/studies` respondem **200** (antes, 404 do
       proxy); `/v1/usage`, `/v1/api-keys` e `/v1/auth/jwks.json` seguem **404** com
       `{"detail":"Rota de simulação não disponível."}`.
+- [x] **Portão de regressão no CI (T017)**, provado nos dois sentidos: com
+      `proxy_ssl_verify_depth 1` o job reprova (502 e `SSL certificate verify error` no log
+      do nginx); com a config versionada, aprova (401 sem credencial, que já prova o
+      handshake TLS).
 - [x] **Ponta a ponta no contêiner de produção** (`docker build` + `docker run`), com a
       config versionada e `proxy_ssl_verify on`: a série responde **200** com
       `Content-Encoding: gzip`, **148 160 B comprimidos para 904 235 B** de original

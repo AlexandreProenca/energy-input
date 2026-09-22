@@ -78,17 +78,50 @@ jobs:
         run: |
           set -euo pipefail
           docker run -d --name energy-input-ci -p 8080:80 energy-input:local-test
-          
+
           # Aguarda o Nginx responder na porta 8080
+          pronto=""
           for _ in $(seq 1 30); do
             if curl -sf http://127.0.0.1:8080/ >/dev/null; then
-              echo "Container respondendo em http://127.0.0.1:8080/"; exit 0
+              pronto=sim; break
             fi
             sleep 1
           done
-          echo "::error::O container Nginx não respondeu em 30 segundos."
-          docker logs energy-input-ci
-          exit 1
+          if [ -z "$pronto" ]; then
+            echo "::error::O container Nginx não respondeu em 30 segundos."
+            docker logs energy-input-ci
+            exit 1
+          fi
+          echo "Container respondendo em http://127.0.0.1:8080/"
+
+      - name: Verificar o proxy de simulação no contêiner
+        run: |
+          set -euo pipefail
+          # Este passo existe porque o passo acima NÃO teria pego o defeito real que a T002
+          # corrigiu: toda chamada a /simulation-api devolvia 502 por
+          # `proxy_ssl_verify_depth` (padrão 1, cadeia de três níveis), e o healthcheck só
+          # busca a página estática. Ficou verde durante todo o tempo em que o proxy estava
+          # quebrado.
+          #
+          # Sem credencial, o serviço responde 401 — e 401 já prova o que interessa: o
+          # handshake TLS com o upstream aconteceu. O portão NÃO é o código de status, e sim
+          # a ausência do erro de verificação no log: um 502 por serviço fora do ar
+          # reprovaria o CI por motivo alheio a este repositório.
+          codigo="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+            http://127.0.0.1:8080/simulation-api/v1/engines || echo 000)"
+          echo "GET /simulation-api/v1/engines -> HTTP $codigo"
+
+          if docker logs energy-input-ci 2>&1 | grep -q "SSL certificate verify error"; then
+            echo "::error::O nginx não verificou o certificado do upstream. Confira \`proxy_ssl_verify_depth\` e o bundle de CAs em docker/nginx.conf."
+            docker logs energy-input-ci 2>&1 | grep -i "ssl" | tail -5
+            exit 1
+          fi
+
+          case "$codigo" in
+            502) echo "::warning::502 sem erro de verificação TLS no log — provável indisponibilidade do serviço, não regressão do proxy." ;;
+            000) echo "::warning::Sem resposta do proxy; serviço possivelmente inacessível a partir do runner." ;;
+            *) echo "O proxy alcançou o upstream e o TLS foi verificado." ;;
+          esac
 
       - name: Limpar container
         if: always()

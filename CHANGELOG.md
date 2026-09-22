@@ -21,6 +21,10 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- Portão no CI para o proxy de simulação no contêiner: chama `/simulation-api/v1/engines` e
+  reprova se o log do nginx tiver `SSL certificate verify error`. O healthcheck anterior só
+  buscava a página estática e por isso ficou verde durante todo o tempo em que o proxy
+  devolvia 502. (`Refs: T017`)
 - Rotas de série (`results/variables`, `results/timeseries`) e de estudo paramétrico
   (`/v1/studies`, `…/runs`, `…/results`, `…/cancel`) liberadas no proxy de desenvolvimento,
   com query string. Antes respondiam 404 do próprio proxy. (`Refs: T002`)

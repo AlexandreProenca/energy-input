@@ -86,7 +86,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T014 | Montar cenários e criar o estudo | T013 |
 | [ ] | T015 | Tabela comparativa e gráfico do estudo | T014, T007 |
 | [ ] | T016 | Destravar a execução de simulações no serviço | — |
-| [ ] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
+| [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
 
@@ -375,22 +375,21 @@ expirados, e deles saíram as fixtures. As tarefas T002–T015 trabalham sobre f
 fica pendente é a verificação de ponta a ponta com execução nova — e a confirmação de se os
 modelos deste app produzem `simple_ashrae_55_not_comfortable` (T005).
 
-#### T017 · CI: o teste de contêiner não exercita o proxy de simulação
+#### T017 · CI: o teste de contêiner não exercita o proxy — **concluída junto da T002**
 
-**Sintoma.** O job `Validar container Docker` sobe a imagem e faz
-`curl -sf http://127.0.0.1:8080/` — só a página estática. Por isso ele passou verde durante
-todo o tempo em que **toda** chamada a `/simulation-api` devolvia 502 na imagem
-(defeito encontrado e corrigido na T002).
+Aberta e fechada na mesma entrega, por insistência da revisão automática — e com razão:
+mandar para a `main` a correção de uma falha silenciosa sem o portão que a detecta deixaria
+a próxima regressão igualmente silenciosa (AGENTS.md §8: "ao aceitar um apontamento,
+corrija acompanhado de teste").
 
-**Entra:** exercitar pelo menos uma rota de proxy no job. Não dá para chamar o serviço real
-sem credencial no CI, então a checagem precisa ser de transporte, não de resultado: uma
-rota conhecida deve responder algo que **não** seja 502 — 401 sem credencial é resposta
-legítima e prova que o handshake TLS com o upstream aconteceu.
+O job `Validar container Docker` ganhou um passo que chama
+`/simulation-api/v1/engines` no contêiner. **O portão não é o código de status**, e sim a
+ausência de `SSL certificate verify error` no log do nginx: sem credencial o serviço
+responde 401, o que já prova que o handshake TLS aconteceu, e um 502 por serviço fora do ar
+viraria aviso, não reprovação — reprovar o CI por indisponibilidade alheia seria ruído.
 
-**Por que importa:** o `proxy_ssl_verify_depth` quebrou silenciosamente e teria continuado
-quebrado. Qualquer mudança futura em `docker/nginx.conf`, no bundle de CAs da imagem base ou
-na cadeia de certificados do serviço tem o mesmo perfil — falha só em produção, invisível
-para o portão atual.
+Verificado por prova negativa: com `proxy_ssl_verify_depth 1` o portão **reprova** (502 e
+erro no log); com a config versionada, **aprova** (401).
 
 ---
 
