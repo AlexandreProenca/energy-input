@@ -5,6 +5,7 @@ import { Button, Callout, Field } from '@/ui/primitives';
 import { useSimulationStore } from '@/features/simulation/simulationStore';
 import { estadoDoPainel, semAnoCompleto } from './estado';
 import { ConsumoPanel } from './panels/ConsumoPanel';
+import { TemperaturaPanel } from './panels/TemperaturaPanel';
 
 /**
  * Casca do modo Resultados.
@@ -174,9 +175,10 @@ export default function ResultsShell() {
 
       <ConsumoPanel simulation={simulation} summary={summary} />
 
-      <Callout tone="info" title="Painéis em construção">
-        O carpete de temperatura operativa e as horas de desconforto entram nas próximas
-        tarefas do épico.
+      <TemperaturaPanel simulation={simulation} />
+
+      <Callout tone="info" title="Painel em construção">
+        As horas de desconforto entram na próxima tarefa do épico.
       </Callout>
     </div>
   );

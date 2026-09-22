@@ -79,7 +79,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T007 | Componentes de gráfico SVG reutilizáveis | T004, T006 |
 | [x] | T008 | Painel de consumo anual | T007 |
 | [x] | T009 | Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR** | T001 |
-| [ ] | T010 | Painel de temperatura operativa | T007, T009 |
+| [x] | T010 | Painel de temperatura operativa | T007, T009 |
 | [ ] | T011 | Painel de horas de desconforto | T005, T007, T009 |
 | [ ] | T012 | Tipos e métodos de estudo no cliente da API | T002 |
 | [ ] | T013 | `studyStore.ts` — acompanhamento do estudo | T012 |
@@ -298,12 +298,26 @@ O padrão passou de `["resumo","cargas","conta"]` para
 lista literal em `answers.ts`. Editar só o JSON não mudaria nada. Agora o padrão **deriva** do
 catálogo, com teste travando isso e prova negativa.
 
-#### T010 · Painel de temperatura operativa
+#### T010 · Painel de temperatura operativa — **concluída**
 
-**Entra:** curva anual com banda diária de mínimo e máximo, e carpete 365×24 por zona, com
-o seletor de zona alimentado por `/results/variables`. Estado explicativo quando a
-simulação não pediu o preset `conforto` (projetos anteriores à T009) ou quando a série
-expirou (410).
+Entregue em [`docs/tasks/T010-painel-temperatura.md`](tasks/T010-painel-temperatura.md).
+
+Curva anual com banda diária, carpete 365 × 24 e a externa para comparação. Fecha o **quinto
+estado** previsto na T006 (série expirada, 410) e a lacuna de verificação da T007: `LineChart`
+e `CarpetPlot` receberam dado real.
+
+**Para a T011:**
+
+- A zona é descoberta pelo **422 de ambiguidade**, não pelo catálogo — `seriesCandidates`
+  (T003) transforma o erro no seletor. A execução disponível tem uma zona só, então esse
+  caminho não foi exercitado com dado real.
+- `interna` e `externa` já estão no store; a externa é opcional e só a faixa adaptativa
+  precisa dela.
+- **O eixo de horas do carpete foi corrigido:** linha 0 é a hora 1 (0h–1h) e fica no topo.
+  Só leitura de pixel provou — o desenho parecia certo nas duas orientações, porque a
+  madrugada é fria nas duas pontas.
+- O `StackedBarChart` **continua sem dado não nulo**: depende de vários medidores com
+  consumo, e a execução disponível tem um só, zerado.
 
 #### T011 · Painel de horas de desconforto
 

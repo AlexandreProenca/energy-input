@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SimulationApi, isSeriesExpired, type TimeSeriesPoint, type SeriesVariable } from '@/features/simulation/api';
+import { SimulationApi, isSeriesExpired, seriesCandidates, type TimeSeriesPoint, type SeriesVariable } from '@/features/simulation/api';
 import { useSimulationStore } from '@/features/simulation/simulationStore';
 
 /**
@@ -28,9 +28,27 @@ interface ResultsState {
   medidores: SerieCarregada[];
   /** Variáveis que a execução não registrou, para o painel explicar a ausência. */
   ausentes: string[];
+  /** Temperatura operativa da zona escolhida, e a externa para referência. */
+  interna?: SerieCarregada;
+  externa?: SerieCarregada;
+  /** Zonas que o serviço reconheceu, quando a variável existe em mais de uma. */
+  zonas: string[];
+  zonaEscolhida?: string;
+  carregandoTemperatura: boolean;
   carregarMedidores: () => Promise<void>;
+  carregarTemperaturas: (zona?: string) => Promise<void>;
   limpar: () => void;
 }
+
+/**
+ * A variável de temperatura operativa, e a externa de que a faixa adaptativa depende.
+ *
+ * Quando a execução tem mais de uma zona, consultar sem `key` devolve **422 com as
+ * candidatas** — é a única forma de descobri-las, porque o catálogo é de tipos e não traz
+ * chave. Com uma zona só, a consulta sem chave resolve direto.
+ */
+const OPERATIVA = 'Zone Operative Temperature';
+const EXTERNA = 'Site Outdoor Air Drybulb Temperature';
 
 /**
  * Medidores procurados, do mais específico para o mais abrangente.
@@ -69,18 +87,80 @@ const api = () => new SimulationApi(useSimulationStore.getState().token);
  * ninguém mais vai ver.
  */
 let emCurso: { id: number; abort: AbortController } | undefined;
+let tempEmCurso: { id: number; abort: AbortController } | undefined;
 let proximaGeracao = 0;
 
 export const useResultsStore = create<ResultsState>((set, get) => ({
   carregando: false,
+  carregandoTemperatura: false,
   expirada: false,
   medidores: [],
   ausentes: [],
+  zonas: [],
 
   limpar: () => {
     emCurso?.abort.abort();
     emCurso = undefined;
-    set({ simulationId: undefined, medidores: [], ausentes: [], erro: undefined, expirada: false, carregando: false });
+    set({
+      simulationId: undefined, medidores: [], ausentes: [], erro: undefined, expirada: false,
+      carregando: false, carregandoTemperatura: false, interna: undefined, externa: undefined,
+      zonas: [], zonaEscolhida: undefined,
+    });
+  },
+
+  /**
+   * Temperatura operativa de uma zona, com a externa junto.
+   *
+   * Sem `zona`, consulta sem chave: resolve direto quando há uma só, e devolve 422 com as
+   * candidatas quando há várias — que é como as zonas são descobertas, já que o catálogo
+   * não as traz.
+   */
+  async carregarTemperaturas(zona?: string) {
+    const simulation = useSimulationStore.getState().simulation;
+    if (!simulation || simulation.status !== 'succeeded') return;
+
+    tempEmCurso?.abort.abort();
+    const minha = ++proximaGeracao;
+    const abort = new AbortController();
+    tempEmCurso = { id: minha, abort };
+    const atual = () => tempEmCurso?.id === minha;
+
+    set({ carregandoTemperatura: true, erro: undefined, zonaEscolhida: zona });
+    try {
+      const interna = await api().allTimeseries(
+        simulation.id, { variable: OPERATIVA, ...(zona ? { key: zona } : {}) }, 12, abort.signal,
+      );
+      if (!atual()) return;
+      // A externa pode faltar sem que isso invalide o painel: ela só é necessária para a
+      // faixa adaptativa, e a fixa continua valendo.
+      const externa = await api()
+        .allTimeseries(simulation.id, { variable: EXTERNA }, 12, abort.signal)
+        .catch(() => undefined);
+      if (!atual()) return;
+      tempEmCurso = undefined;
+      set({
+        carregandoTemperatura: false,
+        interna: { variable: interna.variable, itens: interna.itens, completa: interna.completa },
+        externa: externa && { variable: externa.variable, itens: externa.itens, completa: externa.completa },
+        zonaEscolhida: interna.variable.key || zona,
+        zonas: get().zonas.length ? get().zonas : [interna.variable.key].filter(Boolean),
+      });
+    } catch (e) {
+      if (!atual()) return;
+      tempEmCurso = undefined;
+      const candidatas = seriesCandidates(e);
+      if (candidatas.length) {
+        // 422 de ambiguidade: as candidatas são as zonas. Guardá-las é o que permite
+        // oferecer o seletor — sem elas, o painel só saberia que "deu erro".
+        set({ carregandoTemperatura: false, zonas: candidatas, zonaEscolhida: undefined });
+        return;
+      }
+      set({
+        carregandoTemperatura: false,
+        expirada: isSeriesExpired(e) || get().expirada,
+        erro: isSeriesExpired(e) ? undefined : e instanceof Error ? e.message : String(e),
+      });
+    }
   },
 
   async carregarMedidores() {

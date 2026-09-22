@@ -54,10 +54,16 @@ export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, vazio
   return (
     <figure className="space-y-1">
       <div className="flex gap-2">
+        {/*
+          A linha 0 do carpete é a hora 1 do contrato, isto é, o intervalo 0h–1h, e é
+          desenhada no TOPO. A linha 23 é a hora 24, na base. Os rótulos estavam invertidos:
+          diziam 24h no topo, onde está a madrugada. Conferido por leitura de pixel — a
+          linha do meio (início da tarde) é a mais quente, como tem de ser.
+        */}
         <div className="flex w-6 flex-col justify-between py-0.5 text-[10px] leading-none text-slate-400">
-          <span>24h</span>
-          <span>12h</span>
           <span>0h</span>
+          <span>12h</span>
+          <span>24h</span>
         </div>
         <canvas
           ref={ref}
