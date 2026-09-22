@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mensalEmKwh } from '../panels/ConsumoPanel';
+import { mensalEmKwh, picoEmKw } from '../panels/ConsumoPanel';
 import type { SerieCarregada } from '../resultsStore';
 import type { TimeSeriesPoint } from '@/core/results/types';
 
@@ -70,5 +70,31 @@ describe('por que não há gráfico mensal', () => {
     expect(zerada.valores.every((v) => v === 0)).toBe(true);
     // Foi exatamente o caso real: `EnergyTransfer:Facility` existe na execução disponível,
     // com 8 760 pontos, e marca zero em todos eles.
+  });
+});
+
+describe('pico de demanda em kW', () => {
+  it('converte pela unidade declarada, não por divisão fixa', () => {
+    // O resumo real traz W, mas nada no contrato garante isso. Dividir por mil às cegas um
+    // pico já em kW o mostraria como 0,005 kW — plausível e errado por três ordens.
+    expect(picoEmKw([{ resource: 'Electricity', value: 5250, units: 'W' }])).toBeCloseTo(5.25, 6);
+    expect(picoEmKw([{ resource: 'Electricity', value: 5.25, units: 'kW' }])).toBeCloseTo(5.25, 6);
+    expect(picoEmKw([{ resource: 'Electricity', value: 0.00525, units: 'MW' }])).toBeCloseTo(5.25, 6);
+  });
+
+  it('devolve nulo em unidade desconhecida, em vez de arriscar um fator', () => {
+    expect(picoEmKw([{ resource: 'Electricity', value: 5250, units: 'BTU/h' }])).toBeNull();
+  });
+
+  it('ignora recurso zerado e ausência de pico elétrico', () => {
+    // O motor devolve todos os recursos, quase todos zerados.
+    expect(picoEmKw([{ resource: 'Electricity', value: 0, units: 'W' }])).toBeNull();
+    expect(picoEmKw([{ resource: 'Natural Gas', value: 900, units: 'W' }])).toBeNull();
+    expect(picoEmKw(undefined)).toBeNull();
+  });
+
+  it('bate com o pico da execução real', () => {
+    // 5250 W na fixture; o painel mostra 5,3 kW.
+    expect(picoEmKw([{ resource: 'Electricity', value: 5250, units: 'W' }])).toBeCloseTo(5.25, 6);
   });
 });

@@ -7,8 +7,7 @@ import type { Summary, Simulation } from '@/features/simulation/api';
 import { BarChart } from '../charts/BarChart';
 import { StackedBarChart } from '../charts/StackedBarChart';
 import { corDoMedidor, rotuloDoMedidor, useResultsStore, type SerieCarregada } from '../resultsStore';
-import { usosFinaisEmKwh } from '../estado';
-import { semAnoCompleto } from '../estado';
+import { semAnoCompleto, usosFinaisEmKwh } from '../estado';
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
@@ -29,6 +28,24 @@ export function mensalEmKwh(serie: SerieCarregada): { valores: number[]; descart
     return balde ? (toKwh(balde.value, serie.variable.units) ?? 0) : 0;
   });
   return { valores, descartados: normalizada.dropped, convertivel: true };
+}
+
+/**
+ * Pico de demanda elétrica em kW.
+ *
+ * A conversão olha a unidade em vez de dividir por mil às cegas. O resumo real traz `W`, mas
+ * nada no contrato garante isso — e um pico já em `kW` dividido de novo apareceria como
+ * 0,005 kW, um número plausível e errado por três ordens de grandeza. Unidade que não
+ * reconhecemos devolve `null`, e o indicador mostra travessão.
+ */
+export function picoEmKw(picos?: readonly { resource: string; value: number; units: string }[]): number | null {
+  const eletrico = picos?.find((p) => p.resource === 'Electricity' && p.value > 0);
+  if (!eletrico) return null;
+  const unidade = eletrico.units.trim().replace(/^\[|\]$/g, '').toLowerCase();
+  if (unidade === 'w') return eletrico.value / 1000;
+  if (unidade === 'kw') return eletrico.value;
+  if (unidade === 'mw') return eletrico.value * 1000;
+  return null;
 }
 
 export function ConsumoPanel({ simulation, summary }: { simulation: Simulation; summary?: Summary }) {
@@ -60,7 +77,7 @@ export function ConsumoPanel({ simulation, summary }: { simulation: Simulation; 
   const zerados = convertiveis.filter((s) => !s.mensal.valores.some((v) => v !== 0));
   const totalAnual = series.reduce((a, s) => a + s.mensal.valores.reduce((x, y) => x + y, 0), 0);
   const descartados = series.reduce((a, s) => a + s.mensal.descartados, 0);
-  const pico = summary?.peak_demand.find((p) => p.resource === 'Electricity' && p.value > 0);
+  const pico = picoEmKw(summary?.peak_demand);
 
   return (
     <Painel titulo="Consumo anual">
@@ -79,8 +96,8 @@ export function ConsumoPanel({ simulation, summary }: { simulation: Simulation; 
         />
         <StatTile
           label="Pico de demanda elétrica"
-          value={pico ? fmt(pico.value / 1000, 1) : '—'}
-          unit={pico ? 'kW' : undefined}
+          value={pico === null ? '—' : fmt(pico, 1)}
+          unit={pico === null ? undefined : 'kW'}
         />
       </div>
 

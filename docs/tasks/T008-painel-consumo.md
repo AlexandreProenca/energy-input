@@ -65,14 +65,16 @@ medidor e o resumo por uso final.
 - `src/features/results/resultsStore.ts`: novo.
 - `src/features/results/panels/ConsumoPanel.tsx`: novo.
 - `src/features/results/ResultsShell.tsx`: o gráfico solto da T007 deu lugar ao painel.
-- `src/features/results/__tests__/consumo.test.ts`: novo, 6 testes.
+- `src/features/results/__tests__/consumo.test.ts`: novo, 10 testes.
+- `src/features/results/__tests__/resultsStore.test.ts`: novo, 5 testes.
+- `src/features/simulation/api.ts`: `timeseries` e `allTimeseries` aceitam `AbortSignal`.
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 221 testes (eram 215; +6 nesta tarefa)
+- [x] `npm test` — 230 testes (eram 215; +15 nesta tarefa, 9 deles vindos da revisão do PR)
 - [x] `npm run build`
 - [x] **No navegador, contra o serviço real** (`sim_01M2NEQ…`): indicadores corretos
       (23.072 kWh por uso final, pico de 5,3 kW), sete medidores procurados com **um 200 e
@@ -93,6 +95,18 @@ resultado do modelo e sugere conferir cargas e climatização.
 Foi encontrado porque a verificação foi feita **contra dado real**, não contra fixture
 montada para o caso feliz. A série existia, a requisição devolveu 200, e ainda assim a tela
 mentia.
+
+**Trocar de execução no meio da carga travava o painel para sempre.** A carga antiga
+abandonava sem repor `carregando: false`, e um guarda por `carregando` impedia a nova de
+começar: "Lendo os medidores…" indefinidamente. Agora cada carga tem uma geração, a mais nova
+assume, e um `AbortController` interrompe as requisições em voo — que de outro modo
+continuariam baixando séries de 8 760 pontos que ninguém mais veria. Veio da revisão do PR,
+com prova negativa: o teste do store reprova sob o código anterior.
+
+**Converter pico dividindo por mil às cegas era um erro esperando unidade diferente.** O
+resumo real traz `W`, mas nada no contrato garante isso — um pico já em `kW` apareceria como
+0,005 kW, plausível e errado por três ordens de grandeza. `picoEmKw` olha a unidade e devolve
+`null` no que não reconhece.
 
 **A execução disponível tem consumo só em iluminação externa.** `EnergyTransfer:Facility`
 marca zero o ano inteiro, e nenhum medidor elétrico foi registrado. Isso limita a

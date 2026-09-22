@@ -56,7 +56,11 @@ export class SimulationApi {
     try {
       const headers = new Headers(init.headers);
       if (this.token.trim()) headers.set('Authorization', `Bearer ${this.token.trim().replace(/^Bearer\s+/i, '')}`);
-      response = await fetch(`${this.base}${path}`, { ...init, headers, cache: 'no-store', signal: AbortSignal.timeout(60_000) });
+      // O timeout continua valendo sempre; um `signal` do chamador é somado a ele, para que
+      // cancelar uma carga não desligue a proteção contra requisição pendurada.
+      const timeout = AbortSignal.timeout(60_000);
+      const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+      response = await fetch(`${this.base}${path}`, { ...init, headers, cache: 'no-store', signal });
     } catch {
       throw new SimulationApiError('Não foi possível acessar a simulação. Confira a conexão e tente novamente.', 0);
     }
@@ -102,7 +106,7 @@ export class SimulationApi {
     return this.request<VariableCatalog>(`/simulations/${encodeURIComponent(id)}/results/variables?${q}`);
   }
   /** Uma página da série de **uma** variável. Ambiguidade de chave e variável ausente são 422. */
-  timeseries(id: string, query: TimeSeriesQuery) {
+  timeseries(id: string, query: TimeSeriesQuery, signal?: AbortSignal) {
     const q = new URLSearchParams({ variable: query.variable });
     for (const campo of ['key', 'frequency', 'from', 'to', 'cursor'] as const) {
       const valor = query[campo];
@@ -112,7 +116,7 @@ export class SimulationApi {
     // repassá-lo rende um 422 explícito em vez de o serviço aplicar o default de 10 000
     // calado — quem pediu 0 receberia 10 000 pontos achando que pediu nenhum.
     if (query.limit !== undefined) q.set('limit', String(query.limit));
-    return this.request<TimeSeries>(`/simulations/${encodeURIComponent(id)}/results/timeseries?${q}`);
+    return this.request<TimeSeries>(`/simulations/${encodeURIComponent(id)}/results/timeseries?${q}`, { signal });
   }
   /**
    * Segue `proximo_cursor` até o fim e concatena os pontos, na ordem.
@@ -128,9 +132,9 @@ export class SimulationApi {
    * então ambos só mordem no patológico. A interrupção é reportada em `completa`, não
    * silenciada: devolver meia série sem avisar produziria um gráfico plausível e errado.
    */
-  async allTimeseries(id: string, query: TimeSeriesQuery, maxPaginas = 12) {
+  async allTimeseries(id: string, query: TimeSeriesQuery, maxPaginas = 12, signal?: AbortSignal) {
     const itens: TimeSeriesPoint[] = [];
-    let pagina = await this.timeseries(id, query);
+    let pagina = await this.timeseries(id, query, signal);
     const { variable, utc_offset_hours } = pagina;
     const vistos = new Set<string>();
     let lidas = 1;
@@ -139,7 +143,7 @@ export class SimulationApi {
     while (pagina.proximo_cursor && lidas < maxPaginas) {
       if (vistos.has(pagina.proximo_cursor)) { repetiu = true; break; }
       vistos.add(pagina.proximo_cursor);
-      pagina = await this.timeseries(id, { ...query, cursor: pagina.proximo_cursor });
+      pagina = await this.timeseries(id, { ...query, cursor: pagina.proximo_cursor }, signal);
       itens.push(...pagina.itens);
       lidas++;
     }

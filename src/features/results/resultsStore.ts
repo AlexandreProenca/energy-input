@@ -59,20 +59,44 @@ export const corDoMedidor = (nome: string) =>
 
 const api = () => new SimulationApi(useSimulationStore.getState().token);
 
+/**
+ * Carga em curso, para que a mais nova assuma o lugar da anterior.
+ *
+ * Sem isso, trocar de execução no meio de uma carga travava o painel: a carga antiga
+ * abandonava sem repor `carregando: false`, e um guarda por `carregando` impedia a nova de
+ * começar — "Lendo os medidores…" para sempre. O `AbortController` ainda interrompe as
+ * requisições em voo, que de outro modo continuariam baixando séries de 8 760 pontos que
+ * ninguém mais vai ver.
+ */
+let emCurso: { id: number; abort: AbortController } | undefined;
+let proximaGeracao = 0;
+
 export const useResultsStore = create<ResultsState>((set, get) => ({
   carregando: false,
   expirada: false,
   medidores: [],
   ausentes: [],
 
-  limpar: () => set({ simulationId: undefined, medidores: [], ausentes: [], erro: undefined, expirada: false }),
+  limpar: () => {
+    emCurso?.abort.abort();
+    emCurso = undefined;
+    set({ simulationId: undefined, medidores: [], ausentes: [], erro: undefined, expirada: false, carregando: false });
+  },
 
   async carregarMedidores() {
     const simulation = useSimulationStore.getState().simulation;
     // Só execução concluída tem série. Antes disso o serviço responde 409, e pedir seria
     // transformar um estado normal da interface em erro.
     if (!simulation || simulation.status !== 'succeeded') return;
-    if (get().carregando || get().simulationId === simulation.id) return;
+    // Já carregada e parada: nada a fazer. Carregando, porém, **não** bloqueia — é o caso
+    // de troca de execução, em que a nova precisa assumir.
+    if (get().simulationId === simulation.id && !get().carregando) return;
+
+    emCurso?.abort.abort();
+    const minha = ++proximaGeracao;
+    const abort = new AbortController();
+    emCurso = { id: minha, abort };
+    const atual = () => emCurso?.id === minha;
 
     set({ carregando: true, erro: undefined, expirada: false, medidores: [], ausentes: [], simulationId: simulation.id });
     const encontrados: SerieCarregada[] = [];
@@ -81,11 +105,11 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
     let erro: string | undefined;
 
     for (const medidor of MEDIDORES) {
-      // A execução pode ter sido trocada enquanto a busca corria: abandonar em silêncio é
-      // melhor que escrever a série de uma simulação sobre o painel de outra.
-      if (useSimulationStore.getState().simulation?.id !== simulation.id) return;
+      // Uma carga mais nova assumiu: abandonar em silêncio é melhor que escrever a série de
+      // uma simulação sobre o painel de outra. Quem assumiu já cuida de `carregando`.
+      if (!atual()) return;
       try {
-        const serie = await api().allTimeseries(simulation.id, { variable: medidor.nome });
+        const serie = await api().allTimeseries(simulation.id, { variable: medidor.nome }, 12, abort.signal);
         encontrados.push({ variable: serie.variable, itens: serie.itens, completa: serie.completa });
       } catch (e) {
         if (isSeriesExpired(e)) { expirada = true; break; }
@@ -99,7 +123,8 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
       }
     }
 
-    if (useSimulationStore.getState().simulation?.id !== simulation.id) return;
+    if (!atual()) return;
+    emCurso = undefined;
     set({ carregando: false, medidores: encontrados, ausentes, expirada, erro });
   },
 }));
