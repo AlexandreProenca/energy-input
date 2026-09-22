@@ -114,6 +114,7 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import re
           import sys
           import urllib.error
           import urllib.request
@@ -203,13 +204,40 @@ jobs:
               print(f"::error::Falha na comunicação com a API DeepSeek: {exc}", file=sys.stderr)
               sys.exit(1)
 
+          def extrair_json(texto):
+              """Primeiro objeto JSON do texto, ignorando o que vier depois.
+
+              `json.loads` exige que a string inteira seja um documento só, e o modelo às
+              vezes acrescenta comentário depois do objeto — o erro era
+              `Extra data: line 3 column 1`. `raw_decode` lê o primeiro documento e informa
+              onde ele terminou, que é o que queremos: o resto é conversa, não dado.
+
+              Também tolera cerca de bloco (```json), que é a outra forma de o modelo
+              embrulhar a resposta.
+              """
+              texto = texto.strip()
+              if texto.startswith("```"):
+                  texto = re.sub(r"^```[a-zA-Z]*\s*", "", texto)
+                  texto = re.sub(r"\s*```$", "", texto).strip()
+              # O objeto pode vir depois de um preâmbulo em prosa; começamos na primeira
+              # chave de abertura. Sem isso o `raw_decode` falha no caractere 0.
+              inicio = texto.find("{")
+              if inicio == -1:
+                  raise ValueError("nenhum objeto JSON na resposta")
+              obj, _ = json.JSONDecoder().raw_decode(texto[inicio:])
+              return obj
+
           try:
               content = body["choices"][0]["message"]["content"].strip()
-              review = json.loads(content)
+              review = extrair_json(content)
               findings = review.get("findings", [])
               summary = review.get("summary", "")
           except Exception as exc:
+              # A resposta vai para o log: sem ela, diagnosticar o próximo formato inesperado
+              # exige reproduzir a chamada à mão.
               print(f"::error::Resposta do modelo em formato inválido: {exc}", file=sys.stderr)
+              print("--- resposta recebida ---", file=sys.stderr)
+              print(body.get("choices", [{}])[0].get("message", {}).get("content", "<vazia>")[:4000], file=sys.stderr)
               sys.exit(1)
 
           severidades = {

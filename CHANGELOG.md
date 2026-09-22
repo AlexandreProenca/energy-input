@@ -8,6 +8,13 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- A revisão por IA no PR reprovava quando o modelo devolvia o objeto JSON **seguido de
+  qualquer sobra** — `json.loads` exige que a string inteira seja um documento só. Como é
+  check obrigatório e a saída não é determinística, o bloqueio era por sorte. Agora lê o
+  primeiro objeto e ignora o resto, tolerando também cerca de bloco e preâmbulo em prosa. O
+  portão não foi afrouxado: resposta ilegível continua reprovando, agora dizendo o que
+  recebeu. (`Refs: T018`)
+
 - O eixo de horas do carpete estava invertido: a linha do topo é a hora 1 (intervalo 0h–1h),
   e os rótulos diziam `24h` ali. Só leitura de pixel provou — o desenho parecia plausível nas
   duas orientações. (`Refs: T010`)
