@@ -26,7 +26,8 @@ export interface BoxGeometryParams {
   depth: number;
   floors: number;
   floorHeight: number;
-  groundFloor: 'slab' | 'raised';
+  groundFloor: 'slab' | 'raised' | 'adjacent';
+  topFloor?: 'roof' | 'adjacent';
   constructions: {
     wall: string;
     roof: string;
@@ -139,9 +140,9 @@ export function generateBoxGeometry(p: BoxGeometryParams): BoxGeometryResult {
         surface_type: 'Floor',
         construction_name: p.constructions.groundFloor,
         zone_name: zn,
-        outside_boundary_condition: slab ? 'Ground' : 'Outdoors',
+        outside_boundary_condition: slab ? 'Ground' : p.groundFloor === 'adjacent' ? 'Adiabatic' : 'Outdoors',
         sun_exposure: 'NoSun',
-        wind_exposure: slab ? 'NoWind' : 'WindExposed',
+        wind_exposure: p.groundFloor === 'raised' ? 'WindExposed' : 'NoWind',
         view_factor_to_ground: 'Autocalculate',
         number_of_vertices: 4,
         vertices: toVertices(floorVerts),
@@ -165,12 +166,12 @@ export function generateBoxGeometry(p: BoxGeometryParams): BoxGeometryResult {
     const topVerts: Vec3[] = [[0, D, H], [0, 0, H], [W, 0, H], [W, D, H]];
     if (i === floors - 1) {
       surfaces[`${zn} - Cobertura`] = {
-        surface_type: 'Roof',
+        surface_type: p.topFloor === 'adjacent' ? 'Ceiling' : 'Roof',
         construction_name: p.constructions.roof,
         zone_name: zn,
-        outside_boundary_condition: 'Outdoors',
-        sun_exposure: 'SunExposed',
-        wind_exposure: 'WindExposed',
+        outside_boundary_condition: p.topFloor === 'adjacent' ? 'Adiabatic' : 'Outdoors',
+        sun_exposure: p.topFloor === 'adjacent' ? 'NoSun' : 'SunExposed',
+        wind_exposure: p.topFloor === 'adjacent' ? 'NoWind' : 'WindExposed',
         view_factor_to_ground: 'Autocalculate',
         number_of_vertices: 4,
         vertices: toVertices(topVerts),

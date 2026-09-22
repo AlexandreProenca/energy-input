@@ -4,7 +4,8 @@ import { useSchemaStore } from '@/store/schemaStore';
 import { useUiStore } from '@/store/uiStore';
 import { useWizardStore } from '@/store/wizardStore';
 import { useDocumentStore } from '@/store/documentStore';
-import { clearSnapshot, restoreSnapshot, startAutosave } from '@/store/persistence';
+import { restoreSnapshot, startAutosave } from '@/store/persistence';
+import { resetProject } from '@/store/resetProject';
 import { defaultAnswers } from '@/generators/answers';
 import { exportCurrentDocument } from '@/lib/exportDocument';
 import { Button, Dialog, IconButton, Segmented } from '@/ui/primitives';
@@ -35,6 +36,7 @@ function Header() {
   const canUndo = useDocumentStore((s) => s.past.length > 0);
   const canRedo = useDocumentStore((s) => s.future.length > 0);
   const version = useSchemaStore((s) => s.version);
+  const origin = useDocumentStore((s) => s.origin);
   const [resetOpen, setResetOpen] = useState(false);
 
   return (
@@ -60,7 +62,7 @@ function Header() {
           <IconButton label="Refazer (Ctrl+Shift+Z)" className="hidden sm:inline-flex" disabled={!canRedo} onClick={() => useDocumentStore.getState().redo()}>
             <Redo2 size={17} />
           </IconButton>
-          <IconButton label="Recomeçar do zero" onClick={() => setResetOpen(true)} className="hidden sm:inline-flex">
+          <IconButton label="Resetar edição" onClick={() => setResetOpen(true)}>
             <RotateCcw size={17} />
           </IconButton>
           <Button variant="primary" size="sm" icon={<Download size={15} />} onClick={() => exportCurrentDocument()} className="ml-1" aria-label="Baixar arquivo .epJSON">
@@ -73,26 +75,27 @@ function Header() {
         open={resetOpen}
         onClose={() => setResetOpen(false)}
         icon={<RotateCcw size={18} />}
-        title="Recomeçar do zero?"
+        title={origin.kind === 'upload' ? 'Restaurar arquivo inicial?' : 'Voltar ao início do assistente?'}
         footer={
           <>
             <Button onClick={() => setResetOpen(false)}>Cancelar</Button>
             <Button
               variant="danger"
               onClick={() => {
-                clearSnapshot();
-                useDocumentStore.getState().reset({}, 'modelo.epJSON');
-                useWizardStore.getState().startFresh(defaultAnswers());
-                useUiStore.setState({ mode: 'basic', wizardStep: 'project', visitedSteps: ['project'] });
+                resetProject();
                 setResetOpen(false);
               }}
             >
-              Apagar e recomeçar
+              {origin.kind === 'upload' ? 'Restaurar arquivo' : 'Recomeçar assistente'}
             </Button>
           </>
         }
       >
-        <p className="text-sm text-slate-600">O projeto salvo neste navegador será apagado e o assistente volta às respostas padrão. Baixe o arquivo antes, se quiser guardá-lo.</p>
+        <p className="text-sm text-slate-600">{origin.kind === 'upload'
+          ? origin.recovered
+            ? `Este projeto foi salvo antes do recurso de reset. Será restaurado o primeiro estado recuperado de ${origin.fileName}; o upload original não está disponível.`
+            : `As edições serão descartadas e ${origin.fileName} voltará ao conteúdo original do upload.`
+          : 'As edições serão descartadas e você voltará ao primeiro passo do assistente, com as respostas padrão.'} Baixe o arquivo antes, se quiser guardar as alterações. O histórico de desfazer também será limpo.</p>
       </Dialog>
     </header>
   );
@@ -118,6 +121,7 @@ export function App() {
   const status = useSchemaStore((s) => s.status);
   const error = useSchemaStore((s) => s.error);
   const mode = useUiStore((s) => s.mode);
+  const revision = useDocumentStore((s) => s.revision);
   const booted = useRef(false);
   useUndoShortcuts();
 
@@ -164,10 +168,10 @@ export function App() {
     <div className="min-h-screen">
       <Header />
       {mode === 'basic' ? (
-        <WizardShell />
+        <WizardShell key={revision} />
       ) : (
         <Suspense fallback={<div className="flex h-[60vh] items-center justify-center"><Loader2 className="animate-spin text-brand-600" /></div>}>
-          {mode === 'geometry' ? <GeometryEditor /> : <ExpertShell />}
+          {mode === 'geometry' ? <GeometryEditor key={revision} /> : <ExpertShell key={revision} />}
         </Suspense>
       )}
       <ConflictDialog />

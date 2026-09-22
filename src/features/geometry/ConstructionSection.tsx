@@ -120,6 +120,7 @@ export function ConstructionSection({
 
   return (
     <div className="space-y-3">
+      {interzone && <Callout>Elemento compartilhado: a alteração de material ou espessura vale para os dois lados, com a ordem das camadas invertida na zona vizinha.</Callout>}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor={`cons-${element}`}>
           {glazingUse ? 'Vidro (construção)' : 'Construção'}
@@ -279,7 +280,7 @@ export function ConstructionSection({
             <Plus size={13} /> Adicionar camada (isolante EPS 3 cm, troque depois)
           </button>
           <p className="text-[11px] leading-relaxed text-slate-500">
-            No EnergyPlus as superfícies são planos: a espessura muda a troca de calor, não o volume do ambiente. O 3D desenha a espessura para dentro da zona.
+            No EnergyPlus as superfícies são planos: a espessura muda a troca de calor, não o volume do ambiente. No 3D, elementos externos têm espessura para dentro da zona; paredes e lajes compartilhadas têm uma única espessura centrada na interface.
           </p>
         </div>
       )}

@@ -1,5 +1,7 @@
 export interface GlazingTemplate {
   id: string;
+  thickness?: number;
+  frame?: 'PVC';
   label: string;
   description: string;
   panes: 1 | 2;

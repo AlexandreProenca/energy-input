@@ -1,6 +1,7 @@
+import { newellNormal, length as vectorLength } from './vec';
 import type { EpJsonDocument, EpObject } from '../epjson/types';
-import { setObject, uniqueName } from '../epjson/document';
-import { planeFrame, rectVertices, type PlaneFrame, type Rect2 } from './frames';
+import { deleteObject, setObject, uniqueName } from '../epjson/document';
+import { localBounds, planeFrame, rectVertices, type PlaneFrame, type Rect2 } from './frames';
 import { readGeometryModel, readVertexArray, SUBSURFACE_TYPE, type GeometryModel, type GeometryRules, type SubsurfaceCategory, type SurfaceGeom } from './model';
 import { r4, type Vec3 } from './vec';
 
@@ -24,12 +25,37 @@ export function flatVertices(points: Vec3[]): EpObject {
   return out;
 }
 
+/** A frame belongs to the selected glazing, never to an opaque door. */
+function openingConstruction(doc: EpJsonDocument, obj: EpObject, construction: string): EpObject {
+  const next: EpObject = { ...obj, construction_name: construction };
+  delete next.frame_and_divider_name;
+  const frame = `${construction} - Esquadria PVC`;
+  if (String(obj.surface_type).toUpperCase() !== 'DOOR' && doc['WindowProperty:FrameAndDivider']?.[frame]) next.frame_and_divider_name = frame;
+  return next;
+}
+
 // ---------------------------------------------------------------- surfaces
 
 export function setSurfaceConstruction(doc: EpJsonDocument, model: GeometryModel, name: string, construction: string): EpJsonDocument {
   const s = model.surfaces.get(name);
-  if (s) return setObject(doc, s.type, name, { ...doc[s.type][name], construction_name: construction });
-  if (model.subsurfaces.has(name)) return setObject(doc, SUBSURFACE_TYPE, name, { ...doc[SUBSURFACE_TYPE][name], construction_name: construction });
+  if (s) {
+    let next = setObject(doc, s.type, name, { ...doc[s.type][name], construction_name: construction });
+    const other = s.sharedWith ? model.surfaces.get(s.sharedWith) : undefined;
+    if (other) {
+      const reversed = [...constructionLayers(next, construction)].reverse();
+      if (reversed.length) {
+        // Reuse an equivalent reversed assembly, otherwise create an independent opposite face.
+        let reverseName = Object.keys(next.Construction ?? {}).find(c => JSON.stringify(constructionLayers(next, c)) === JSON.stringify(reversed));
+        if (!reverseName) {
+          reverseName = uniqueName(next, 'Construction', `${construction} (face oposta)`);
+          next = setObject(next, 'Construction', reverseName, layersObject(undefined, reversed));
+        }
+        next = setObject(next, other.type, other.name, { ...next[other.type][other.name], construction_name: reverseName });
+      }
+    }
+    return next;
+  }
+  if (model.subsurfaces.has(name)) return syncOpening(setObject(doc, SUBSURFACE_TYPE, name, openingConstruction(doc, doc[SUBSURFACE_TYPE][name], construction)), name);
   return doc;
 }
 
@@ -54,6 +80,16 @@ export function checkOpening(model: GeometryModel, base: SurfaceGeom, rect: Rect
       problems.push(`Sobrepõe “${other}”.`);
     }
   }
+  const opposite = base.sharedWith ? model.surfaces.get(base.sharedWith) : undefined;
+  if (opposite && base.frame) {
+    const peer = self ? model.subsurfaces.get(self)?.sharedWith : undefined;
+    for (const n of opposite.subsurfaces) {
+      if (n === peer) continue;
+      const sub = model.subsurfaces.get(n)!;
+      const o = localBounds(base.frame, sub.points.map(p => model.fromWorld(model.toWorld(p, opposite.zone), base.zone)));
+      if (rect.x < o.x + o.width - TOL && o.x < rect.x + rect.width - TOL && rect.y < o.y + o.height - TOL && o.y < rect.y + rect.height - TOL) problems.push(`Sobrepõe “${n}” na zona vizinha.`);
+    }
+  }
   return problems;
 }
 
@@ -73,6 +109,43 @@ function openingPoints(rules: GeometryRules, frame: PlaneFrame, rect: Rect2) {
   return rectVertices(frame, rect, rules);
 }
 
+/** Mirrors an opening in the opposite zone's coordinates and links both thermal faces. */
+function syncOpening(doc: EpJsonDocument, name: string): EpJsonDocument {
+  const model = readGeometryModel(doc), sub = model.subsurfaces.get(name);
+  const base = sub && model.surfaces.get(sub.base);
+  const other = base?.sharedWith ? model.surfaces.get(base.sharedWith) : undefined;
+  if (!sub || !base || !other) return doc;
+  const peer = sub.sharedWith ?? uniqueName(doc, SUBSURFACE_TYPE, `${name} (face oposta)`);
+  let next = doc;
+  const reversed = constructionLayers(doc, sub.construction!).reverse();
+  let construction = sub.construction;
+  if (reversed.length) {
+    construction = Object.keys(doc.Construction ?? {}).find(c => JSON.stringify(constructionLayers(doc, c)) === JSON.stringify(reversed));
+    if (!construction) {
+      construction = uniqueName(doc, 'Construction', `${sub.construction} (face oposta)`);
+      next = setObject(next, 'Construction', construction, layersObject(undefined, reversed));
+    }
+  }
+  const points = sub.points.map(p => model.fromWorld(model.toWorld(p, base.zone), other.zone)).reverse();
+  next = setObject(next, SUBSURFACE_TYPE, name, { ...next[SUBSURFACE_TYPE][name], outside_boundary_condition_object: peer });
+  next = setObject(next, SUBSURFACE_TYPE, peer, { ...next[SUBSURFACE_TYPE][name],
+    building_surface_name: other.name, construction_name: construction,
+    outside_boundary_condition_object: name, ...flatVertices(points) });
+  // Geometric matching also supports imported walls lacking reciprocal boundary references.
+  for (const [face, opposite] of [[base, other], [other, base]]) {
+    next = setObject(next, face.type, face.name, { ...next[face.type][face.name],
+      outside_boundary_condition: 'Surface', outside_boundary_condition_object: opposite.name,
+      sun_exposure: 'NoSun', wind_exposure: 'NoWind' });
+  }
+  return next;
+}
+
+export function deleteOpening(doc: EpJsonDocument, name: string): EpJsonDocument {
+  const peer = readGeometryModel(doc).subsurfaces.get(name)?.sharedWith;
+  const next = deleteObject(doc, SUBSURFACE_TYPE, name);
+  return peer ? deleteObject(next, SUBSURFACE_TYPE, peer) : next;
+}
+
 export function addOpening(
   doc: EpJsonDocument,
   model: GeometryModel,
@@ -82,33 +155,39 @@ export function addOpening(
   const base = model.surfaces.get(baseName);
   if (!base?.frame || !base.rect) throw new Error('Só é possível adicionar aberturas em superfícies retangulares.');
   const rect = clampRect(base.rect, opts.rect);
+  if (!base.sharedWith && ['SURFACE', 'ZONE', 'ADIABATIC'].includes((base.boundary ?? '').toUpperCase())) throw new Error('A parede precisa de uma face correspondente na zona vizinha.');
+  const problems = checkOpening(model, base, rect);
+  if (problems.length) throw new Error(problems.join(' '));
   const name = opts.name ?? uniqueName(doc, SUBSURFACE_TYPE, `${baseName} - ${SUBSURFACE_LABEL[opts.category]} ${base.subsurfaces.length + 1}`);
   const data: EpObject = {
     surface_type: opts.category,
     construction_name: opts.construction,
+    ...(opts.category !== 'Door' && doc['WindowProperty:FrameAndDivider']?.[`${opts.construction} - Esquadria PVC`] ? { frame_and_divider_name: `${opts.construction} - Esquadria PVC` } : {}),
     building_surface_name: baseName,
     ...(opts.category === 'Door' ? {} : { view_factor_to_ground: 'Autocalculate' }),
     multiplier: 1,
     number_of_vertices: 4,
     ...flatVertices(openingPoints(model.rules, base.frame, rect)),
   };
-  return { doc: setObject(doc, SUBSURFACE_TYPE, name, data), name };
+  return { doc: syncOpening(setObject(doc, SUBSURFACE_TYPE, name, data), name), name };
 }
 
 export function moveOpening(doc: EpJsonDocument, model: GeometryModel, name: string, rect: Rect2): EpJsonDocument {
   const sub = model.subsurfaces.get(name);
   const base = sub && model.surfaces.get(sub.base);
   if (!sub || !base?.frame || !base.rect) return doc;
+  const problems = checkOpening(model, base, rect, name);
+  if (problems.length) throw new Error(problems.join(' '));
   const obj = { ...doc[SUBSURFACE_TYPE][name] };
   for (let i = 1; i <= 4; i++) for (const a of ['x', 'y', 'z']) delete obj[`vertex_${i}_${a}_coordinate`];
-  return setObject(doc, SUBSURFACE_TYPE, name, { ...obj, number_of_vertices: 4, ...flatVertices(openingPoints(model.rules, base.frame, rect)) });
+  return syncOpening(setObject(doc, SUBSURFACE_TYPE, name, { ...obj, number_of_vertices: 4, ...flatVertices(openingPoints(model.rules, base.frame, rect)) }), name);
 }
 
 /** Changing an opening between door and window types also swaps door-only fields. */
 export function setOpeningCategory(doc: EpJsonDocument, name: string, category: Exclude<SubsurfaceCategory, 'Other'>, construction: string): EpJsonDocument {
   const obj: EpObject = { ...doc[SUBSURFACE_TYPE][name], surface_type: category, construction_name: construction };
   if (category === 'Door') delete obj.view_factor_to_ground;
-  return setObject(doc, SUBSURFACE_TYPE, name, obj);
+  return syncOpening(setObject(doc, SUBSURFACE_TYPE, name, openingConstruction(doc, obj, construction)), name);
 }
 
 // ---------------------------------------------------------------- zone boxes
@@ -287,7 +366,20 @@ export type EditScope = { mode: 'all' } | { mode: 'only'; element: string };
 export function editConstruction(doc: EpJsonDocument, construction: string, layers: string[], scope: EditScope): { doc: EpJsonDocument; construction: string } {
   if (layers.length === 0) throw new Error('A construção precisa ter ao menos uma camada.');
   if (scope.mode === 'all') {
-    return { doc: setObject(doc, 'Construction', construction, layersObject(doc.Construction?.[construction], layers)), construction };
+    let next = setObject(doc, 'Construction', construction, layersObject(doc.Construction?.[construction], layers));
+    const model = readGeometryModel(next);
+    const handled = new Set<string>();
+    for (const s of model.surfaces.values()) {
+      if (s.construction !== construction || !s.sharedWith || handled.has(s.name)) continue;
+      next = setSurfaceConstruction(next, model, s.name, construction);
+      handled.add(s.name); handled.add(s.sharedWith);
+    }
+    for (const sub of model.subsurfaces.values()) {
+      if (sub.construction !== construction || !sub.sharedWith || handled.has(sub.name)) continue;
+      next = syncOpening(next, sub.name);
+      handled.add(sub.name); handled.add(sub.sharedWith);
+    }
+    return { doc: next, construction };
   }
   const copy = uniqueName(doc, 'Construction', `${construction} - ${scope.element}`);
   let next = setObject(doc, 'Construction', copy, layersObject(doc.Construction?.[construction], layers));
@@ -315,5 +407,5 @@ export function materialWithThickness(doc: EpJsonDocument, material: string, thi
 }
 
 export function surfaceArea(s: SurfaceGeom): number {
-  return s.rect ? r4(s.rect.width * s.rect.height) : 0;
+  return r4(vectorLength(newellNormal(s.points)) / 2);
 }

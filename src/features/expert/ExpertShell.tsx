@@ -54,9 +54,12 @@ export default function ExpertShell() {
 
   const back = () => useExpertStore.getState().navigate(name ? type : undefined, undefined);
 
-  const replaceDocument = (next: EpJsonDocument, nextName: string, label: string) => {
-    useDocumentStore.getState().commit(next, label);
-    useDocumentStore.getState().setFileName(nextName);
+  const replaceDocument = (next: EpJsonDocument, nextName: string, uploaded = true) => {
+    if (uploaded) useDocumentStore.getState().openUpload(next, nextName);
+    else {
+      useDocumentStore.getState().reset(next, nextName);
+      useDocumentStore.setState((s) => ({ origin: { kind: 'generated' }, revision: s.revision + 1 }));
+    }
     useWizardStore.getState().unlink();
     useUiStore.getState().selectObject(undefined, undefined);
     useExpertStore.getState().setDirty(false);
@@ -83,7 +86,7 @@ export default function ExpertShell() {
     }
     const diff = diffDocuments(doc, next);
     const errors = useSchemaStore.getState().validator!.validate(next).filter((i) => i.severity === 'error').length;
-    if (countObjects(doc) === 0) replaceDocument(next, file.name, `Abrir ${file.name}`);
+    if (countObjects(doc) === 0) replaceDocument(next, file.name, true);
     else setImporting({ doc: next, fileName: file.name, diff, errors });
   };
 
@@ -235,7 +238,7 @@ export default function ExpertShell() {
                     GlobalGeometryRules: { [placeholderName('GlobalGeometryRules')]: { starting_vertex_position: 'UpperLeftCorner', vertex_entry_direction: 'Counterclockwise', coordinate_system: 'Relative' } },
                   },
                   'modelo.epJSON',
-                  'Novo arquivo',
+                  false,
                 );
                 setNewOpen(false);
               }}
@@ -246,8 +249,7 @@ export default function ExpertShell() {
         }
       >
         <p className="text-sm text-slate-600">
-          O arquivo em branco começa só com os objetos obrigatórios (<code>Version</code>, <code>Building</code>, <code>GlobalGeometryRules</code>). O documento atual será substituído — use Desfazer se
-          precisar.
+          O arquivo em branco começa só com os objetos obrigatórios (<code>Version</code>, <code>Building</code>, <code>GlobalGeometryRules</code>). O documento atual será substituído. Baixe o arquivo antes, se quiser guardá-lo.
         </p>
       </Dialog>
 
@@ -264,7 +266,7 @@ export default function ExpertShell() {
             <Button
               variant="primary"
               onClick={() => {
-                if (importing) replaceDocument(importing.doc, importing.fileName, `Abrir ${importing.fileName}`);
+                if (importing) replaceDocument(importing.doc, importing.fileName, true);
                 toast(`${importing?.fileName} aberto.`);
                 setImporting(undefined);
               }}

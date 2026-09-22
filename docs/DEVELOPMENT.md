@@ -98,3 +98,160 @@ Para atualizar a versão do EnergyPlus na imagem, rode `npm run fetch-schema -- 
 - Santa Maria, Caxias do Sul and Pelotas DDY files lack ASHRAE conditions; their design days are estimated from the EPW.
 - `Site:GroundTemperature:BuildingSurface` uses a damped monthly mean clamped to 15–25 °C (no slab preprocessor).
 - Facade names (Norte/Sul/…) follow model axes; with a non-zero north axis they are rotated.
+
+## Planta 2D por ambientes
+
+Em **Assistente → Geometria → Planta 2D por ambientes**, o usuário pode criar
+contornos clicando no plano cartesiano ou digitando coordenadas X/Y em metros.
+A paleta oferece retângulo, quadrado, triângulo, formato L e hexágono, com
+largura e altura configuráveis. Arrastar para a planta posiciona a figura pelo
+canto inferior esquerdo; clicar na paleta insere no centro da vista (alternativa
+para teclado e dispositivos de toque). A figura entra como rascunho.
+
+Em **Selecionar / mover**, qualquer ambiente pode ser selecionado no desenho ou
+na lista, mesmo com outras edições pendentes. Arraste um vértice para mudar o
+contorno, uma linha para deslocar seus dois extremos ou o interior para mover o
+ambiente inteiro. Linhas coincidentes podem ser escolhidas pela lista
+**Selecionar linhas do ambiente** após selecionar a zona desejada. O movimento
+atinge o ambiente selecionado; os vizinhos não são deslocados automaticamente. O passo da grade controla o ajuste. Selecione um
+ponto ou linha e use as setas (Shift = 10 passos) ou Delete. Tab + Enter também seleciona
+os pontos. **Adicionar pontos** retoma o desenho livre. **Mover vista**, zoom e
+**Enquadrar planta** controlam a navegação.
+
+**Desfazer edição / Refazer edição** (Ctrl/Cmd+Z e Ctrl/Cmd+Shift+Z com o plano
+focado) operam no rascunho da planta inteira, inclusive após trocar de ambiente; um arraste é uma única operação. Esc cancela um
+arraste em curso. Os pontos podem ser corrigidos ou removidos antes de
+**Salvar planta**.
+O fechamento liga o último ponto ao primeiro. O salvamento conjunto valida todos os ambientes antes de atualizar o epJSON
+e a prévia. **Cancelar alterações** descarta todas as edições pendentes. **Abrir maquete 3D e editar materiais** abre o editor existente.
+
+- O polígono representa o limite geométrico da zona: área pelo contorno, perímetro
+  pela soma dos segmentos, volume pela área × altura. Espessuras de materiais
+  não descontam área nem deslocam os pontos.
+- Cada ambiente gera uma zona térmica por pavimento. Nesta versão, todos os
+  pavimentos repetem a mesma planta e altura. Cobertura plana, sem furos internos.
+- Contornos simples podem ser côncavos ou inclinados. Coordenadas: −500 a 500 m;
+  3–100 vértices; segmentos ≥ 1 cm; área ≥ 0,01 m². O gerador rejeita cruzamentos,
+  contatos consigo mesmo, sobreposições entre ambientes e nomes duplicados.
+- Paredes compartilhadas são divididas nos encontros em T e pareadas entre
+  zonas, com construções em ordem inversa. Portas e janelas não são geradas por padrão; são adicionadas pelo usuário no
+  editor 3D. A geração por percentual exige ativação explícita na etapa Janelas
+  e só atua em paredes externas. Fachadas inclinadas usam a direção cardinal mais próxima.
+- Pisos e coberturas mantêm um polígono por ambiente, sem diagonais de subdivisão
+  visíveis. A triangulação para desenho respeita concavidades, e as áreas no
+  editor 3D são calculadas pelos polígonos reais. A renderização diferencia a
+  profundidade de faces coplanares na junção entre paredes e cobertura.
+- Para projetos vinculados à planta, dimensões são editadas no 2D; materiais
+  continuam no 3D. A proteção de conflitos já existente continua em vigor.
+- Projetos antigos sem `geometry.mode` continuam no modo de bloco retangular.
+  Ambientes salvos são incluídos no autosave existente. O contorno em edição é
+  um rascunho local: salve antes de mudar de etapa ou de modo.
+
+Implementação: `src/generators/geometry/floorPlan.ts` (validação e extrusão),
+`src/features/wizard/steps/FloorPlanEditor.tsx` (editor), `compose.ts` (integração).
+
+Validação: `npm test`, `npm run typecheck` e build Vite. O caso
+`planta-ambientes` de `scripts/eplus-check.ts` exercita uma sala em L, dois
+ambientes adjacentes e dois pavimentos no EnergyPlus real. Execute com
+`CASE=planta-ambientes EPLUS_DIR=… EPW=… npm run eplus-check`.
+Na validação local com EnergyPlus 26.1: zero Severe/Fatal; um aviso porque a
+localização do EPW de teste substitui a cidade configurada no projeto.
+
+
+### Paredes e lajes compartilhadas
+
+`sharedSurfaces.ts` compara contornos em coordenadas globais, aplicando as origens
+(inclusive cota Z) e rotações das zonas. Reconhece vértices em ordem inversa e
+inícios diferentes, removendo pontos colineares redundantes, com tolerância de
+0,1 mm. Exige zonas distintas, contornos coincidentes e normais opostas; não
+combina faces apenas próximas, da mesma zona ou com correspondência ambígua.
+Encontros parciais de paredes da planta são divididos antes pelo gerador.
+
+O epJSON mantém duas faces térmicas reciprocamente ligadas por `Surface`, pois
+cada zona precisa de seu fechamento. O editor 3D e a prévia exibem um único
+elemento físico. Na visualização com espessura, o elemento compartilhado é
+centrado na interface e tem uma única espessura total. Pode ser selecionado pelos
+dois lados na árvore, identificados como compartilhados. O filtro de pavimentos
+considera todas as zonas na mesma cota e não elimina a laje intermediária.
+
+A troca de construção ou edição de camadas em um lado sincroniza o outro, em
+ordem inversa, tanto na edição individual como na edição de todos os usuários de
+uma construção. A detecção visual por vértices também funciona em documentos
+sem referência de adjacência; ela não reescreve automaticamente as condições
+térmicas de arquivos importados.
+
+Testes: contagem de elementos físicos, espessura única, paredes em T, lajes,
+rotações/translações, contornos colineares, falsos positivos e edição de materiais.
+O caso EnergyPlus `planta-ambientes` agora também modifica as camadas de uma
+parede e uma laje compartilhadas antes de simular.
+
+
+### Reset da edição
+
+O botão **Resetar edição** no cabeçalho pede confirmação e considera a origem
+do projeto. Uploads guardam uma cópia independente do documento e do nome
+originais; o reset restaura essa cópia e abre o modo Especialista. Projetos
+criados no aplicativo voltam às respostas padrão e ao primeiro passo do
+assistente. Rascunhos locais são descartados pela remontagem dos editores;
+histórico, seleções e conflitos pendentes também são limpos. Abrir outro
+arquivo ou iniciar um projeto estabelece uma nova sessão de edição.
+
+A origem e a cópia do upload acompanham o autosave em localStorage. Sessões
+antigas sem essa cópia usam o primeiro estado recuperado como referência,
+com aviso explícito na confirmação de reset. O upload original dessas sessões
+não pode ser reconstruído. Testes em `src/store/__tests__/resetProject.test.ts`
+cobrem reset repetido, isolamento da cópia, restauração do autosave, upload
+vazio, migração de sessão antiga e retorno ao assistente.
+
+
+### Portas e janelas entre zonas térmicas
+
+No Editor 3D, selecione um trecho retangular de parede compartilhada e use
+**Janela**, **Porta** ou **Porta de vidro**. A operação cria duas
+`FenestrationSurface:Detailed` com referências recíprocas, vértices coincidentes
+em coordenadas globais e orientação oposta. A face vizinha usa coordenadas
+locais da própria zona, incluindo origem e rotação, e camadas invertidas.
+
+Mover, redimensionar, trocar tipo/material ou excluir no Editor 3D atualiza
+as duas faces numa única edição. A malha 3D mostra apenas uma abertura,
+centralizada na espessura da parede; selecionar qualquer face destaca essa
+mesma malha. Sobreposições são verificadas nos dois lados. Em encontros com
+três ou mais zonas, cada trecho de parede já dividido pela planta conecta
+as duas zonas adjacentes; a abertura deve caber nesse trecho. Paredes sem
+face vizinha identificada continuam exigindo correção da geometria antes
+da inserção de aberturas internas.
+
+Os testes de superfícies compartilhadas cobrem três tipos de abertura,
+múltiplas zonas, transformações locais, edição pelo lado oposto e exclusão.
+O caso `planta-ambientes` do smoke test EnergyPlus inclui esses três tipos
+de abertura interna, além das edições de camadas nas paredes e lajes.
+
+
+### Presets Casa e Apartamento (etapa 5)
+
+A etapa **Materiais** oferece Casa (`padrao`, ID mantido para compatibilidade)
+e Apartamento (`apartamento`), preservando cartões, cortes de camadas, cores
+e pré-visualização. Os presets antigos continuam disponíveis na biblioteca
+do Editor 3D e em projetos salvos. O revestimento cerâmico ou vinílico é
+aplicado a todos os pisos e às faces inversas das lajes entre pavimentos.
+
+Apartamento usa bloco de concreto equivalente de 14 cm rebocado, laje de
+concreto de 12 cm, contrapiso, acabamento escolhido e gesso no teto. Ambos
+os presets disponibilizam a porta interna semi-oca da biblioteca. A janela
+do apartamento usa `WindowMaterial:Glazing` com espessura real de 0,004 m e
+`WindowProperty:FrameAndDivider` para o PVC; as propriedades óticas e térmicas
+são valores indicativos, não dados certificados de fabricante. Nenhuma
+abertura é inserida automaticamente pela seleção do preset.
+
+Ao selecionar Apartamento, os contatos externos do primeiro piso e último
+teto passam a `adjacent`: lajes adiabáticas representando unidades vizinhas
+fora do modelo. Essa aproximação é explicada na interface e não representa
+uma simulação explícita do vizinho. Pavimentos incluídos no modelo continuam
+com pares `Surface` e construções inversas. O usuário pode mudar o contato
+para solo, pilotis ou cobertura externa nas etapas 4 e 5. Casa repõe solo e
+cobertura externa; selecionar um preset não muda a opção de janelas automáticas.
+
+Validação: testes `residentialPresets.test.ts` cobrem planta e caixa, contato
+adiabático, pares internos, revestimentos, espessura do vidro, esquadria e
+troca de preset. O smoke test `CASE=apartamento` usa dois pavimentos, ambientes
+adjacentes, janela PVC e porta interna semi-oca entre zonas.

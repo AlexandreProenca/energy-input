@@ -14,6 +14,7 @@ const { validator, index } = loadTestSchema();
 
 function doc(floors = 1) {
   const a = defaultAnswers();
+  a.windows.automatic = true;
   a.geometry.floors = floors;
   return generateDocument(a, templates).document;
 }

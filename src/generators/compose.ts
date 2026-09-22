@@ -2,11 +2,13 @@ import type { EpJsonDocument, EpJsonFragment } from '@/core/epjson/types';
 import { mergeFragments } from '@/core/epjson/document';
 import type { TemplateLibrary } from '@/templates';
 import type { WizardAnswers, WizardStepId } from './answers';
+import { generateFloorPlan } from './geometry/floorPlan';
 import { generateProject } from './project';
 import { generateLocation, resolveLocation, type ResolvedLocation } from './location';
 import { generateRunPeriod } from './runPeriod';
 import { generateEnvelope } from './envelope';
 import { generateBoxGeometry, ZONE_LIST_NAME, type ZoneInfo } from './geometry/boxGeometry';
+import { importLibraryConstruction } from './library';
 import { generateWindows } from './windows';
 import { generateLoads } from './loads';
 import { generateHvac } from './hvac';
@@ -35,8 +37,14 @@ export interface GenerationResult {
  */
 export function generateDocument(answers: WizardAnswers, lib: TemplateLibrary, schemaVersion = '26.1'): GenerationResult {
   const location = resolveLocation(answers.location, lib);
-  const envelope = generateEnvelope(answers.envelope, lib, answers.geometry.floors);
-  const geometry = generateBoxGeometry({ ...answers.geometry, constructions: envelope.names });
+  const envelope = generateEnvelope(answers.envelope, lib, answers.geometry.floors, answers.geometry);
+  // Make preset opening materials available without creating any openings.
+  const door = importLibraryConstruction(envelope.fragment, lib, 'door:semi_oca');
+  const glazing = importLibraryConstruction(door.doc, lib, `glazing:${answers.windows.glazingId}`);
+  envelope.fragment = glazing.doc;
+  const geometry = answers.geometry.mode === 'plan'
+    ? generateFloorPlan({ ...answers.geometry, rooms: answers.geometry.rooms ?? [], constructions: envelope.names, interiorWall: envelope.names.interiorWall, interiorWallReverse: envelope.names.interiorWallReverse })
+    : generateBoxGeometry({ ...answers.geometry, constructions: envelope.names });
   const windows = generateWindows(geometry.zones, answers.windows, lib);
   const loads = generateLoads(answers.loads, ZONE_LIST_NAME, lib);
 

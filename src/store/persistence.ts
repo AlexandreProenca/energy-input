@@ -1,7 +1,7 @@
 import type { EpJsonDocument } from '@/core/epjson/types';
 import type { WizardAnswers, WizardStepId } from '@/generators/answers';
 import type { OwnershipMap } from '@/core/sync/wizardSync';
-import { useDocumentStore } from './documentStore';
+import { useDocumentStore, type ProjectOrigin } from './documentStore';
 import { useUiStore, type AppMode } from './uiStore';
 import { useWizardStore } from './wizardStore';
 
@@ -9,6 +9,7 @@ const KEY = 'energy-input:autosave:v1';
 
 interface Snapshot {
   savedAt: string;
+  origin?: ProjectOrigin;
   doc: EpJsonDocument;
   fileName: string;
   answers: WizardAnswers;
@@ -41,8 +42,11 @@ export function clearSnapshot() {
 /** Restores the last session. Returns the save date when something was restored. */
 export function restoreSnapshot(): string | undefined {
   const s = readSnapshot();
-  if (!s || Object.keys(s.doc).length === 0) return undefined;
+  if (!s) return undefined;
   useDocumentStore.getState().reset(s.doc, s.fileName);
+  useDocumentStore.setState({ origin: s.origin ?? (s.linked === false
+    ? { kind: 'upload', doc: structuredClone(s.doc), fileName: s.fileName, recovered: true }
+    : { kind: 'generated' }) });
   useWizardStore.getState().hydrate({ answers: s.answers, owned: s.owned ?? {}, linked: s.linked ?? true });
   useUiStore.setState({ mode: s.mode ?? 'basic', wizardStep: s.wizardStep ?? 'project', visitedSteps: s.visitedSteps ?? ['project'] });
   return s.savedAt;
@@ -60,6 +64,7 @@ export function startAutosave(): () => void {
       const snap: Snapshot = {
         savedAt: new Date().toISOString(),
         doc: d.doc,
+        origin: d.origin,
         fileName: d.fileName,
         answers: w.answers,
         owned: w.owned,

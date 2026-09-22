@@ -1,9 +1,12 @@
+import { cross, dot } from '@/core/geometry/vec';
+import { useWizardStore } from '@/store/wizardStore';
 import { useMemo, useState, type ReactNode } from 'react';
 import { AlignHorizontalJustifyCenter, AppWindow, ArrowDownToLine, Box, DoorOpen, Layers2, MousePointerClick, Pencil, Plus, Square, Trash2, TriangleAlert } from 'lucide-react';
 import type { EpJsonDocument } from '@/core/epjson/types';
 import type { Rect2 } from '@/core/geometry/frames';
 import {
   addOpening,
+  deleteOpening,
   boxDims,
   checkOpening,
   clampRect,
@@ -19,12 +22,12 @@ import {
 } from '@/core/geometry/edits';
 import { readGeometryModel, SUBSURFACE_TYPE, type GeometryModel, type SubsurfaceCategory, type SurfaceGeom } from '@/core/geometry/model';
 import { importLibraryConstruction } from '@/generators/library';
-import { templates } from '@/templates';
+import { byId, templates } from '@/templates';
 import { useDocumentStore } from '@/store/documentStore';
 import { useUiStore } from '@/store/uiStore';
-import { Badge, Button, Callout, Field, Segmented, StatTile, fmt } from '@/ui/primitives';
+import { Badge, Button, Callout, Dialog, Field, Segmented, StatTile, fmt } from '@/ui/primitives';
 import { NumberInput } from '@/ui/NumberInput';
-import { DeleteDialog, RenameDialog } from '@/features/expert/ObjectDialogs';
+import { RenameDialog } from '@/features/expert/ObjectDialogs';
 import { ConstructionSection } from './ConstructionSection';
 import { WallElevation } from './WallElevation';
 import { useGeometryUi } from './geometryStore';
@@ -92,9 +95,11 @@ function useCommit() {
 function BoxDimsEditor({ model, zone, fields }: { model: GeometryModel; zone: string; fields: { key: keyof BoxDims; label: string }[] }) {
   const doc = useDocumentStore((s) => s.doc);
   const run = useCommit();
+  const fromPlan = useWizardStore(s => s.linked && s.answers.geometry.mode === 'plan');
   const [allFloors, setAllFloors] = useState(true);
   const box = zoneBox(model, zone);
   const siblings = useMemo(() => sameFootprintZones(model, zone), [model, zone]);
+  if (fromPlan) return <Callout>Edite o contorno e a altura na planta 2D do assistente para manter os ambientes alinhados.<Button className="mt-2" onClick={() => { useUiStore.getState().goToStep('geometry'); useUiStore.getState().setMode('basic'); }}>Editar planta 2D</Button></Callout>;
   if (!box) {
     return <Callout tone="info">Este pavimento não é uma caixa retangular, então as dimensões só podem ser editadas pelos vértices no modo especialista.</Callout>;
   }
@@ -128,8 +133,12 @@ export function ZonePanel({ model, zone }: { model: GeometryModel; zone: string 
   const [renaming, setRenaming] = useState(false);
   const z = model.zones.get(zone);
   if (!z) return null;
-  const box = zoneBox(model, zone);
-  const dims = box && boxDims(box);
+  const surfaces = z.surfaces.map(name => model.surfaces.get(name)!);
+  const area = surfaces.filter(s => s.category === 'Floor').reduce((sum, s) => sum + surfaceArea(s), 0);
+  const volume = Math.abs(surfaces.reduce((sum, s) => {
+    for (let i = 1; i < s.points.length - 1; i++) sum += dot(s.points[0], cross(s.points[i], s.points[i + 1])) / 6;
+    return sum;
+  }, 0));
   const counts = { Wall: 0, Floor: 0, Roof: 0, Ceiling: 0, openings: 0 };
   for (const s of z.surfaces) {
     const sg = model.surfaces.get(s)!;
@@ -139,10 +148,10 @@ export function ZonePanel({ model, zone }: { model: GeometryModel; zone: string 
   return (
     <div className="space-y-4">
       <PanelHeader icon={<Box size={20} />} kicker="Zona térmica" title={zone} onRename={() => setRenaming(true)} />
-      {dims && (
+      {surfaces.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
-          <StatTile label="Área de piso" value={fmt(dims.width * dims.depth)} unit="m²" />
-          <StatTile label="Volume" value={fmt(dims.width * dims.depth * dims.height)} unit="m³" />
+          <StatTile label="Área de piso" value={fmt(area)} unit="m²" />
+          <StatTile label="Volume" value={fmt(volume)} unit="m³" />
         </div>
       )}
       <BoxDimsEditor
@@ -191,6 +200,8 @@ function defaultConstruction(doc: EpJsonDocument, category: Exclude<SubsurfaceCa
     if (existing) return { doc, name: existing };
     return importLibraryConstruction(doc, templates, 'glazing:simples');
   }
+  const hollow = `Porta - ${byId(templates.doors, 'semi_oca').label}`;
+  if (doc.Construction?.[hollow]) return { doc, name: hollow };
   return importLibraryConstruction(doc, templates, 'door:madeira');
 }
 
@@ -250,7 +261,7 @@ export function SurfacePanel({ model, name }: { model: GeometryModel; name: stri
   const [renaming, setRenaming] = useState(false);
   const s = model.surfaces.get(name);
   if (!s) return null;
-  const interzone = ['SURFACE', 'ZONE'].includes((s.boundary ?? '').toUpperCase());
+  const interzone = !!s.sharedWith || ['SURFACE', 'ZONE'].includes((s.boundary ?? '').toUpperCase());
   const n = s.frame?.n;
   const alongX = n ? Math.abs(n[1]) > 0.99 : false;
   const alongY = n ? Math.abs(n[0]) > 0.99 : false;
@@ -283,6 +294,10 @@ export function SurfacePanel({ model, name }: { model: GeometryModel; name: stri
         )}
       </div>
 
+      {s.sharedWith && <Callout title={s.category === 'Wall' ? 'Parede compartilhada' : 'Laje compartilhada'}>
+        Um único elemento físico entre {s.zone} e {model.surfaces.get(s.sharedWith)?.zone}. As duas faces térmicas têm os mesmos vértices em coordenadas globais.
+        <Button className="mt-2" size="sm" onClick={() => select({ kind: 'surface', name: s.sharedWith! })}>Ver lado da outra zona</Button>
+      </Callout>}
       {s.zone && (
         <section>
           <h3 className="mb-2 text-sm font-semibold text-slate-800">Dimensões</h3>
@@ -308,11 +323,12 @@ export function SurfacePanel({ model, name }: { model: GeometryModel; name: stri
                 onSelect={(sub) => select({ kind: 'opening', name: sub })}
                 onCommit={(sub, rect) => run(() => moveOpening(doc, model, sub, rect), 'Mover abertura')}
               />
-              {interzone ? (
-                <p className="text-xs text-slate-500">Parede interna: aberturas aqui não são recomendadas (precisariam de par na zona vizinha).</p>
+              {interzone && !s.sharedWith ? (
+                <p className="text-xs text-slate-500">A face correspondente na zona vizinha não foi identificada. Confira os pontos das duas zonas.</p>
               ) : (
                 <AddOpeningButtons wall={s} />
               )}
+              {s.sharedWith && <p className="text-xs text-slate-500">A abertura será criada nos dois lados e suas edições serão sincronizadas.</p>}
               <p className="text-[11px] text-slate-500">Clique numa abertura para editar; arraste para mover ou pelos cantos para redimensionar.</p>
             </>
           ) : (
@@ -370,6 +386,10 @@ export function OpeningPanel({ model, name }: { model: GeometryModel; name: stri
         }
       />
 
+      {sub.sharedWith && <Callout title="Abertura compartilhada">
+        Posição, tamanho, tipo e materiais são sincronizados com a zona vizinha.
+        <Button className="mt-2" size="sm" onClick={() => select({ kind: 'opening', name: sub.sharedWith! })}>Ver lado da outra zona</Button>
+      </Callout>}
       <Segmented
         ariaLabel="Tipo de abertura"
         value={sub.category === 'Other' ? 'Window' : sub.category}
@@ -428,11 +448,18 @@ export function OpeningPanel({ model, name }: { model: GeometryModel; name: stri
 
       <section>
         <h3 className="mb-2 text-sm font-semibold text-slate-800">{sub.category === 'Door' ? 'Material da porta' : 'Vidro'}</h3>
-        <ConstructionSection element={name} construction={sub.construction} use={sub.category === 'Door' ? 'door' : 'window'} category="Opening" />
+        <ConstructionSection element={name} construction={sub.construction} use={sub.category === 'Door' ? 'door' : 'window'} category="Opening" interzone={!!sub.sharedWith} />
       </section>
 
       {renaming && <RenameDialog type={SUBSURFACE_TYPE} name={name} onClose={() => setRenaming(false)} onRenamed={(nn) => select({ kind: 'opening', name: nn })} />}
-      {deleting && <DeleteDialog type={SUBSURFACE_TYPE} name={name} onClose={() => setDeleting(false)} onDeleted={() => select(wall ? { kind: 'surface', name: wall.name } : undefined)} />}
+      {deleting && <Dialog open title={`Excluir “${name}”?`} onClose={() => setDeleting(false)} footer={<>
+        <Button onClick={() => setDeleting(false)}>Cancelar</Button>
+        <Button variant="danger" onClick={() => {
+          if (run(() => deleteOpening(doc, name), 'Excluir abertura')) {
+            setDeleting(false); select(wall ? { kind: 'surface', name: wall.name } : undefined);
+          }
+        }}>Excluir</Button>
+      </>}><p className="text-sm text-slate-600">{sub.sharedWith ? 'A abertura será excluída dos dois lados da parede.' : 'A abertura será excluída.'} Você pode desfazer esta ação.</p></Dialog>}
     </div>
   );
 }

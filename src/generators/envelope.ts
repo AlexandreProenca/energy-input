@@ -5,6 +5,8 @@ import type { WizardAnswers } from './answers';
 
 export interface ConstructionNames {
   wall: string;
+  interiorWall: string;
+  interiorWallReverse: string;
   roof: string;
   groundFloor: string;
   interFloor: string;
@@ -71,6 +73,7 @@ export function generateEnvelope(
   env: WizardAnswers['envelope'],
   lib: TemplateLibrary,
   floors = 1,
+  geometry?: WizardAnswers['geometry'],
 ): { fragment: EpJsonFragment; names: ConstructionNames; preset: ConstructionPreset } {
   const preset = byId(lib.constructionPresets, env.presetId);
   const wallAlpha = byId(lib.surfaceColors, env.wallColorId).absorptance;
@@ -92,17 +95,22 @@ export function generateEnvelope(
     fragment.Construction[constructionName] = data;
   };
 
-  const a = preset.assemblies;
+  const a = resolveAssemblies(preset, env.floorFinish);
+
   const names: ConstructionNames = {
+    interiorWall: `Parede interna - ${preset.label}`,
+    interiorWallReverse: `Parede interna (inversa) - ${preset.label}`,
     wall: `Parede externa - ${preset.label}`,
     roof: `Cobertura - ${preset.label}`,
     groundFloor: `Piso térreo - ${preset.label}`,
     interFloor: `Laje entre pavimentos (piso) - ${preset.label}`,
     interCeiling: `Laje entre pavimentos (forro) - ${preset.label}`,
   };
+  build(names.interiorWall, a.wall.layers);
+  build(names.interiorWallReverse, [...a.wall.layers].reverse());
   build(names.wall, a.wall.layers, wallAlpha);
-  build(names.roof, a.roof.layers, roofAlpha);
-  build(names.groundFloor, a.groundFloor.layers);
+  build(names.roof, geometry?.topFloor === 'adjacent' ? [...a.interFloor.layers].reverse() : a.roof.layers, geometry?.topFloor === 'adjacent' ? undefined : roofAlpha);
+  build(names.groundFloor, geometry?.groundFloor === 'adjacent' ? a.interFloor.layers : a.groundFloor.layers);
   if (floors > 1) {
     // Interzone pairs must mirror each other's layer order.
     build(names.interFloor, a.interFloor.layers);
@@ -111,4 +119,13 @@ export function generateEnvelope(
 
   if (Object.keys(fragment['Material:AirGap']).length === 0) delete fragment['Material:AirGap'];
   return { fragment, names, preset };
+}
+
+/** Apply the selected finish consistently to every slab. */
+export function resolveAssemblies(preset: ConstructionPreset, finish?: WizardAnswers['envelope']['floorFinish']): ConstructionPreset['assemblies'] {
+  const replace = (a: ConstructionPreset['assemblies']['groundFloor']) => ({ ...a,
+    label: a.label.replace(/cerâmica|revestimento/g, finish === 'vinyl' ? 'revestimento vinílico' : 'revestimento cerâmico'),
+    layers: a.layers.map(l => ['piso_ceramico', 'piso_vinilico'].includes(l.material)
+      ? { material: finish === 'vinyl' ? 'piso_vinilico' : 'piso_ceramico' } : l) });
+  return { ...preset.assemblies, groundFloor: replace(preset.assemblies.groundFloor), interFloor: replace(preset.assemblies.interFloor) };
 }

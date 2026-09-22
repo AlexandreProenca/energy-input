@@ -4,3 +4,5 @@ services:
     ports:
       - "8080:80"
     restart: unless-stopped
+
+# docker run -d --name energy-input -p 8080:80 ghcr.io/alexandreproenca/energy-input:0.1.0

@@ -1,3 +1,5 @@
+import { findSharedSurfaces } from '@/core/geometry/sharedSurfaces';
+import { polygonGeometry } from './polygonGeometry';
 import { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -19,30 +21,6 @@ const COLORS: Record<SurfaceKind, string> = {
 /** EnergyPlus (X east, Y north, Z up) → three.js (x, y up, -z north). */
 const toThree = ([x, y, z]: [number, number, number]) => new THREE.Vector3(x, z, -y);
 
-function polygonGeometry(p: PreviewPolygon, offset = 0) {
-  const pts = p.points.map(toThree);
-  const normal = new THREE.Vector3();
-  for (let i = 0; i < pts.length; i++) {
-    const a = pts[i];
-    const b = pts[(i + 1) % pts.length];
-    normal.x += (a.y - b.y) * (a.z + b.z);
-    normal.y += (a.z - b.z) * (a.x + b.x);
-    normal.z += (a.x - b.x) * (a.y + b.y);
-  }
-  normal.normalize();
-  // three.js axis swap mirrors handedness, so flip to keep "outward".
-  normal.multiplyScalar(-1);
-  const shifted = pts.map((v) => v.clone().addScaledVector(normal, offset));
-  const positions: number[] = [];
-  for (let i = 1; i < shifted.length - 1; i++) {
-    for (const v of [shifted[0], shifted[i], shifted[i + 1]]) positions.push(v.x, v.y, v.z);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  g.computeVertexNormals();
-  const outline = new THREE.BufferGeometry().setFromPoints([...shifted, shifted[0]]);
-  return { g, outline };
-}
 
 interface Framing {
   center: THREE.Vector3;
@@ -114,7 +92,19 @@ function isFrontFacing(p: PreviewPolygon) {
 }
 
 export default function Building3D({ doc, height = 280, cutaway = false }: { doc: EpJsonDocument; height?: number; cutaway?: boolean }) {
-  const { polygons } = useMemo(() => extractPolygons(doc), [doc]);
+  const { polygons } = useMemo(() => {
+    const extracted = extractPolygons(doc);
+    const pairs = findSharedSurfaces(extracted.polygons.filter(p => ['Wall', 'Floor', 'Roof', 'Ceiling'].includes(p.kind)).map(p => ({ ...p, category: p.kind })));
+    const seen = new Set<string>();
+    // Prefer floor over ceiling so a shared slab remains visible in the preview.
+    const polygons = [...extracted.polygons].sort((a, b) => Number(a.kind === 'Ceiling') - Number(b.kind === 'Ceiling')).filter(p => {
+      if (seen.has(p.name)) return false;
+      seen.add(p.name);
+      const other = pairs.get(p.name); if (other) seen.add(other);
+      return true;
+    });
+    return { ...extracted, polygons };
+  }, [doc]);
   const framing = useMemo(() => frame(polygons), [polygons]);
   // Remount (and re-frame the camera) only when the building's overall size changes.
   const key = [framing.center.x, framing.center.y, framing.center.z, framing.radius].map((n) => Math.round(n)).join(',');

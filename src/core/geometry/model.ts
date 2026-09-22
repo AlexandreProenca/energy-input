@@ -1,3 +1,4 @@
+import { findSharedSurfaces } from './sharedSurfaces';
 import type { EpJsonDocument, EpObject } from '../epjson/types';
 import { isFrameRectangle, localBounds, planeFrame, type PlaneFrame, type Rect2, type StartCorner, type VertexRules } from './frames';
 import type { Vec3 } from './vec';
@@ -33,6 +34,8 @@ export interface SurfaceGeom {
   construction?: string;
   boundary?: string;
   boundaryObject?: string;
+  /** Opposite thermal face of the same physical partition, matched by world vertices. */
+  sharedWith?: string;
   points: Vec3[];
   frame?: PlaneFrame;
   /** Present when the surface is a rectangle in its frame. */
@@ -41,6 +44,7 @@ export interface SurfaceGeom {
 }
 
 export interface SubsurfaceGeom {
+  sharedWith?: string;
   name: string;
   category: SubsurfaceCategory;
   surfaceType: string;
@@ -58,6 +62,7 @@ export interface GeometryModel {
   surfaces: Map<string, SurfaceGeom>;
   subsurfaces: Map<string, SubsurfaceGeom>;
   toWorld: (p: Vec3, zone?: string) => Vec3;
+  fromWorld: (p: Vec3, zone?: string) => Vec3;
 }
 
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
@@ -171,5 +176,22 @@ export function readGeometryModel(doc: EpJsonDocument): GeometryModel {
     return rotateZ(q, northAxis);
   };
 
-  return { rules, northAxis, zones, surfaces, subsurfaces, toWorld };
+  const fromWorld = (p: Vec3, zone?: string): Vec3 => {
+    let q = rotateZ(p, -northAxis);
+    const z = zone ? zones.get(zone) : undefined;
+    if (rules.relative && z) {
+      q = [q[0] - z.origin[0], q[1] - z.origin[1], q[2] - z.origin[2]];
+      q = rotateZ(q, -z.relativeNorth);
+    }
+    return q;
+  };
+  const pairs = findSharedSurfaces([...surfaces.values()].map(s => ({ name: s.name, zone: s.zone, category: s.category, points: s.points.map(p => toWorld(p, s.zone)) })));
+  for (const [name, other] of pairs) surfaces.get(name)!.sharedWith = other;
+  for (const sub of subsurfaces.values()) {
+    const ref = doc[SUBSURFACE_TYPE][sub.name].outside_boundary_condition_object;
+    const other = typeof ref === 'string' ? [...subsurfaces.values()].find(s => s.name.toUpperCase() === ref.toUpperCase()) : undefined;
+    if (other && surfaces.get(sub.base)?.sharedWith === other.base &&
+        String(doc[SUBSURFACE_TYPE][other.name].outside_boundary_condition_object).toUpperCase() === sub.name.toUpperCase()) sub.sharedWith = other.name;
+  }
+  return { rules, northAxis, zones, surfaces, subsurfaces, toWorld, fromWorld };
 }

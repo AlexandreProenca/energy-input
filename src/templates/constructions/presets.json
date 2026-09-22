@@ -31,5 +31,76 @@
       "groundFloor": { "label": "Laje + EPS 3 cm + contrapiso + cerâmica", "layers": [{ "material": "concreto" }, { "material": "eps", "thickness": 0.03 }, { "material": "contrapiso" }, { "material": "piso_ceramico" }] },
       "interFloor": { "label": "Laje de concreto 10 cm", "layers": [{ "material": "reboco", "thickness": 0.015 }, { "material": "concreto" }, { "material": "contrapiso" }, { "material": "piso_ceramico" }] }
     }
+  },
+  {
+    "id": "apartamento",
+    "label": "Apartamento",
+    "description": "Blocos de concreto rebocados, lajes entre apartamentos, portas internas semi-ocas e janelas de PVC com vidro de 4 mm.",
+    "assemblies": {
+      "wall": {
+        "label": "Bloco de concreto 14 cm rebocado",
+        "layers": [
+          {
+            "material": "reboco"
+          },
+          {
+            "material": "bloco_concreto"
+          },
+          {
+            "material": "reboco"
+          }
+        ]
+      },
+      "roof": {
+        "label": "Telha cerâmica + laje de concreto 10 cm",
+        "layers": [
+          {
+            "material": "telha_ceramica"
+          },
+          {
+            "material": "camara_ar_cobertura"
+          },
+          {
+            "material": "concreto"
+          }
+        ]
+      },
+      "groundFloor": {
+        "label": "Laje de concreto 12 cm + contrapiso + revestimento",
+        "layers": [
+          {
+            "material": "gesso"
+          },
+          {
+            "material": "concreto",
+            "thickness": 0.12
+          },
+          {
+            "material": "contrapiso"
+          },
+          {
+            "material": "piso_ceramico"
+          }
+        ]
+      },
+      "interFloor": {
+        "label": "Laje de concreto 12 cm com acabamento de gesso",
+        "layers": [
+          {
+            "material": "gesso"
+          },
+          {
+            "material": "concreto",
+            "thickness": 0.12
+          },
+          {
+            "material": "contrapiso"
+          },
+          {
+            "material": "piso_ceramico"
+          }
+        ]
+      }
+    }
   }
 ]

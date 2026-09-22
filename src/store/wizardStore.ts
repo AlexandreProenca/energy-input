@@ -39,6 +39,11 @@ export const useWizardStore = create<WizardState>((set, get) => ({
   update(step, patch) {
     const prev = get().answers;
     const answers: WizardAnswers = { ...prev, [step]: { ...prev[step], ...patch } };
+    if (step === 'envelope' && 'presetId' in patch && patch.presetId !== prev.envelope.presetId) {
+      const apartment = patch.presetId === 'apartamento';
+      answers.geometry = { ...answers.geometry, groundFloor: apartment ? 'adjacent' : 'slab', topFloor: apartment ? 'adjacent' : 'roof' };
+      answers.windows = { ...answers.windows, glazingId: apartment ? 'pvc_4mm' : 'simples' };
+    }
     // Choosing a building use resets the thermostat to that use's defaults.
     if (step === 'loads' && 'useId' in patch && patch.useId !== prev.loads.useId) {
       const use = byId(templates.buildingUses, answers.loads.useId);
@@ -87,15 +92,16 @@ export const useWizardStore = create<WizardState>((set, get) => ({
   startFresh(answers) {
     const a = answers ?? get().answers;
     const plan = planWizardSync({}, generate(a), {}, 'overwrite');
-    set({ answers: a, owned: plan.owned, linked: true, pending: undefined });
-    useDocumentStore.getState().commit(plan.next, 'Novo projeto pelo assistente');
+    set({ answers: a, owned: plan.owned, linked: true, pending: undefined, policy: undefined });
+    useDocumentStore.getState().reset(plan.next, 'modelo.epJSON');
+    useDocumentStore.setState((s) => ({ origin: { kind: 'generated' }, revision: s.revision + 1 }));
   },
 
   unlink() {
-    set({ linked: false, owned: {}, pending: undefined });
+    set({ linked: false, owned: {}, pending: undefined, policy: undefined });
   },
 
   hydrate(s) {
-    set({ answers: { ...defaultAnswers(), ...s.answers }, owned: s.owned, linked: s.linked });
+    set({ answers: { ...defaultAnswers(), ...s.answers }, owned: s.owned, linked: s.linked, pending: undefined, policy: undefined });
   },
 }));

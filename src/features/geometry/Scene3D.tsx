@@ -34,6 +34,9 @@ interface Built {
   kind: 'surface' | 'opening';
   category: keyof typeof COLORS;
   zone?: string;
+  /** Both thermal faces belonging to this single physical mesh. */
+  faces?: SurfaceGeom[];
+  aliases?: string[];
   geometry: THREE.BufferGeometry;
   edges: THREE.BufferGeometry;
   center: THREE.Vector3;
@@ -52,7 +55,7 @@ function worldBasis(model: GeometryModel, s: SurfaceGeom) {
   return m;
 }
 
-function buildMeshes(doc: EpJsonDocument, model: GeometryModel, showThickness: boolean): Built[] {
+export function buildMeshes(doc: EpJsonDocument, model: GeometryModel, showThickness: boolean): Built[] {
   const thicknessCache = new Map<string, number>();
   const thicknessOf = (construction: string | undefined, category: SurfaceGeom['category']) => {
     if (!showThickness || !construction) return 0.02;
@@ -64,8 +67,13 @@ function buildMeshes(doc: EpJsonDocument, model: GeometryModel, showThickness: b
   };
 
   const out: Built[] = [];
+  const rendered = new Set<string>();
   for (const s of model.surfaces.values()) {
-    if (!s.frame || s.points.length < 3) continue;
+    if (!s.frame || s.points.length < 3 || rendered.has(s.name)) continue;
+    const opposite = s.sharedWith ? model.surfaces.get(s.sharedWith) : undefined;
+    if (opposite && s.subsurfaces.length < opposite.subsurfaces.length) continue;
+    const faces = opposite ? [s, opposite] : [s];
+    faces.forEach(face => rendered.add(face.name));
     const local = s.points.map((p) => toLocal(s.frame!, p));
     const shape = new THREE.Shape(local.map(([x, y]) => new THREE.Vector2(x, y)));
     for (const subName of s.subsurfaces) {
@@ -76,6 +84,8 @@ function buildMeshes(doc: EpJsonDocument, model: GeometryModel, showThickness: b
     const depth = thicknessOf(s.construction, s.category);
     const basis = worldBasis(model, s);
     const geometry = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
+    // One total thickness centered on a shared interface, not two inward extrusions.
+    if (opposite) geometry.translate(0, 0, -depth / 2);
     geometry.applyMatrix4(basis);
     geometry.computeBoundingBox();
     out.push({
@@ -84,6 +94,7 @@ function buildMeshes(doc: EpJsonDocument, model: GeometryModel, showThickness: b
       kind: 'surface',
       category: s.category,
       zone: s.zone,
+      faces,
       geometry,
       edges: new THREE.EdgesGeometry(geometry, 25),
       center: geometry.boundingBox!.getCenter(new THREE.Vector3()),
@@ -97,11 +108,12 @@ function buildMeshes(doc: EpJsonDocument, model: GeometryModel, showThickness: b
       const opaque = sub.category === 'Door';
       const subDepth = opaque ? Math.min(depth, 0.05) : 0.01;
       const g = new THREE.ExtrudeGeometry(subShape, { depth: subDepth, bevelEnabled: false });
-      g.translate(0, 0, (depth - subDepth) / 2);
+      g.translate(0, 0, opposite ? -subDepth / 2 : (depth - subDepth) / 2);
       g.applyMatrix4(basis);
       g.computeBoundingBox();
       out.push({
         key: sub.name,
+        aliases: sub.sharedWith ? [sub.sharedWith] : [],
         label: sub.name,
         kind: 'opening',
         category: sub.category,
@@ -143,7 +155,9 @@ function Scene({ doc, model }: { doc: EpJsonDocument; model: GeometryModel }) {
 
   const levels = useMemo(() => zoneLevels(model), [model]);
   const levelIndex = levelZone ? levels.findIndex((l) => l.name === levelZone) : -1;
-  const visibleZones = levelIndex >= 0 ? new Set(levels.slice(0, levelIndex + 1).map((l) => l.name)) : undefined;
+  const cutoff = levelIndex >= 0 ? levels[levelIndex].baseZ : undefined;
+  const visibleZones = cutoff !== undefined ? new Set(levels.filter(l => l.baseZ <= cutoff + 1e-4).map(l => l.name)) : undefined;
+  const topZones = cutoff !== undefined ? new Set(levels.filter(l => Math.abs(l.baseZ - cutoff) < 1e-4).map(l => l.name)) : undefined;
 
   const bounds = useMemo(() => {
     const b = new THREE.Box3();
@@ -157,7 +171,8 @@ function Scene({ doc, model }: { doc: EpJsonDocument; model: GeometryModel }) {
   const onClick = (b: Built) => (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 5) return; // it was an orbit drag
     e.stopPropagation();
-    select({ kind: b.kind, name: b.key });
+    const face = b.faces?.find(f => f.zone === selectedZone) ?? b.faces?.[0];
+    select({ kind: b.kind, name: face?.name ?? b.key });
   };
 
   const center = bounds.isEmpty() ? new THREE.Vector3() : bounds.getCenter(new THREE.Vector3());
@@ -178,13 +193,13 @@ function Scene({ doc, model }: { doc: EpJsonDocument; model: GeometryModel }) {
       </mesh>
 
       {built.map((b) => {
-        if (visibleZones && b.zone && !visibleZones.has(b.zone)) return null;
-        if (visibleZones && b.zone === levelZone && (b.category === 'Roof' || b.category === 'Ceiling')) return null;
-        const isSelected = (selection?.name === b.key && selection.kind === b.kind) || (selectedZone && b.zone === selectedZone && b.kind === 'surface');
-        const isHovered = hovered === b.key || (hovered && b.zone === hovered && b.kind === 'surface' && model.zones.has(hovered));
+        const faceVisible = (f: { zone?: string; category: string }) => (!visibleZones || !f.zone || visibleZones.has(f.zone)) && !(topZones && f.zone && topZones.has(f.zone) && (f.category === 'Roof' || f.category === 'Ceiling'));
+        if (!(b.faces ?? [b]).some(faceVisible)) return null;
+        const isSelected = (selection?.kind === b.kind && (selection.name === b.key || b.aliases?.includes(selection.name) || b.faces?.some(f => f.name === selection.name))) || (selectedZone && b.kind === 'surface' && (b.faces ?? [b]).some(f => f.zone === selectedZone));
+        const isHovered = hovered === b.key || (!!hovered && b.aliases?.includes(hovered)) || b.faces?.some(f => f.name === hovered || f.zone === hovered);
         const glass = b.category === 'Window' || b.category === 'GlassDoor';
         const faded = xray && b.kind === 'surface';
-        const context = selectedOpeningBase === b.key;
+        const context = selectedOpeningBase === b.key || b.faces?.some(f => f.name === selectedOpeningBase);
         const color = isSelected ? COLORS.selected : isHovered ? COLORS.hovered : COLORS[b.category];
         return (
           <group key={`${b.kind}:${b.key}`}>
@@ -203,6 +218,9 @@ function Scene({ doc, model }: { doc: EpJsonDocument; model: GeometryModel }) {
             >
               <meshStandardMaterial
                 color={color}
+                polygonOffset
+                polygonOffsetFactor={b.category === 'Roof' || b.category === 'Ceiling' ? 1 : 2}
+                polygonOffsetUnits={b.category === 'Roof' || b.category === 'Ceiling' ? 1 : 2}
                 side={THREE.DoubleSide}
                 transparent={glass || faded}
                 opacity={glass ? 0.7 : faded ? 0.28 : 1}

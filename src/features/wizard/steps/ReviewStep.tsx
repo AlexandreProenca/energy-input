@@ -90,15 +90,15 @@ export function ReviewStep() {
               : 'Apenas os dias de projeto (sem arquivo climático).'}
         </SummaryRow>
         <SummaryRow step="geometry">
-          Caixa de {fmt(a.geometry.width)} × {fmt(a.geometry.depth)} m com {a.geometry.floors} pavimento(s) de {fmt(a.geometry.floorHeight)} m ({fmt(info.totalFloorArea, 0)} m² no total), piso
-          térreo {a.geometry.groundFloor === 'slab' ? 'apoiado no solo' : 'elevado'} e cobertura plana.
+          {a.geometry.mode === 'plan' ? `Planta com ${a.geometry.rooms?.length ?? 0} ambiente(s) por pavimento` : `Caixa de ${fmt(a.geometry.width)} × ${fmt(a.geometry.depth)} m`} com {a.geometry.floors} pavimento(s) de {fmt(a.geometry.floorHeight)} m ({fmt(info.totalFloorArea, 0)} m² no total), piso
+          térreo {a.geometry.groundFloor === 'slab' ? 'apoiado no solo' : a.geometry.groundFloor === 'adjacent' ? 'sobre outro pavimento (adiabático)' : 'elevado'} e {a.geometry.topFloor === 'adjacent' ? 'teto sob outro pavimento (adiabático)' : 'cobertura plana'}.
         </SummaryRow>
         <SummaryRow step="envelope">
           Construção <strong>{preset.label.toLowerCase()}</strong>: {preset.assemblies.wall.label.toLowerCase()}; {preset.assemblies.roof.label.toLowerCase()}. Fachadas de cor{' '}
           {byId(templates.surfaceColors, a.envelope.wallColorId).label.toLowerCase()}.
         </SummaryRow>
         <SummaryRow step="windows">
-          {glazing.label} · {wwrText} ({fmt(info.totalWindowArea)} m² de vidro).
+          {a.windows.automatic ? `${glazing.label} · ${wwrText} (${fmt(info.totalWindowArea)} m² de vidro).` : 'Sem aberturas automáticas. Portas e janelas são definidas pelo usuário no editor 3D.'}
         </SummaryRow>
         <SummaryRow step="loads">
           Uso <strong>{info.use.label.toLowerCase()}</strong>: {fmt(1 / info.use.peoplePerArea, 0)} m²/pessoa, iluminação {fmt(info.use.lightingPowerDensity)} W/m², equipamentos{' '}

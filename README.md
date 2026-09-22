@@ -1,3 +1,8 @@
+> **Implementação atual:** além do bloco retangular descrito no briefing abaixo,
+> o aplicativo oferece planta 2D por ambientes, coordenadas em metros, áreas
+> calculadas e geração da maquete 3D para edição de materiais.
+> Veja o fluxo e os limites em [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#planta-2d-por-ambientes).
+
 # Prompt: Build a Web App to Create and Edit EnergyPlus epJSON Files
 
 Copy everything below into your coding tool of choice (Claude Code, Cursor, etc.).

@@ -88,7 +88,7 @@ describe('generated document', () => {
   it('default answers validate against the schema with no dangling references', () => {
     const doc = expectValid(defaultAnswers());
     expect(Object.keys(doc.Zone)).toEqual(['Pavimento 1']);
-    expect(Object.keys(doc['FenestrationSurface:Detailed'])).toHaveLength(4);
+    expect(doc['FenestrationSurface:Detailed']).toBeUndefined();
   });
 
   it('every template combination validates', () => {
@@ -98,6 +98,7 @@ describe('generated document', () => {
           const a = defaultAnswers();
           a.envelope.presetId = preset.id;
           a.loads.useId = use.id;
+          a.windows.automatic = true;
           a.windows.glazingId = glazing.id;
           a.geometry.floors = 3;
           a.geometry.groundFloor = 'raised';
@@ -109,7 +110,7 @@ describe('generated document', () => {
 
   it('handles per-facade WWR, no windows, date ranges and design-day runs', () => {
     const a = defaultAnswers();
-    a.windows = { mode: 'perFacade', wwr: 0, perFacade: { north: 40, south: 0, east: 10, west: 0 }, glazingId: 'duplo' };
+    a.windows = { automatic: true, mode: 'perFacade', wwr: 0, perFacade: { north: 40, south: 0, east: 10, west: 0 }, glazingId: 'duplo' };
     a.runPeriod = { mode: 'range', beginMonth: 2, beginDay: 30, endMonth: 3, endDay: 15 };
     let doc = expectValid(a);
     expect(Object.keys(doc['FenestrationSurface:Detailed'])).toHaveLength(2);

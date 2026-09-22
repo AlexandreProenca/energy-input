@@ -1,9 +1,10 @@
+import { useUiStore } from '@/store/uiStore';
 import { SunMedium } from 'lucide-react';
 import { templates } from '@/templates';
 import type { Facade } from '@/generators/answers';
 import { useWizardStore } from '@/store/wizardStore';
 import { useGeneration } from '@/hooks/useGeneration';
-import { Field, Segmented, StatTile, fmt } from '@/ui/primitives';
+import { Button, Callout, Field, Segmented, StatTile, fmt } from '@/ui/primitives';
 import { SliderNumber } from '@/ui/NumberInput';
 import { FacadeWwr, GlazingIllustration } from '../illustrations';
 import { ChoiceCard, PropertyBar, SectionTitle, useStepAnswers } from './common';
@@ -26,6 +27,11 @@ export function WindowsStep() {
 
   return (
     <div className="space-y-8">
+      <Callout>O modelo começa sem portas e janelas. No editor 3D, selecione uma parede para adicionar e dimensionar cada abertura.
+        <Button className="mt-2" onClick={() => useUiStore.getState().setMode('geometry')}>Adicionar aberturas no editor 3D</Button>
+      </Callout>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-brand-600" checked={w.automatic ?? false} onChange={e => update({ automatic: e.target.checked })} />Gerar janelas automaticamente por percentual (opcional)</label>
+      {w.automatic && <>
       <div>
         <SectionTitle hint="Percentual da área de cada fachada ocupado por vidro (PAF, ou WWR em inglês).">Área de janelas</SectionTitle>
         <Segmented
@@ -101,6 +107,7 @@ export function WindowsStep() {
           ))}
         </div>
       </div>
+      </>}
     </div>
   );
 }

@@ -166,5 +166,27 @@
     "specificHeat": 1340,
     "color": "#c89b63",
     "pattern": "board"
+  },
+  "bloco_concreto": {
+    "kind": "Material",
+    "label": "Bloco de concreto (camada equivalente)",
+    "roughness": "Rough",
+    "thickness": 0.14,
+    "conductivity": 0.8,
+    "density": 1400,
+    "specificHeat": 1000,
+    "color": "#a7a9ac",
+    "pattern": "concrete"
+  },
+  "piso_vinilico": {
+    "kind": "Material",
+    "label": "Revestimento vinílico",
+    "roughness": "Smooth",
+    "thickness": 0.003,
+    "conductivity": 0.2,
+    "density": 1400,
+    "specificHeat": 1000,
+    "color": "#bb946c",
+    "pattern": "board"
   }
 }

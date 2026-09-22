@@ -38,18 +38,23 @@ export interface WizardAnswers {
     endDay: number;
   };
   geometry: {
+    mode?: 'box' | 'plan';
+    rooms?: import('./geometry/floorPlan').PlanRoom[];
     width: number;
     depth: number;
     floors: number;
     floorHeight: number;
-    groundFloor: 'slab' | 'raised';
+    groundFloor: 'slab' | 'raised' | 'adjacent';
+    topFloor?: 'roof' | 'adjacent';
   };
   envelope: {
     presetId: string;
+    floorFinish?: 'ceramic' | 'vinyl';
     wallColorId: string;
     roofColorId: string;
   };
   windows: {
+    automatic?: boolean;
     mode: 'uniform' | 'perFacade';
     wwr: number;
     perFacade: Record<Facade, number>;
@@ -89,7 +94,7 @@ export function defaultAnswers(): WizardAnswers {
     runPeriod: { mode: 'year', beginMonth: 1, beginDay: 1, endMonth: 12, endDay: 31 },
     geometry: { width: 10, depth: 8, floors: 1, floorHeight: 3, groundFloor: 'slab' },
     envelope: { presetId: 'padrao', wallColorId: 'clara', roofColorId: 'media' },
-    windows: { mode: 'uniform', wwr: 20, perFacade: { north: 20, east: 20, south: 20, west: 20 }, glazingId: 'simples' },
+    windows: { automatic: false, mode: 'uniform', wwr: 20, perFacade: { north: 20, east: 20, south: 20, west: 20 }, glazingId: 'simples' },
     loads: { useId: 'residencial' },
     hvac: { heatingSetpoint: 18, coolingSetpoint: 26, setbackEnabled: false },
     outputs: { selected: ['resumo', 'cargas', 'conta'] },

@@ -97,13 +97,13 @@ export function WizardShell() {
         </ol>
       </nav>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:gap-6">
+      <div className={clsx("flex min-w-0 flex-1 flex-col gap-4 lg:gap-6", step !== 'geometry' && "lg:flex-row")}>
       {/* Question */}
       <main className="min-w-0 flex-1">
         {!linked && (
           <div className="mb-4">
             <Callout tone="warning" icon={<TriangleAlert size={18} />} title="O arquivo aberto não foi criado pelo assistente">
-              <p>As respostas abaixo não estão ligadas ao documento atual. Para usar o assistente, comece um novo projeto — o documento atual será substituído (você pode desfazer).</p>
+              <p>As respostas abaixo não estão ligadas ao documento atual. Para usar o assistente, comece um novo projeto — o documento atual será substituído. Baixe o arquivo antes, se quiser guardá-lo.</p>
               <Button className="mt-2" variant="primary" size="sm" onClick={() => startFresh()}>
                 Começar novo projeto com o assistente
               </Button>
@@ -144,7 +144,7 @@ export function WizardShell() {
       </main>
 
       {/* Live preview */}
-      <aside className="lg:w-[320px] lg:shrink-0 2xl:w-[360px]">
+      <aside className={step === 'geometry' ? "w-full" : "lg:w-[320px] lg:shrink-0 2xl:w-[360px]"}>
         <div className="card space-y-4 p-4 lg:sticky lg:top-20">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">

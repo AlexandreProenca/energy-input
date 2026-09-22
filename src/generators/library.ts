@@ -4,7 +4,7 @@ import { layersObject } from '@/core/geometry/edits';
 import type { TemplateLibrary } from '@/templates';
 import type { LayerDef } from '@/templates/constructions/types';
 import { materialName, materialObject } from './envelope';
-import { glazingConstructionName } from './windows';
+import { glazingConstructionName, glazingFragment } from './windows';
 
 /*
  * Template items the 3D editor can drop into any document. Objects are only
@@ -74,10 +74,10 @@ export function importLibraryConstruction(doc: EpJsonDocument, lib: TemplateLibr
     const name = glazingConstructionName(g);
     if (doc.Construction?.[name]) return { doc, name };
     let next = doc;
-    if (!doc['WindowMaterial:SimpleGlazingSystem']?.[g.label]) {
-      next = setObject(next, 'WindowMaterial:SimpleGlazingSystem', g.label, { u_factor: g.uFactor, solar_heat_gain_coefficient: g.shgc, visible_transmittance: g.visibleTransmittance });
+    for (const [type, objects] of Object.entries(glazingFragment(g))) {
+      for (const [key, data] of Object.entries(objects)) if (!next[type]?.[key]) next = setObject(next, type, key, data);
     }
-    return { doc: setObject(next, 'Construction', name, { outside_layer: g.label }), name };
+    return { doc: next, name };
   }
   if (kind === 'door') {
     const d = lib.doors.find((x) => x.id === key);

@@ -47,7 +47,7 @@ export function ElementTree({ model }: { model: GeometryModel }) {
   const renderSurfaces = (list: SurfaceGeom[], depth: number) =>
     list.filter(matches).map((s) => (
       <li key={s.name}>
-        <Row name={s.name} kind="surface" depth={depth} label={short(s.name, s.zone)} icon={s.category === 'Wall' ? <Square size={13} /> : <Layers2 size={13} />} />
+        <Row name={s.name} kind="surface" depth={depth} label={`${short(s.name, s.zone)}${s.sharedWith ? ' · compartilhada' : ''}`} icon={s.category === 'Wall' ? <Square size={13} /> : <Layers2 size={13} />} />
         {s.subsurfaces.length > 0 && (
           <ul>
             {s.subsurfaces.map((n) => {

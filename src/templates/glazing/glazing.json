@@ -2,5 +2,17 @@
   { "id": "simples", "label": "Vidro simples incolor", "description": "Vidro comum 6 mm. Barato, deixa entrar muito calor e luz.", "panes": 1, "tint": "clear", "uFactor": 5.7, "shgc": 0.82, "visibleTransmittance": 0.88 },
   { "id": "controle_solar", "label": "Vidro de controle solar", "description": "Vidro simples refletivo/laminado. Bloqueia parte do calor do sol.", "panes": 1, "tint": "reflective", "uFactor": 5.4, "shgc": 0.45, "visibleTransmittance": 0.4 },
   { "id": "duplo", "label": "Vidro duplo (insulado)", "description": "Duas lâminas com ar entre elas. Isola melhor o calor por condução.", "panes": 2, "tint": "clear", "uFactor": 2.8, "shgc": 0.7, "visibleTransmittance": 0.78 },
-  { "id": "duplo_lowe", "label": "Vidro duplo low-E", "description": "Duplo com película de baixa emissividade. Melhor desempenho térmico.", "panes": 2, "tint": "lowe", "uFactor": 1.8, "shgc": 0.4, "visibleTransmittance": 0.65 }
+  { "id": "duplo_lowe", "label": "Vidro duplo low-E", "description": "Duplo com película de baixa emissividade. Melhor desempenho térmico.", "panes": 2, "tint": "lowe", "uFactor": 1.8, "shgc": 0.4, "visibleTransmittance": 0.65 },
+  {
+    "id": "pvc_4mm",
+    "label": "PVC com vidro incolor 4 mm",
+    "description": "Esquadria de PVC e vidro simples de 4 mm. Propriedades térmicas indicativas; ajuste conforme o fabricante.",
+    "panes": 1,
+    "tint": "clear",
+    "uFactor": 5.8,
+    "shgc": 0.85,
+    "visibleTransmittance": 0.9,
+    "thickness": 0.004,
+    "frame": "PVC"
+  }
 ]

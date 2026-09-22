@@ -241,7 +241,7 @@ export function GlazingIllustration({ g }: { g: GlazingTemplate }) {
   const glass = g.tint === 'reflective' ? '#8fb3c9' : g.tint === 'lowe' ? '#b9e0d2' : '#d6ecf8';
   return (
     <svg viewBox="0 0 80 60" className="h-14 w-full" aria-hidden>
-      <rect x="18" y="4" width="44" height="52" rx="2" fill="#94a3b8" />
+      <rect x="18" y="4" width="44" height="52" rx="2" fill={g.frame === 'PVC' ? '#f1f5f9' : '#94a3b8'} stroke="#94a3b8" />
       {g.panes === 1 ? (
         <rect x="36" y="8" width="8" height="44" fill={glass} stroke="#64748b" strokeWidth="0.8" />
       ) : (
@@ -364,7 +364,13 @@ export function YearBar({ begin, end, mode }: { begin: [number, number]; end: [n
   );
 }
 
-export function GroundFloorIllustration({ kind }: { kind: 'slab' | 'raised' }) {
+export function GroundFloorIllustration({ kind }: { kind: 'slab' | 'raised' | 'adjacent' }) {
+  if (kind === 'adjacent') return <svg viewBox="0 0 120 64" className="h-16 w-full" aria-hidden>
+    <rect width="120" height="64" rx="8" fill={SKY} />
+    <rect x="25" y="6" width="70" height="52" fill="#f1e9dc" stroke="#94a3b8" />
+    <rect x="23" y="29" width="74" height="6" fill="#64748b" />
+    <rect x="35" y="12" width="16" height="12" fill="#b9ddec" /><rect x="69" y="40" width="16" height="12" fill="#b9ddec" />
+  </svg>;
   return (
     <svg viewBox="0 0 120 64" className="h-16 w-full" aria-hidden>
       <rect width="120" height="64" rx="8" fill={SKY} />

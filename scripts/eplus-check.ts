@@ -23,6 +23,33 @@ if (!epw) throw new Error('Defina EPW com um arquivo climático.');
 
 // Optional post-processing with the 3D editor operations.
 const editorEdits: Record<string, (d: EpJsonDocument) => EpJsonDocument> = {
+  apartamento: (d) => {
+    const m = readGeometryModel(d), wall = [...m.surfaces.values()].find(s => s.category === 'Wall' && s.sharedWith)!;
+    return addOpening(d, m, wall.name, { category: 'Door', construction: 'Porta - Porta de madeira semi-oca',
+      rect: { x: 0.2, y: 0, width: 0.9, height: 2.1 } }).doc;
+  },
+  'planta-ambientes': (d) => {
+    // Editing either thermal face must keep the physical partition consistent.
+    for (const category of ['Wall', 'Ceiling']) {
+      const model = readGeometryModel(d);
+      const surface = [...model.surfaces.values()].find(s => s.category === category && s.sharedWith)!;
+      const layers = constructionLayers(d, surface.construction!);
+      const changed = materialWithThickness(d, layers[0], 0.045);
+      d = editConstruction(changed.doc, surface.construction!, [changed.name, ...layers.slice(1)], { mode: 'only', element: surface.name }).doc;
+    }
+    const door = importLibraryConstruction(d, templates, 'door:metalica'); d = door.doc;
+    const glass = importLibraryConstruction(d, templates, 'glazing:duplo_lowe'); d = glass.doc;
+    const walls = [...readGeometryModel(d).surfaces.values()].filter(s => s.category === 'Wall' && s.sharedWith);
+    const seen = new Set<string>(); let count = 0;
+    for (const wall of walls) {
+      if (seen.has(wall.name)) continue;
+      seen.add(wall.name); seen.add(wall.sharedWith!);
+      const category = (['Door', 'Window', 'GlassDoor'] as const)[count++ % 3];
+      d = addOpening(d, readGeometryModel(d), wall.name, { category, construction: category === 'Door' ? door.name : glass.name,
+        rect: { x: wall.rect!.x + 0.2, y: wall.rect!.y + 0.1, width: 0.6, height: 1.2 } }).doc;
+    }
+    return d;
+  },
   'editor-3d': (d) => {
     d = resizeZoneBox(d, 'Pavimento 1', { width: 14, depth: 9, height: 3.2 }, true);
     d = importLibraryConstruction(d, templates, 'door:metalica').doc;
@@ -47,6 +74,24 @@ const editorEdits: Record<string, (d: EpJsonDocument) => EpJsonDocument> = {
 const cases: [string, (a: WizardAnswers) => void][] = [
   ['editor-3d', (a) => {
     a.geometry.floors = 2;
+    a.windows.automatic = true;
+  }],
+  ['planta-ambientes', (a) => {
+    a.runPeriod.mode = 'designDays';
+    a.geometry = { ...a.geometry, mode: 'plan', floors: 2, rooms: [
+      { id: 'sala', name: 'Sala em L', points: [[0, 0], [6, 0], [6, 2], [4, 2], [4, 4], [0, 4]] },
+      { id: 'quarto', name: 'Quarto', points: [[4, 2], [6, 2], [6, 4], [4, 4]] },
+      { id: 'cozinha', name: 'Cozinha', points: [[6, 0], [9, 0], [9, 4], [6, 4]] },
+    ] };
+  }],
+  ['apartamento', (a) => {
+    a.runPeriod.mode = 'designDays';
+    a.envelope = { ...a.envelope, presetId: 'apartamento', floorFinish: 'vinyl' };
+    a.geometry = { ...a.geometry, mode: 'plan', floors: 2, groundFloor: 'adjacent', topFloor: 'adjacent', rooms: [
+      { id: 'a', name: 'Sala', points: [[0,0], [5,0], [5,8], [0,8]] },
+      { id: 'b', name: 'Quarto', points: [[5,0], [10,0], [10,8], [5,8]] },
+    ] };
+    a.windows = { ...a.windows, automatic: true, glazingId: 'pvc_4mm' };
   }],
   ['padrao', () => {}],
   ['escritorio-3pav-isolado', (a) => {
@@ -55,7 +100,7 @@ const cases: [string, (a: WizardAnswers) => void][] = [
     a.envelope.presetId = 'isolado';
     a.loads.useId = 'escritorio';
     a.hvac = { heatingSetpoint: 20, coolingSetpoint: 24, setbackEnabled: true };
-    a.windows = { mode: 'perFacade', wwr: 0, perFacade: { north: 50, south: 30, east: 10, west: 0 }, glazingId: 'duplo_lowe' };
+    a.windows = { automatic: true, mode: 'perFacade', wwr: 0, perFacade: { north: 50, south: 30, east: 10, west: 0 }, glazingId: 'duplo_lowe' };
     a.outputs.selected = templates.outputs.map((o) => o.id);
     a.project.northAxis = 30;
   }],
@@ -73,6 +118,7 @@ const cases: [string, (a: WizardAnswers) => void][] = [
 
 let failed = 0;
 for (const [name, mutate] of cases) {
+  if (process.env.CASE && process.env.CASE !== name) continue;
   const a = defaultAnswers();
   mutate(a);
   let { document } = generateDocument(a, templates);

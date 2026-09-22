@@ -9,7 +9,14 @@ interface HistoryEntry {
   label: string;
 }
 
+export type ProjectOrigin =
+  | { kind: 'generated' }
+  | { kind: 'upload'; doc: EpJsonDocument; fileName: string; recovered?: boolean };
+
 interface DocumentState {
+  origin: ProjectOrigin;
+  revision: number;
+  openUpload: (doc: EpJsonDocument, fileName: string) => void;
   doc: EpJsonDocument;
   fileName: string;
   past: HistoryEntry[];
@@ -26,6 +33,12 @@ interface DocumentState {
 }
 
 export const useDocumentStore = create<DocumentState>((set, get) => ({
+  origin: { kind: 'generated' },
+  revision: 0,
+  openUpload(doc, fileName) {
+    get().reset(structuredClone(doc), fileName);
+    set({ origin: { kind: 'upload', doc: structuredClone(doc), fileName }, revision: get().revision + 1 });
+  },
   doc: {},
   fileName: 'modelo.epJSON',
   past: [],

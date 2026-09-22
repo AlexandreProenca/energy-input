@@ -51,6 +51,30 @@ export function glazingConstructionName(g: GlazingTemplate) {
   return `Janela - ${g.label}`;
 }
 
+/** Indicative single clear pane and PVC frame; replace with product data when available. */
+export function glazingFragment(g: GlazingTemplate): EpJsonFragment {
+  const name = glazingConstructionName(g);
+  const fragment: EpJsonFragment = { Construction: { [name]: { outside_layer: g.label } } };
+  if (g.thickness) {
+    fragment['WindowMaterial:Glazing'] = { [g.label]: {
+      optical_data_type: 'SpectralAverage', thickness: g.thickness,
+      solar_transmittance_at_normal_incidence: 0.83,
+      front_side_solar_reflectance_at_normal_incidence: 0.08, back_side_solar_reflectance_at_normal_incidence: 0.08,
+      visible_transmittance_at_normal_incidence: 0.9,
+      front_side_visible_reflectance_at_normal_incidence: 0.08, back_side_visible_reflectance_at_normal_incidence: 0.08,
+      infrared_transmittance_at_normal_incidence: 0,
+      front_side_infrared_hemispherical_emissivity: 0.84, back_side_infrared_hemispherical_emissivity: 0.84, conductivity: 1,
+    } };
+  } else fragment['WindowMaterial:SimpleGlazingSystem'] = { [g.label]: {
+    u_factor: g.uFactor, solar_heat_gain_coefficient: g.shgc, visible_transmittance: g.visibleTransmittance,
+  } };
+  if (g.frame === 'PVC') fragment['WindowProperty:FrameAndDivider'] = { [`${name} - Esquadria PVC`]: {
+    frame_width: 0.06, frame_conductance: 2.2, frame_solar_absorptance: 0.3,
+    frame_visible_absorptance: 0.3, frame_thermal_hemispherical_emissivity: 0.9,
+  } };
+  return fragment;
+}
+
 function flatVertices(pts: [number, number, number][]): EpObject {
   const out: EpObject = {};
   pts.forEach(([x, y, z], i) => {
@@ -68,6 +92,7 @@ export function generateWindows(
   w: WizardAnswers['windows'],
   lib: TemplateLibrary,
 ): { fragment: EpJsonFragment; totalWindowArea: number } {
+  if (!w.automatic) return { fragment: {}, totalWindowArea: 0 };
   const glazing = byId(lib.glazing, w.glazingId);
   const constructionName = glazingConstructionName(glazing);
   const fenestration: Record<string, EpObject> = {};
@@ -80,9 +105,13 @@ export function generateWindows(
       const rect = sizeWindow(wall.length, wall.height, ratio(wall));
       if (!rect) continue;
       totalWindowArea += rect.width * rect.height;
-      fenestration[`${zone.name} - Janela ${FACADE_LABEL[wall.facade]}`] = {
+      const baseName = `${zone.name} - Janela ${FACADE_LABEL[wall.facade]}`;
+      let name = baseName;
+      for (let suffix = 2; fenestration[name]; suffix++) name = `${baseName} ${suffix}`;
+      fenestration[name] = {
         surface_type: 'Window',
         construction_name: constructionName,
+        ...(glazing.frame ? { frame_and_divider_name: `${constructionName} - Esquadria PVC` } : {}),
         building_surface_name: wall.name,
         view_factor_to_ground: 'Autocalculate',
         multiplier: 1,
@@ -94,10 +123,7 @@ export function generateWindows(
 
   const fragment: EpJsonFragment = {};
   if (Object.keys(fenestration).length > 0) {
-    fragment['WindowMaterial:SimpleGlazingSystem'] = {
-      [glazing.label]: { u_factor: glazing.uFactor, solar_heat_gain_coefficient: glazing.shgc, visible_transmittance: glazing.visibleTransmittance },
-    };
-    fragment.Construction = { [constructionName]: { outside_layer: glazing.label } };
+    Object.assign(fragment, glazingFragment(glazing));
     fragment['FenestrationSurface:Detailed'] = fenestration;
   }
   return { fragment, totalWindowArea: Math.round(totalWindowArea * 100) / 100 };
