@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { serializeDocument } from '@/core/epjson/document';
 import { useDocumentStore } from '@/store/documentStore';
 import { useSchemaStore } from '@/store/schemaStore';
+import { isSimulationId } from '@/core/ids';
 import { SimulationApi, SimulationApiError, terminal, type RunRequest, type Simulation, type Summary, type Diagnostics, type Artifacts, type SimulationLogs } from './api';
 
 interface Attempt { key: string; body: RunRequest; fileName: string; sentAt: string }
@@ -27,7 +28,7 @@ function remember(attempt?: Attempt, simulation?: Simulation) {
 function restore(): { attempt?: Attempt; simulation?: Simulation } {
   try {
     const value = JSON.parse(sessionStorage.getItem(KEY) ?? '{}');
-    if (value.attempt?.body?.model_version_id && value.attempt?.key || /^sim_[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(value.simulation?.id ?? '')) return value;
+    if (value.attempt?.body?.model_version_id && value.attempt?.key || isSimulationId(value.simulation?.id ?? '')) return value;
   } catch { /* unavailable or malformed */ }
   return {};
 }
@@ -93,7 +94,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
   async track(id) {
     if (get().busy) return;
-    if (!/^sim_[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(id)) { set({ error: 'Informe um identificador válido de simulação (sim_…).' }); return; }
+    if (!isSimulationId(id)) { set({ error: 'Informe um identificador válido de simulação (sim_…).' }); return; }
     set({ busy: true, error: undefined });
     try {
       const simulation = await new SimulationApi(get().token).status(id);

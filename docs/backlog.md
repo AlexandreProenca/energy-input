@@ -71,7 +71,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | Estado | Id | Tarefa | Depende de |
 | --- | --- | --- | --- |
 | [x] | T001 | Execução anual real bem-sucedida e captura de fixtures | — |
-| [ ] | T002 | Liberar séries e estudos no proxy de desenvolvimento; paridade do nginx | — |
+| [x] | T002 | Liberar séries e estudos no proxy de desenvolvimento; paridade do nginx | — |
 | [ ] | T003 | Tipos e métodos de série temporal no cliente da API | T001, T002 |
 | [ ] | T004 | `core/results/series.ts` — agregação, reamostragem e conversão de unidades | T001 |
 | [ ] | T005 | `core/results/comfort.ts` — horas de desconforto | T004 |
@@ -86,6 +86,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T014 | Montar cenários e criar o estudo | T013 |
 | [ ] | T015 | Tabela comparativa e gráfico do estudo | T014, T007 |
 | [ ] | T016 | Destravar a execução de simulações no serviço | — |
+| [ ] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
 
@@ -122,50 +123,26 @@ observado em 12 asserções.
   (GJ e m3). (T008)
 - `Summary` real traz `simulation_id` e `status`, que a interface local não modela. (T003)
 
-#### T002 · Liberar séries e estudos no proxy de desenvolvimento; paridade do nginx
+#### T002 · Liberar séries e estudos no proxy de desenvolvimento — **concluída**
 
-**Entra:** extrair o allowlist de `scripts/simulationProxy.ts:5` para um
-`scripts/simulationRoutes.ts` puro e testável — hoje o regex não tem teste nenhum — e
-estendê-lo para `results/(variables|timeseries)` com query string, `simulations` com query
-string (filtros de listagem) e `/v1/studies`, `/v1/studies/std_<ULID>` e
-`…/(runs|results|cancel)`. Extrair também os padrões de id para `src/core/ids.ts`,
-eliminando a duplicação entre `simulationStore.ts:30`, `simulationStore.ts:96` e o proxy.
+Entregue em [`docs/tasks/T002-allowlist-series-e-estudos.md`](tasks/T002-allowlist-series-e-estudos.md).
 
-**Continua negado, de propósito:** `…/iterations*` (o modo do estudo aqui é `parametric`),
-`/v1/auth/*`, `/v1/api-keys*`, `/v1/webhooks*`, `/v1/usage`, `/v1/properties/*` e as rotas
-de mutação de modelo (`/content`, `/patch`, `/objects`, `/materials`, `/expand`, `/upgrade`).
+O allowlist virou `scripts/simulationRoutes.ts` (módulo puro, 30 testes, antes sem nenhum) e
+os identificadores viraram `src/core/ids.ts`. `results/variables`, `results/timeseries` e os
+estudos paramétricos passam; `iterations`, `auth`, `api-keys`, `webhooks`, `usage`,
+`properties` e a mutação de modelo seguem negados, em `DENIED_BY_DESIGN` — lista exportada e
+percorrida pelo teste, para que ampliar as rotas por descuido quebre na hora.
 
-> **Armadilha de import.** `vite.config.ts` importa `./scripts/simulationProxy`, e o esbuild
-> carrega a config **antes** de o `resolve.alias` declarado nela própria existir. Um
-> `import … from '@/core/ids'` dentro do plugin **falha ao resolver**. Use caminho relativo
-> (`../src/core/ids`). O arquivo já está no `include` do `tsconfig.json`, então o typecheck
-> cobre.
+**Dois defeitos pré-existentes encontrados ao escrever os testes que faltavam:**
 
-**Também entra — nginx (`docker/nginx.conf`):** o `location /simulation-api/v1/` é prefixo e
-já repassa sub-rotas e query string, então **nada precisa ser liberado em produção**. O que
-falta é desempenho e robustez para páginas de série de ~1 MB:
-
-- **`gzip_proxied any;`** — sem isso o nginx **nunca** comprime resposta vinda de proxy,
-  mesmo com `application/json` já listado em `gzip_types` (linha 12). JSON de série comprime
-  perto de 10:1.
-- `proxy_http_version 1.1;` + `proxy_set_header Connection "";` — o padrão do nginx para
-  upstream é HTTP/1.0, e o painel dispara várias consultas de série seguidas.
-- Aumentar `proxy_buffer_size` / `proxy_buffers`, senão cada página vai para disco em
-  `proxy_temp_path`; e subir `proxy_read_timeout` de 60 s.
-- Um comentário dizendo explicitamente que **o allowlist é controle só de desenvolvimento** e
-  que produção depende da autorização do próprio serviço — para ninguém "sincronizar" os dois
-  apagando o allowlist depois.
-
-Registrar também que o `error_page 302 = @simulation_download` converte **qualquer** 302 em
-`{download_url}`, e conferir que nenhuma rota nova redireciona.
-
-**Verificação:** `scripts/__tests__/simulationRoutes.test.ts` com as duas listas — aceitar
-timeseries e variables com query string, `POST /v1/studies`, `…/runs?from_index=0`,
-`…/cancel`; recusar `DELETE`/`PUT`, prefixo de id trocado (`/v1/studies/sim_…`),
-`…/iterations`, `/v1/auth/jwks.json`, `/v1/api-keys`, fragmento `#` e travessia de caminho.
-O nginx não tem portão automatizado: registrar no documento da tarefa o `curl` com
-`Accept-Encoding: gzip` devolvendo `200` e `Content-Encoding: gzip`, e `nginx -t` dentro da
-imagem.
+- O padrão do nome de artefato (`[^/?#]+`) barrava a barra literal mas deixava passar
+  `..%2f`, e o proxy repassa a URL crua. Apertado para `[A-Za-z0-9][A-Za-z0-9._-]*`, que
+  cobre os 19 nomes que o motor realmente produz.
+- **O proxy de produção nunca funcionou:** toda chamada a `/simulation-api` na imagem Docker
+  dava **502**. Não era bundle de CA desatualizado — o `openssl` no mesmo contêiner verifica
+  a cadeia sem reclamar. Era o `proxy_ssl_verify_depth` do nginx, cujo padrão é 1 contra uma
+  cadeia de três níveis. Com `proxy_ssl_verify_depth 3` a série anual responde 200,
+  comprimindo 904 KB em 148 KB.
 
 ### Fase 1 — Núcleo puro, sem interface
 
@@ -389,6 +366,23 @@ Levar a tabela de execuções e a assinatura da falha. `GET /v1/usage` exigiria 
 expirados, e deles saíram as fixtures. As tarefas T002–T015 trabalham sobre fixture. O que
 fica pendente é a verificação de ponta a ponta com execução nova — e a confirmação de se os
 modelos deste app produzem `simple_ashrae_55_not_comfortable` (T005).
+
+#### T017 · CI: o teste de contêiner não exercita o proxy de simulação
+
+**Sintoma.** O job `Validar container Docker` sobe a imagem e faz
+`curl -sf http://127.0.0.1:8080/` — só a página estática. Por isso ele passou verde durante
+todo o tempo em que **toda** chamada a `/simulation-api` devolvia 502 na imagem
+(defeito encontrado e corrigido na T002).
+
+**Entra:** exercitar pelo menos uma rota de proxy no job. Não dá para chamar o serviço real
+sem credencial no CI, então a checagem precisa ser de transporte, não de resultado: uma
+rota conhecida deve responder algo que **não** seja 502 — 401 sem credencial é resposta
+legítima e prova que o handshake TLS com o upstream aconteceu.
+
+**Por que importa:** o `proxy_ssl_verify_depth` quebrou silenciosamente e teria continuado
+quebrado. Qualquer mudança futura em `docker/nginx.conf`, no bundle de CAs da imagem base ou
+na cadeia de certificados do serviço tem o mesmo perfil — falha só em produção, invisível
+para o portão atual.
 
 ---
 
