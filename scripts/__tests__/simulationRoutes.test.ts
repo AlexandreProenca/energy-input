@@ -82,6 +82,22 @@ describe('rotas recusadas pelo proxy de desenvolvimento', () => {
     expect(permite(`/v1/simulations/${SIM}/artifacts/.hidden`)).toBe(false);
   });
 
+  it('recusa `..` em qualquer posição do nome do artefato', () => {
+    // Defesa em profundidade, não correção de falha: `a..b` é nome de arquivo comum e não
+    // é travessia — esta só existe quando `..` é o segmento inteiro. Como nenhum artefato
+    // do motor tem `..`, proibir remove a dependência de como o upstream normaliza.
+    expect(permite(`/v1/simulations/${SIM}/artifacts/a..b`)).toBe(false);
+    expect(permite(`/v1/simulations/${SIM}/artifacts/eplusout.err..`)).toBe(false);
+  });
+
+  it('aceita `#` codificado na query, porque é a codificação correta de um `#` literal', () => {
+    // Contraponto deliberado: `%23` NÃO deve ser recusado. É como se envia um `#` como
+    // dado — um nome de variável pode contê-lo —, e o allowlist controla rota, não
+    // semântica de parâmetro, que é do serviço. Recusar aqui quebraria consulta legítima.
+    expect(permite('/v1/studies?tag=cenario%23 3')).toBe(true);
+    expect(permite(`/v1/simulations/${SIM}/results/timeseries?variable=X%23Y`)).toBe(true);
+  });
+
   it('continua aceitando todo nome de artefato que o motor realmente produz', () => {
     // Conferidos contra a fixture real de artefatos capturada na T001.
     for (const nome of ['eplusout.err', 'eplusout.sql', 'eplustbl.csv', 'eplustbl.htm', 'sqlite.err']) {

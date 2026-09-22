@@ -91,7 +91,7 @@ O regex também não tinha teste nenhum — um controle de segurança sem teste 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 109 testes (eram 79; +30 nesta tarefa)
+- [x] `npm test` — 120 testes (eram 79; +41 nesta tarefa, 11 deles vindos da revisão do PR)
 - [x] `npm run build`
 - [x] `nginx -t` dentro de `nginx:1.27-alpine`
 - [x] **Ponta a ponta no `npm run dev`**, contra o serviço real: `results/variables`,
@@ -133,6 +133,14 @@ alfanumérica também recusa `..` e `.oculto`. O teste cobre os dois lados — r
 travessia e confirma que `eplusout.err`, `eplusout.sql`, `eplustbl.csv`, `eplustbl.htm` e
 `sqlite.err` continuam passando. **Esse buraco é anterior a esta tarefa**; foi encontrado ao
 escrever o teste que faltava.
+
+**O download de artefato esbarra num defeito do serviço, não do proxy.** Ao conferir que o
+padrão novo do nome de artefato não quebrava nada, `…/artifacts/eplusout.err` passou pelo
+allowlist e parou em 502 com `{"detail":"Link de download inválido."}`. É o guarda do
+próprio proxy funcionando: a API responde 302 com
+`location: http://minio:9000/simulation-homolog/…` — HTTP simples e hostname interno do
+Docker. Entregar isso ao navegador vazaria o modelo em texto claro. Registrado na T016;
+não confunda com falha do allowlist.
 
 **Produção é mais permissiva que o desenvolvimento, e isso é de propósito.** O
 `location /simulation-api/v1/` do nginx é de prefixo: repassa qualquer sub-rota e query

@@ -358,6 +358,14 @@ todas com `attempts: 3`, ~30 s a 90 s,
 e em `design_day`; e modelos de outras origens também falham no mesmo período. Sem `.err`
 e sem artefato nenhum, o EnergyPlus não chegou a escrever — a falha está **antes do motor**.
 
+**Segundo sintoma, mesma origem: o download de artefato também nunca funcionou.**
+`GET /v1/simulations/{id}/artifacts/{nome}` responde 302 com
+`location: http://minio:9000/simulation-homolog/...` — **HTTP simples e hostname interno do
+Docker**, inalcançável de fora. O proxy recusa corretamente
+(`{"detail":"Link de download inválido."}`), porque entregar ao navegador um link não-TLS
+vazaria o conteúdo do modelo em texto claro. O serviço precisa assinar a URL com o host
+público e `https`.
+
 **Próximo passo:** é uma questão para quem opera o serviço, não para este repositório.
 Levar a tabela de execuções e a assinatura da falha. `GET /v1/usage` exigiria escopo
 `admin:billing`, então cota não pôde ser descartada daqui.

@@ -41,7 +41,11 @@ const ROUTES = [
   // (`eplusout.err`, `eplustbl.csv`, `sqlite.err` — conferidos nas fixtures da T001).
   // O padrão anterior, `[^/?#]+`, barrava a barra literal mas deixava passar `..%2f`:
   // o `%` não pertence a esta classe, e exigir inicial alfanumérica também recusa `..`.
-  `/v1/simulations/${SIM}/artifacts/[A-Za-z0-9][A-Za-z0-9._-]*`,
+  // O lookahead recusa `..` em qualquer posição. Não é correção de falha — `a..b` é nome
+  // de arquivo comum e não é travessia, que só existe quando `..` é o segmento inteiro.
+  // É defesa em profundidade: nenhum artefato do motor tem `..`, então proibir remove a
+  // discussão em vez de depender de como o upstream normaliza o caminho.
+  `/v1/simulations/${SIM}/artifacts/(?!.*\\.\\.)[A-Za-z0-9][A-Za-z0-9._-]*`,
 
   // Resultados. `summary` e `errors` já existiam; `variables` e `timeseries` são o que o
   // épico de dashboards consome, e ambos precisam de query string.
