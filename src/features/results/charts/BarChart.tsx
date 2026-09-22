@@ -24,25 +24,27 @@ export function BarChart({ label, barras, unidade, vazio }: {
   const valores = barras.map((b) => b.valor);
   const max = valores.length ? Math.max(...valores, 0) : 0;
   const min = valores.length ? Math.min(...valores, 0) : 0;
+  // O domínio é declarado uma vez e usado pela moldura e pelas barras. Duplicá-lo era o
+  // defeito: com todos os valores iguais, a grade usava `min + 1` e a barra usava `max`.
+  const dominioY = { min, max: max === min ? min + 1 : max };
 
   return (
     <ChartFrame
       label={label}
-      dominioY={{ min, max: max === min ? min + 1 : max }}
+      dominioY={dominioY}
       rotulosX={barras.map((b) => b.rotulo)}
       unidade={unidade}
       vazio={vazio ?? (barras.length === 0 ? 'Sem dados para este gráfico.' : undefined)}
     >
-      {({ x0, x1, y0, y1 }) => {
+      {({ x0, x1, escalaY }) => {
         const faixa = (x1 - x0) / Math.max(barras.length, 1);
         // Teto de largura: com uma categoria só, `faixa` é a área inteira e a barra vira
         // um bloco que ocupa o gráfico. Acontece de verdade — há execução real com um único
         // uso final consumindo.
         const largura = Math.min(72, Math.max(2, faixa * 0.62));
-        const escala = (v: number) => (max === min ? y1 : y1 - ((v - min) / (max - min)) * (y1 - y0));
-        const base = escala(Math.max(min, 0));
+        const base = escalaY(Math.max(min, 0));
         return barras.map((b, i) => {
-          const topo = escala(b.valor);
+          const topo = escalaY(b.valor);
           const altura = Math.abs(base - topo);
           return (
             <rect

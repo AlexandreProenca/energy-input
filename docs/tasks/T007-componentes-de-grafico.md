@@ -82,7 +82,7 @@ o Vitest alcança.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 211 testes (eram 191; +20 nesta tarefa)
+- [x] `npm test` — 215 testes (eram 191; +24 nesta tarefa, 4 deles vindos da revisão do PR)
 - [x] `npm run build`
 - [x] **No navegador, contra o serviço real:** o `BarChart` desenha o consumo por uso final
       da execução `sim_01M2NEQ…` — **23.072 kWh em iluminação externa**, com eixo em marcações
@@ -96,6 +96,18 @@ interface na T010 — até lá, a garantia deles é a geometria pura, com as arm
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
+
+**A moldura e o filho não podem calcular a mesma escala em separado.** O `ChartFrame`
+desenha as linhas de grade com a sua escala, e o `BarChart` desenhava as barras com uma
+escala própria a partir dos mesmos dados. Batiam quase sempre — e divergiam no caso de borda,
+com todos os valores iguais: a grade usava `min + 1` e a barra usava `max`. Agora a moldura
+**passa a escala** para o filho, e as duas concordam por construção. Conferido numericamente
+no navegador: a base da barra cai em `y = 196`, exatamente sobre a linha de grade do zero.
+
+**Saldo negativo em uso final é dado, não ruído.** O filtro era `valor > 0` e virou
+`!== 0`: geração no local pode deixar um uso final com saldo negativo, e esconder isso
+apagaria justamente o resultado mais interessante do projeto. Zerado continua fora, porque o
+motor devolve os 14 recursos sempre.
 
 **Multiplicar por inteiro não escapa do ponto flutuante.** A primeira versão de `niceTicks`
 usava múltiplos inteiros do passo para não *acumular* erro — e ainda assim `3 × 0,1` é

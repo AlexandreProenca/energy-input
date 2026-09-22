@@ -122,3 +122,22 @@ describe('cor divergente', () => {
     expect(divergingColor(NaN, { min: 0, max: 40 })).toBe('#e2e8f0');
   });
 });
+
+describe('escala da moldura com domínio de borda', () => {
+  it('série constante não desaparece: o domínio degenerado cai no meio da área', () => {
+    // Era o caso em que a barra e a grade divergiam — a moldura usava `min + 1` e a barra
+    // usava `max`. Com a escala vinda da moldura, as duas concordam por construção.
+    const s = linearScale({ min: 7, max: 7 }, { min: 200, max: 0 });
+    expect(s(7)).toBe(100);
+  });
+
+  it('a escala é a mesma para as marcações e para o desenho', () => {
+    const dominio = { min: 0, max: 20 };
+    const s = linearScale(dominio, { min: 180, max: 10 });
+    for (const t of niceTicks(dominio.min, dominio.max, 4)) {
+      expect(Number.isFinite(s(t))).toBe(true);
+      expect(s(t)).toBeLessThanOrEqual(180);
+      expect(s(t)).toBeGreaterThanOrEqual(10);
+    }
+  });
+});

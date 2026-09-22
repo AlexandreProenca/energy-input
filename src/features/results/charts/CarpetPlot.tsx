@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { divergingColor, type CarpetCell, type Range } from '@/core/results/plot';
 import { fmt } from '@/ui/primitives';
 
@@ -24,7 +24,9 @@ export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, vazio
   vazio?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const colunas = cells.length ? Math.max(...cells.map((c) => c.col)) + 1 : 0;
+  // Memoizado porque um ano horário são 8 760 células: sem isto, cada render percorre a
+  // lista inteira e espalha 8 760 argumentos em `Math.max` só para descobrir a largura.
+  const colunas = useMemo(() => (cells.length ? cells.reduce((m, c) => (c.col > m ? c.col : m), 0) + 1 : 0), [cells]);
 
   useEffect(() => {
     const canvas = ref.current;

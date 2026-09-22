@@ -49,5 +49,8 @@ export function usosFinaisEmKwh(
         .filter((r) => isEnergyUnit(r.units))
         .reduce((total, r) => total + (toKwh(r.value, r.units) ?? 0), 0),
     }))
-    .filter((b) => b.valor > 0);
+    // `!== 0`, e não `> 0`: geração no local pode deixar um uso final com saldo negativo, e
+    // esconder isso apagaria justamente o resultado mais interessante do projeto. Zerado
+    // continua fora, porque o motor devolve os 14 recursos sempre.
+    .filter((b) => b.valor !== 0);
 }

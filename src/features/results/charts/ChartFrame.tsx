@@ -23,8 +23,14 @@ export interface ChartFrameProps {
   /** Rótulos do eixo horizontal, na ordem das faixas. */
   rotulosX?: string[];
   unidade?: string;
-  /** Recebe a área útil e devolve o conteúdo do gráfico. */
-  children: (area: { x0: number; x1: number; y0: number; y1: number }) => ReactNode;
+  /**
+   * Recebe a área útil **e a escala vertical da moldura**, e devolve o conteúdo.
+   *
+   * A escala vem daqui de propósito: é a mesma que desenha as linhas de grade. Quando o
+   * filho calcula a sua, as duas divergem no caso de borda — série constante, domínio com
+   * folga — e as barras deixam de bater com a grade sem que nada acuse.
+   */
+  children: (area: { x0: number; x1: number; y0: number; y1: number; escalaY: (v: number) => number }) => ReactNode;
   /** Mensagem no lugar do gráfico quando não há o que desenhar. */
   vazio?: string;
 }
@@ -72,7 +78,7 @@ export function ChartFrame({
         </text>
       )}
 
-      {children({ x0, x1, y0, y1 })}
+      {children({ x0, x1, y0, y1, escalaY })}
 
       {/* Eixo horizontal por último, para ficar acima do desenho. */}
       <line x1={x0} x2={x1} y1={y1} y2={y1} stroke="#cbd5e1" strokeWidth="1" />

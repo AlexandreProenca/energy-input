@@ -75,3 +75,21 @@ describe('usos finais convertidos para kWh', () => {
     expect(barras[0].valor).toBeCloseTo(1001, 6);
   });
 });
+
+describe('saldo negativo em uso final', () => {
+  it('mantém categoria com saldo negativo, que geração no local pode produzir', () => {
+    // Esconder isso apagaria justamente o resultado mais interessante de um projeto com
+    // geração: o uso final que ficou negativo.
+    const barras = usosFinaisEmKwh([
+      { category: 'Generators', resources: [{ resource: 'Electricity', value: -3.6, units: 'GJ' }] },
+    ]);
+    expect(barras).toHaveLength(1);
+    expect(barras[0].valor).toBeCloseTo(-1000, 6);
+  });
+
+  it('continua omitindo categoria exatamente zerada', () => {
+    expect(usosFinaisEmKwh([
+      { category: 'Heating', resources: [{ resource: 'Electricity', value: 0, units: 'GJ' }] },
+    ])).toEqual([]);
+  });
+});

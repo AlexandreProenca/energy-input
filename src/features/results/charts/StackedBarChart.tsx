@@ -39,9 +39,9 @@ export function StackedBarChart({ label, rotulos, series, unidade, vazio }: {
         {({ x0, x1, y0, y1 }) => {
           const faixa = (x1 - x0) / Math.max(rotulos.length, 1);
           // Teto de largura: com uma categoria só, `faixa` é a área inteira e a barra vira
-        // um bloco que ocupa o gráfico. Acontece de verdade — há execução real com um único
-        // uso final consumindo.
-        const largura = Math.min(72, Math.max(2, faixa * 0.62));
+          // um bloco que ocupa o gráfico. Acontece de verdade — há execução real com um
+          // único uso final consumindo.
+          const largura = Math.min(72, Math.max(2, faixa * 0.62));
           const altura = (v: number) => (max === 0 ? 0 : (v / max) * (y1 - y0));
           return rotulos.map((rotulo, i) => {
             let acumulado = 0;
