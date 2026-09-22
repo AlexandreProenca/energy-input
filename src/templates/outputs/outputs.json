@@ -14,7 +14,7 @@
     "label": "Conforto (temperatura e umidade)",
     "description": "Temperatura do ar, temperatura operativa e umidade relativa de cada pavimento, hora a hora.",
     "icon": "thermometer",
-    "defaultOn": false,
+    "defaultOn": true,
     "objects": {
       "Output:Variable": {
         "Temperatura do ar": { "key_value": "*", "variable_name": "Zone Mean Air Temperature", "reporting_frequency": "Hourly" },
