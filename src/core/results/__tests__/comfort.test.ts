@@ -108,6 +108,15 @@ describe('média externa predominante', () => {
     expect(runningMeanOutdoor([30, 10, 10, 10])!).toBeLessThan(runningMeanOutdoor([10, 30, 30, 30])!);
   });
 
+  it('pula dia sem dado mantendo a posição, em vez de promover os anteriores', () => {
+    // Compactar a lista faria o dia de anteontem pesar como o de ontem, e a faixa seguiria
+    // um clima que não houve. Com a posição preservada: (30·1 + 10·0,64) / 1,64 = 22,195.
+    expect(runningMeanOutdoor([30, NaN, 10])).toBeCloseTo(22.1951, 4);
+    // Contraprova: compactando daria (30 + 10·0,8) / 1,8 = 21,111 — valor diferente.
+    expect(runningMeanOutdoor([30, NaN, 10])).not.toBeCloseTo(21.1111, 4);
+    expect(runningMeanOutdoor([30, 10])).toBeCloseTo(21.1111, 4);
+  });
+
   it('com todos os dias iguais, a média é esse valor', () => {
     expect(runningMeanOutdoor([20, 20, 20, 20])).toBeCloseTo(20, 6);
   });
@@ -167,6 +176,41 @@ describe('desconforto adaptativo', () => {
     expect(verao.fallbackDays).toBe(1);
     expect(verao.comfortable).toBe(7 * 24);
     expect(verao.comfortable).toBeGreaterThan(inverno.comfortable);
+  });
+});
+
+describe('alinhamento entre as duas séries', () => {
+  /** Série de um valor por dia, em dias do ano dados por [mês, dia]. */
+  const porData = (datas: [number, number][], valor: number, leap: boolean): NormalizedSeries => ({
+    points: datas.flatMap(([month, day]) =>
+      Array.from({ length: 24 }, (_, i) => ({ month, day, hour: i + 1, value: valor }))),
+    dropped: 0,
+    leap,
+  });
+
+  it('conta como fallback os dias internos que a série externa nem cobre', () => {
+    // Antes da revisão, `fallbackDays` era contado percorrendo os dias da série EXTERNA:
+    // se ela cobrisse 3 dias e a interna 10, os 7 dias sem faixa adaptativa não apareciam.
+    // O painel anunciaria "1 dia na faixa fixa" para 8 dias que usaram a faixa fixa.
+    const interna = serieDiaria(Array(10).fill(19));
+    const externa = serieDiaria(Array(3).fill(20));
+    const r = adaptiveDiscomfort(interna, externa, FIXA);
+    expect(r.fallbackDays).toBe(8); // dia 1 (sem histórico) + dias 4 a 10 (sem externa)
+    expect(r.bands.size).toBe(2); // só os dias 2 e 3 tiveram base
+  });
+
+  it('não desalinha quando só uma das séries contém 29 de fevereiro', () => {
+    // A externa recortada sem 29/2 usaria leap=false e chamaria 1º de março de dia 60,
+    // enquanto a interna, com 29/2, o chamaria de 61: a faixa de um dia seria aplicada ao
+    // outro do 1º de março em diante. As duas séries têm de compartilhar o mesmo calendário.
+    const fev = Array.from({ length: 9 }, (_, i) => [2, 20 + i] as [number, number]); // 20 a 28
+    const externaDatas: [number, number][] = [...fev, [3, 1]];
+    const internaDatas: [number, number][] = [...fev, [2, 29], [3, 1]];
+    // Externa a 20 °C ⇒ faixa adaptativa 20,5–27,5; interna a 19 °C é FRIA nela e
+    // CONFORTÁVEL na fixa (18–26). O veredito do 1º de março denuncia o desalinhamento.
+    const r = adaptiveDiscomfort(porData(internaDatas, 19, true), porData(externaDatas, 20, false), FIXA);
+    expect(r.bands.has(61)).toBe(true); // 1º de março em ano bissexto
+    expect(r.cold).toBeGreaterThan(0);
   });
 });
 

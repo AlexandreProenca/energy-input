@@ -91,21 +91,29 @@ export function adaptiveBand(meanOutdoor: number, tolerance = 3.5): ComfortBand 
  * predominante, e inventar uma seria pior que admitir a ausência.
  */
 export function runningMeanOutdoor(dailyMeans: readonly number[], alpha = 0.8): number | null {
-  const validos = dailyMeans.filter(v => Number.isFinite(v));
-  if (validos.length === 0) return null;
   let numerador = 0, denominador = 0;
-  for (let i = 0; i < validos.length; i++) {
+  for (let i = 0; i < dailyMeans.length; i++) {
+    const v = dailyMeans[i];
+    // Dia sem dado é pulado **mantendo sua posição**: compactar a lista promoveria os dias
+    // anteriores para pesos que não são deles. Um buraco de um dia faria o de três dias
+    // atrás pesar como o de ontem, e a faixa seguiria um clima que não houve.
+    if (!Number.isFinite(v)) continue;
     const peso = Math.pow(alpha, i);
-    numerador += peso * validos[i];
+    numerador += peso * v;
     denominador += peso;
   }
-  return numerador / denominador;
+  return denominador === 0 ? null : numerador / denominador;
 }
 
 export interface AdaptiveResult extends Discomfort {
   /** Faixa usada em cada dia do ano que teve base para o modelo adaptativo. */
   bands: Map<number, ComfortBand>;
-  /** Dias em que o modelo ficou fora do domínio de validade e a faixa fixa valeu. */
+  /**
+   * Quantos dias **da série interna** foram classificados pela faixa fixa, seja porque o
+   * modelo adaptativo saiu do domínio de validade, seja porque não havia série externa
+   * para aquele dia. É o número que o painel precisa exibir: contar só o primeiro motivo
+   * sub-reportaria a troca de critério.
+   */
   fallbackDays: number;
 }
 
@@ -125,34 +133,43 @@ export function adaptiveDiscomfort(
   options: { tolerance?: number; window?: number } = {},
 ): AdaptiveResult {
   const janela = options.window ?? 7;
+  // Um ano bissexto para as duas séries. Se cada uma usasse o próprio `leap`, bastaria a
+  // externa não conter 29 de fevereiro — por recorte da fixture ou buraco de medição — para
+  // os índices divergirem de 1º de março em diante, e a faixa do dia seguinte seria aplicada
+  // ao dia anterior pelo resto do ano.
+  const leap = indoor.leap || outdoor.leap;
+  const serieExterna: NormalizedSeries = { ...outdoor, leap };
+
   const mediasPorDia = new Map<number, number>();
-  for (const b of aggregateDaily(outdoor, 'mean')) mediasPorDia.set(b.index, b.value);
+  for (const b of aggregateDaily(serieExterna, 'mean')) mediasPorDia.set(b.index, b.value);
 
   const bands = new Map<number, ComfortBand>();
-  let fallbackDays = 0;
   for (const dia of [...mediasPorDia.keys()].sort((a, b) => a - b)) {
     // Dias anteriores, do mais recente para o mais antigo — a ordem que o peso exponencial
-    // da EN 16798 espera.
+    // da EN 16798 espera. Dia ausente entra como `NaN` para **não deslocar** os pesos dos
+    // demais: a posição é o que define o peso.
     const anteriores: number[] = [];
-    for (let k = 1; k <= janela; k++) {
-      const v = mediasPorDia.get(dia - k);
-      if (v !== undefined) anteriores.push(v);
-    }
+    for (let k = 1; k <= janela; k++) anteriores.push(mediasPorDia.get(dia - k) ?? NaN);
     const media = runningMeanOutdoor(anteriores);
     const faixa = media === null ? null : adaptiveBand(media, options.tolerance);
     if (faixa) bands.set(dia, faixa);
-    else fallbackDays++;
   }
 
   const hourly: HourState[] = [];
+  const diasNaFixa = new Set<number>();
   let cold = 0, hot = 0, comfortable = 0;
   for (const p of indoor.points) {
-    const faixa = bands.get(dayOfYear(p.month, p.day, indoor.leap)) ?? fixed;
+    const dia = dayOfYear(p.month, p.day, leap);
+    const adaptativa = bands.get(dia);
+    // Conta pelo dia da série INTERNA, que é a que está sendo classificada. Contar pelos
+    // dias da externa deixaria de fora o caso em que ela simplesmente não cobre o período.
+    if (!adaptativa) diasNaFixa.add(dia);
+    const faixa = adaptativa ?? fixed;
     if (p.value < faixa.min) { cold++; hourly.push('frio'); }
     else if (p.value > faixa.max) { hot++; hourly.push('quente'); }
     else { comfortable++; hourly.push('ok'); }
   }
-  return { cold, hot, comfortable, total: indoor.points.length, hourly, bands, fallbackDays };
+  return { cold, hot, comfortable, total: indoor.points.length, hourly, bands, fallbackDays: diasNaFixa.size };
 }
 
 /** Os três indicadores de conforto que o resumo permanente traz, todos em horas. */

@@ -25,7 +25,7 @@ conformidade.
 - `adaptiveBand`, `runningMeanOutdoor`, `adaptiveDiscomfort` — modelo adaptativo da
   ASHRAE 55 / EN 16798, com queda para a faixa fixa onde ele não vale.
 - `summaryComfortHours` — os três indicadores do resumo permanente, organizados.
-- `src/core/results/__tests__/comfort.test.ts`: 20 asserções.
+- `src/core/results/__tests__/comfort.test.ts`: 23 asserções.
 
 ### O que NÃO entra (deliberadamente postergado)
 
@@ -70,14 +70,14 @@ conformidade.
 ## 4. Alterações realizadas
 
 - `src/core/results/comfort.ts`: novo.
-- `src/core/results/__tests__/comfort.test.ts`: novo, 20 testes.
+- `src/core/results/__tests__/comfort.test.ts`: novo, 23 testes.
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 179 testes (eram 159; +20 nesta tarefa)
+- [x] `npm test` — 182 testes (eram 159; +23 nesta tarefa, 3 deles vindos da revisão do PR)
 - [x] `npm run build`
 - [x] Contraprovas: série inteiramente acima não gera hora fria (pegaria `cold`/`hot`
       trocados); os limites da faixa contam como confortáveis, não como desconforto; a faixa
@@ -101,6 +101,22 @@ O segundo esperava zero horas quentes num verão de 30 °C com interna a 27 °C.
 **primeiro dia da série não tem histórico** e cai na faixa fixa (18–26), onde 27 °C é quente.
 São 24 h quentes, não 0. O teste agora afirma isso e o `fallbackDays: 1` junto — o
 comportamento é correto e precisa ficar visível.
+
+**As duas séries precisam compartilhar o mesmo calendário.** `normalizeSeries` detecta
+bissexto por série, e bastava a externa não conter 29 de fevereiro — por recorte ou buraco de
+medição — para os índices divergirem de 1º de março em diante: a faixa de um dia seria
+aplicada ao dia anterior pelo resto do ano. `adaptiveDiscomfort` agora usa
+`indoor.leap || outdoor.leap` nas duas. Veio da revisão do PR, com prova negativa: o teste
+reprova sob o código anterior.
+
+**`fallbackDays` conta pelos dias da série interna.** Antes era contado percorrendo a
+externa, então dias internos que ela nem cobre não apareciam — com interna de 10 dias e
+externa de 3, o painel anunciaria "1 dia na faixa fixa" para 8 dias que a usaram.
+
+**Dia sem dado na janela entra como `NaN`, não é removido.** Compactar a lista promove os
+dias anteriores a pesos que não são deles: um buraco de um dia faria o de anteontem pesar
+como o de ontem. Com a posição preservada, `[30, NaN, 10]` dá 22,195; compactando daria
+21,111.
 
 **A T011 tem de mostrar `fallbackDays` e as horas sem dado.** O painel que exibir só o total
 de horas de desconforto estará escondendo duas coisas: quantos dias usaram um critério
