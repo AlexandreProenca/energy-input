@@ -72,7 +72,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | --- | --- | --- | --- |
 | [x] | T001 | Execução anual real bem-sucedida e captura de fixtures | — |
 | [x] | T002 | Liberar séries e estudos no proxy de desenvolvimento; paridade do nginx | — |
-| [ ] | T003 | Tipos e métodos de série temporal no cliente da API | T001, T002 |
+| [x] | T003 | Tipos e métodos de série temporal no cliente da API | T001, T002 |
 | [ ] | T004 | `core/results/series.ts` — agregação, reamostragem e conversão de unidades | T001 |
 | [ ] | T005 | `core/results/comfort.ts` — horas de desconforto | T004 |
 | [ ] | T006 | Casca do modo Resultados | T003 |
@@ -86,6 +86,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T014 | Montar cenários e criar o estudo | T013 |
 | [ ] | T015 | Tabela comparativa e gráfico do estudo | T014, T007 |
 | [ ] | T016 | Destravar a execução de simulações no serviço | — |
+| [ ] | T018 | Revisão por IA no PR cai quando o modelo devolve JSON com sobra | — |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -146,16 +147,25 @@ percorrida pelo teste, para que ampliar as rotas por descuido quebre na hora.
 
 ### Fase 1 — Núcleo puro, sem interface
 
-#### T003 · Tipos e métodos de série temporal no cliente da API
+#### T003 · Tipos e métodos de série temporal no cliente — **concluída**
 
-**Entra:** em `src/features/simulation/api.ts`, os tipos `Frequency`, `VariableCatalog`,
-`TimeSeriesPoint` e `TimeSeries`, os métodos `variables(id, cursor?)` e
-`timeseries(id, query)`, e um auxiliar que segue `proximo_cursor` até o fim com teto de
-páginas. Mapear **410** para um estado próprio ("série expirada — o resumo continua
-disponível") e **422** exibindo as candidatas devolvidas pelo serviço.
+Entregue em [`docs/tasks/T003-cliente-series-temporais.md`](tasks/T003-cliente-series-temporais.md).
 
-**Verificação:** `src/features/simulation/__tests__/api.test.ts` no idioma da casa
-(`vi.stubGlobal('fetch', …)`), alimentado pelas fixtures da T001.
+Os tipos ficaram em `src/core/results/types.ts`, não em `features/`, porque a T004 e a T005
+os consomem e `src/core/` não pode importar de `features/`. O cliente reexporta.
+
+`SimulationApiError` passou a carregar o corpo `problem+json`: o `request` achata o erro numa
+mensagem legível, mas isso perdia `errors[]` — e no 422 de ambiguidade são as **candidatas de
+chave**, única fonte delas, já que o catálogo é por tipo. Helpers `isSeriesExpired` (410) e
+`seriesCandidates` (422).
+
+`allTimeseries` segue `proximo_cursor` com teto de páginas e devolve `completa`/`paginas`:
+uma série anual cabe numa página só, então o teto só morde num cursor que não avança — mas
+devolver meia série calada faria um gráfico plausível e errado.
+
+Verificado contra o serviço real: 8 760 pontos numa página, `completa: true`, e **365 pontos
+com `hour: 24`** — um por dia, a convenção da T001 confirmada em dado vivo. **A T004 precisa
+disso ao montar os baldes diários.**
 
 #### T004 · `core/results/series.ts` — agregação, reamostragem e conversão
 
@@ -390,6 +400,24 @@ viraria aviso, não reprovação — reprovar o CI por indisponibilidade alheia 
 
 Verificado por prova negativa: com `proxy_ssl_verify_depth 1` o portão **reprova** (502 e
 erro no log); com a config versionada, **aprova** (401).
+
+#### T018 · Revisão por IA no PR cai quando o modelo devolve JSON com sobra
+
+**Sintoma.** O job falhou no PR #2 com
+`Resposta do modelo em formato inválido: Extra data: line 3 column 1 (char 4811)`. O
+`ai-pr-review.yml` faz `json.loads(content)` sobre a resposta do modelo; quando ela traz o
+objeto JSON seguido de qualquer sobra, o `json.loads` levanta e o job inteiro reprova. O
+`response_format: json_object` torna isso raro, não impossível.
+
+**Por que importa:** é check obrigatório. Falhar por sorte bloqueia qualquer PR, e a
+reexecução resolveu por ser saída não determinística — o que confirma a natureza do
+problema em vez de corrigi-lo.
+
+**Entra:** trocar `json.loads(content)` por `json.JSONDecoder().raw_decode(content)`, que lê
+o primeiro objeto e ignora o resto. Não há como piorar: hoje o mesmo caso é falha total.
+
+**Nota:** é workflow do repositório, fora do épico E1 e fora do escopo de qualquer tarefa
+dele — por isso tarefa própria, e não carona numa entrega de dashboards.
 
 ---
 
