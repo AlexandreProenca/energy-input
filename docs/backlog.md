@@ -70,7 +70,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 
 | Estado | Id | Tarefa | Depende de |
 | --- | --- | --- | --- |
-| [ ] | T001 | Execução anual real bem-sucedida e captura de fixtures | — |
+| [x] | T001 | Execução anual real bem-sucedida e captura de fixtures | — |
 | [ ] | T002 | Liberar séries e estudos no proxy de desenvolvimento; paridade do nginx | — |
 | [ ] | T003 | Tipos e métodos de série temporal no cliente da API | T001, T002 |
 | [ ] | T004 | `core/results/series.ts` — agregação, reamostragem e conversão de unidades | T001 |
@@ -85,38 +85,42 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T013 | `studyStore.ts` — acompanhamento do estudo | T012 |
 | [ ] | T014 | Montar cenários e criar o estudo | T013 |
 | [ ] | T015 | Tabela comparativa e gráfico do estudo | T014, T007 |
+| [ ] | T016 | Destravar a execução de simulações no serviço | — |
 
 ---
 
 ### Fase 0 — Destravar
 
-#### T001 · Execução anual real bem-sucedida e captura de fixtures
+#### T001 · Execução anual real bem-sucedida e captura de fixtures — **concluída**
 
-**Por que é a primeira.** [`DEVELOPMENT.md`](DEVELOPMENT.md) registra que, em 22/09/2026,
-**nenhuma simulação jamais terminou com sucesso** no serviço: autenticação, catálogo,
-upload, criação e repetição idempotente funcionaram, mas a execução terminou `failed` com
-`err_available: false`. A forma real de `Summary`, a existência das séries e o download de
-artefatos nunca foram observados. Desenhar gráfico contra formato adivinhado é retrabalho
-garantido.
+Entregue em [`docs/tasks/T001-execucao-real-e-fixtures.md`](tasks/T001-execucao-real-e-fixtures.md).
 
-**Entra:** novo `scripts/capture-results-fixtures.ts`, irmão de
-`scripts/simulation-api-check.ts`. Roda em Node, portanto aponta **direto** para
-`https://homolog.ee.dev.br/v1` com o token de `.env.local` e não depende do proxy nem da
-T002. Gera um modelo com `runPeriod.mode = 'annual'` e `outputs.selected` incluindo
-`conforto`, escolhe um `weather_id` do catálogo, executa, aguarda o estado terminal e grava
-em `src/features/simulation/__tests__/fixtures/`: `summary.json`, `variables.json`,
-`artifacts.json` e três `timeseries-*.json` — temperatura operativa horária,
-`Electricity:Facility` mensal e carga de resfriamento horária.
-Cria também `CHANGELOG.md` e `MEMORY.md`, exigidos por AGENTS.md §3 e hoje inexistentes, e
-fixa a convenção `docs/tasks/TNNN-slug.md`, corrigindo a divergência entre AGENTS.md §2/§3
-(que diz `NNN`) e o template (que usa `TNNN`).
+**Resultado:** nenhuma execução **nova** conclui no serviço desde 19/09/2026 — mas as três
+execuções bem-sucedidas de 16/09 continuam com resultados e artefatos não expirados, e foi
+delas que saíram as fixtures. O épico segue destravado; a falha de execução virou a **T016**.
 
-**Não entra:** qualquer interface. Nenhum gráfico nesta tarefa.
+`scripts/capture-results-fixtures.ts` grava em `src/core/results/__fixtures__/`, em dois
+modos (`SIMULATION_ID=sim_…` para capturar de uma execução concluída, ou sem variável para
+executar uma anual nova). `src/core/results/__tests__/fixtures.test.ts` trava o contrato
+observado em 12 asserções.
 
-**Verificação:** fixtures commitadas; o parágrafo de `DEVELOPMENT.md` que diz que "a
-validação real de resultado bem-sucedido e download permanece pendente" substituído pelo
-que foi de fato observado.
-**Se a execução falhar de novo, a tarefa entrega o diagnóstico e o épico para aqui.**
+**O que as fixtures ensinaram, e que muda as tarefas abaixo:**
+
+- `hour` vai de **1 a 24** e é o **fim** do intervalo: a hora 24 ainda é do dia anterior,
+  embora o `timestamp` UTC já esteja no dia seguinte. Tratar 24 como hora 0 do dia seguinte
+  desloca a série em um dia. (T004)
+- O ano das séries é o do **arquivo climático** (2013 nas fixtures), não o da execução. (T007)
+- Uma série anual horária cabe numa página: 8 760 pontos, `proximo_cursor: null`. (T003)
+- `frequency` e `aggregation` usam grafias diferentes no mesmo objeto: `hourly` e `Avg`. (T003)
+- O catálogo é de **tipos** (RDD/MDD) e paginado em 200; `Zone Operative Temperature` foi
+  gravada pela execução e **não** aparece na primeira página. (T012)
+- Descobrir o que foi gravado é **por tentativa**: variável ausente devolve **422**
+  `"variável inexistente nesta simulação"`. O mesmo 422 cobre ambiguidade de chave — só o
+  corpo distingue. (T003, T012)
+- `Summary.comfort` tem **três** nomes, incluindo `simple_ashrae_55_not_comfortable`. (T005)
+- `end_uses` traz os **14 recursos sempre**, inclusive zerados e com unidades mistas
+  (GJ e m3). (T008)
+- `Summary` real traz `simulation_id` e `status`, que a interface local não modela. (T003)
 
 #### T002 · Liberar séries e estudos no proxy de desenvolvimento; paridade do nginx
 
@@ -213,9 +217,16 @@ Logo, **dois indicadores separados, nunca confundidos**:
     **Fora do domínio de validade do modelo (10 °C ≤ T̄ext ≤ 33,5 °C) a função devolve nulo e
     o chamador cai na faixa fixa** — extrapolar o modelo adaptativo em silêncio é o bug que
     esta tarefa precisa testar.
-- **Horas fora do setpoint** — `Summary.comfort`, sob esse rótulo honesto. É de graça,
-  permanente e **sobrevive à retenção que apaga o `.sql`**: quando a série responder 410, é o
-  único número que resta. Secundário, mas não descartável.
+- **Indicadores do resumo permanente** — `Summary.comfort` traz **três** nomes, todos em
+  horas, confirmados em execução real (T001): `occupied_heating_setpoint_not_met` e
+  `occupied_cooling_setpoint_not_met`, que deram **0 h** nas duas execuções observadas —
+  coerente com o `NoLimit` acima —, e **`simple_ashrae_55_not_comfortable`**, que deu 332,5 h
+  numa delas. Este último é conforto de verdade, é de graça e **sobrevive à retenção que
+  apaga o `.sql`**: quando a série responder 410, é o número que resta.
+  **A confirmar quando a execução voltar (T016):** se os modelos deste aplicativo produzem
+  esse campo — ele depende de os objetos `People` carregarem modelo de conforto. Se
+  produzirem, ele vira o indicador de fallback natural; se não, o cálculo sobre a série é a
+  única fonte.
 
 Manter a postura de `src/generators/nbr15575.ts` ("Informational only — not a compliance
 check"): nada aqui emite veredito de conformidade.
@@ -263,6 +274,11 @@ explicativo em vez de gráfico vazio, honrando o aviso que já existe em
 que o preset `conta` mede. O gráfico e o dicionário de rótulos precisam tratar esses
 recursos como aquecimento e resfriamento, senão o painel mostra climatização zerada.
 
+**Armadilha confirmada na T001:** `end_uses` devolve os **14 recursos sempre**, inclusive
+zerados, e com **unidades mistas** — energia em `GJ`, água em `m3`, na mesma lista. Um
+gráfico que não filtrar valores nulos desenha 14 séries vazias por categoria, e uma
+conversão cega para kWh mente na linha de água.
+
 #### T009 · Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR**
 
 **Armadilha:** `defaultOn` em `src/templates/outputs/outputs.json` é **dado morto**. Um
@@ -300,6 +316,13 @@ indicativo da T005 quando a série existir. Inclui o dicionário pt-BR de `comfo
 inglês cru.
 
 ### Fase 3 — Estudos
+
+> **Nota da T001 para o seletor de séries.** O catálogo (`/results/variables`) é de tipos
+> RDD/MDD e vem paginado em 200: uma variável efetivamente gravada pode **não** estar na
+> primeira página. E não existe rota que responda "o que esta execução registrou" — a
+> descoberta é por tentativa, tratando o 422. Só o 422 de *variável inexistente* tem
+> fixture; o de *ambiguidade de chave* não pôde ser capturado, porque as execuções
+> bem-sucedidas disponíveis têm uma zona só. O seletor precisa tolerar essa ausência.
 
 #### T012 · Tipos e métodos de estudo no cliente da API
 
@@ -342,6 +365,31 @@ código novo e puro.
 —, marcando `shared: true` (variação que não gerou trabalho) e variações sem resumo. Barras
 comparativas por coluna escolhida, reutilizando a T007.
 
+### Fora do épico, aberta pela T001
+
+#### T016 · Destravar a execução de simulações no serviço
+
+**Sintoma.** Nenhuma simulação conclui desde 19/09/2026: 8 falhas em 6 modelos diferentes,
+todas com `attempts: 3`, ~30 s a 90 s,
+`failure_reason: "tentativas esgotadas: a execução falhou repetidamente"`,
+`err_available: false`, `entries: []`, `fatal: null` e **zero artefatos**
+(`expected_total: 0`, `complete: true`). As três execuções de 16/09 concluíram normalmente
+(2,0 s a 24,9 s).
+
+**O que já foi descartado (T001):** o modelo gerado por este aplicativo passa em
+`POST /v1/models/{id}/validate` (`{"valido": true, "erros": []}`); falha igual em `annual`
+e em `design_day`; e modelos de outras origens também falham no mesmo período. Sem `.err`
+e sem artefato nenhum, o EnergyPlus não chegou a escrever — a falha está **antes do motor**.
+
+**Próximo passo:** é uma questão para quem opera o serviço, não para este repositório.
+Levar a tabela de execuções e a assinatura da falha. `GET /v1/usage` exigiria escopo
+`admin:billing`, então cota não pôde ser descartada daqui.
+
+**Por que não bloqueia o épico E1:** os resultados de 16/09 continuam disponíveis e não
+expirados, e deles saíram as fixtures. As tarefas T002–T015 trabalham sobre fixture. O que
+fica pendente é a verificação de ponta a ponta com execução nova — e a confirmação de se os
+modelos deste app produzem `simple_ashrae_55_not_comfortable` (T005).
+
 ---
 
 ## Documentação obrigatória do épico
@@ -369,11 +417,12 @@ Conforme AGENTS.md §4:
 
 ## Perguntas em aberto
 
-- **A execução anual vai concluir?** Nunca concluiu. A T001 é o teste.
-- **Quais chaves de zona o `Zone Operative Temperature` produz**, e se `key_value: "*"` no
-  epJSON vira uma série por zona no `.sql`. Resolve-se lendo as fixtures da T001.
-- **Nomes reais em `Summary.comfort`.** O único exemplo do contrato é
-  `occupied_cooling_setpoint_not_met`; o dicionário pt-BR da T011 depende do conjunto
-  observado.
+- **Quando a execução volta a funcionar?** Fora do alcance deste repositório — T016.
+- **Se `key_value: "*"` no epJSON vira uma série por zona no `.sql`.** Continua aberta: as
+  execuções bem-sucedidas disponíveis têm uma zona só (`ZONE ONE`), então a fixture não
+  responde. Também é o que impede capturar o 422 de ambiguidade.
+- **Se os modelos deste aplicativo produzem `simple_ashrae_55_not_comfortable`.** Depende de
+  os objetos `People` carregarem modelo de conforto; só uma execução nova responde (T016).
+  Decide se a T005 tem um indicador permanente de fallback ou não.
 - **Retenção do `.sql`.** O contrato diz que a série vira 410 depois de um prazo que ele não
   numera. Afeta se vale guardar as séries localmente.

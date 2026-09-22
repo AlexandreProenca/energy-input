@@ -294,9 +294,71 @@ arquivos estáticos; use `npm run dev` ou Docker/nginx para a integração.
 Validação automática: testes de transporte e ciclo de vida; smoke test real
 (opt-in) `node --import tsx scripts/simulation-api-check.ts` contra o Vite
 local com credencial configurada. Esse script cria um modelo sintético,
-verifica idempotência e acompanha a execução. Em 22/09/2026, autenticação,
-catálogo, upload, criação e repetição idempotente funcionaram. A execução
-`sim_01M34AR1Y55GWWB936547KMXPZ` terminou em `failed` após três tentativas, com
-`err_available: false` e diagnóstico indisponível. Portanto a validação real
-de resultado bem-sucedido e download permanece pendente da execução no
-serviço; essa falha não deve ser reportada como sucesso da simulação.
+verifica idempotência e acompanha a execução.
+
+**Estado da execução no serviço (22/09/2026).** Autenticação, catálogo, upload,
+criação, repetição idempotente e validação de modelo funcionam. A **execução**
+não: nenhuma simulação concluiu desde 16/09/2026.
+
+| Data | Tipo | Resultado |
+| --- | --- | --- |
+| 16/09 | design_day e annual | 3 execuções `succeeded` (2,0 s a 24,9 s) |
+| 19/09 a 22/09 | annual e design_day | 8 execuções `failed`, em 6 modelos diferentes |
+
+As falhas têm sempre a mesma assinatura: `attempts: 3`, ~30 s a 90 s,
+`failure_reason: "tentativas esgotadas: a execução falhou repetidamente"`,
+`err_available: false`, `entries: []`, `fatal: null` e **zero artefatos**
+(`expected_total: 0`, `complete: true`). Sem `.err` e sem artefato, o EnergyPlus
+não chegou a escrever nada — a falha está antes do motor.
+
+O modelo gerado por este aplicativo **passa** em `POST /v1/models/{id}/validate`
+(`{"valido": true, "erros": []}`), e o mesmo modelo falha tanto em `annual`
+quanto em `design_day`. Como modelos de origens diferentes também falham desde
+19/09, o indício é de regressão no serviço, não no epJSON gerado aqui. Enquanto
+nada executa, não é possível descartar um problema latente no modelo.
+Investigação registrada na T001; acompanhamento na T016 do backlog.
+
+Isso **não** bloqueia o épico de dashboards: as execuções de 16/09 continuam com
+resultados e artefatos não expirados, e foi delas que saíram as fixtures reais
+(veja abaixo).
+
+### Fixtures reais de resultados
+
+`scripts/capture-results-fixtures.ts` grava em `src/core/results/__fixtures__/`
+respostas reais de `results/summary`, `results/variables`, `results/timeseries`
+e `artifacts`. Dois modos:
+
+```bash
+SIMULATION_ID=sim_… npx tsx scripts/capture-results-fixtures.ts   # execução já concluída
+npx tsx scripts/capture-results-fixtures.ts                        # executa uma anual nova
+```
+
+Identificadores da conta são trocados por marcadores estáveis que ainda casam
+com os padrões do contrato; números e nomes de campo ficam byte a byte.
+`src/core/results/__tests__/fixtures.test.ts` trava o contrato observado. O que
+essas fixtures ensinaram, e que a prosa do OpenAPI não dizia:
+
+- **`hour` vai de 1 a 24 e é o fim do intervalo.** A hora 24 ainda pertence ao
+  dia anterior, embora seu `timestamp` UTC já esteja no dia seguinte
+  (`month: 1, day: 1, hour: 24` ⇄ `2013-01-02T03:00:00Z` com `utc_offset_hours: -3`).
+  Tratar 24 como hora 0 do dia seguinte desloca a série em um dia.
+- **O ano das séries é o do arquivo climático** (2013 nas fixtures), não o da execução.
+- **Uma série anual horária cabe numa página:** 8 760 pontos com `proximo_cursor: null`.
+- **`frequency` e `aggregation` usam grafias diferentes no mesmo objeto:** `hourly`
+  (contrato, minúscula) e `Avg` (motor, capitalizada).
+- **O catálogo é de tipos e é paginado.** `Zone Operative Temperature` foi gravada
+  pela execução e mesmo assim não aparece na primeira página de 200. O catálogo
+  não diz o que foi registrado — só o que o modelo poderia relatar (RDD/MDD).
+- **Descobrir o que foi gravado é por tentativa.** Variável não registrada devolve
+  **422** `"variável inexistente nesta simulação"`, com
+  `errors[0].message = "a simulação não registrou 'X'"`. O mesmo 422 cobre a
+  ambiguidade de chave, então quem consome precisa distinguir pelo corpo.
+- **`Summary.comfort` vem em horas e tem três nomes:**
+  `occupied_heating_setpoint_not_met`, `occupied_cooling_setpoint_not_met` e
+  `simple_ashrae_55_not_comfortable`. Os dois primeiros deram 0 h nas duas
+  execuções observadas; o terceiro deu 0 h numa e 332,5 h na outra.
+- **`end_uses` traz os 14 recursos sempre, inclusive zerados, com unidades
+  mistas** (GJ para energia, m3 para água). Gráfico que não filtrar desenha 14
+  séries vazias por categoria; conversão cega para kWh mente na linha de água.
+- **`Summary` real traz `simulation_id` e `status`**, que a interface local
+  `Summary` em `src/features/simulation/api.ts` ainda não modela.

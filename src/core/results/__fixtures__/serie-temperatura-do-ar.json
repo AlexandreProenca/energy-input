@@ -1,0 +1,593 @@
+{
+  "simulation_id": "sim_01M2KXB9D4TQ7F3S0YJ8N5VZQK",
+  "status": "succeeded",
+  "variable": {
+    "name": "Zone Mean Air Temperature",
+    "key": "ZONE ONE",
+    "frequency": "hourly",
+    "units": "C",
+    "aggregation": "Avg",
+    "is_meter": false
+  },
+  "utc_offset_hours": -3,
+  "itens": [
+    {
+      "timestamp": "2013-01-01T04:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 1,
+      "minute": 0,
+      "value": 24.433871942408903
+    },
+    {
+      "timestamp": "2013-01-01T05:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 2,
+      "minute": 0,
+      "value": 24.394453123897392
+    },
+    {
+      "timestamp": "2013-01-01T06:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 3,
+      "minute": 0,
+      "value": 24.275303619822274
+    },
+    {
+      "timestamp": "2013-01-01T07:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 4,
+      "minute": 0,
+      "value": 24.11580294953678
+    },
+    {
+      "timestamp": "2013-01-01T08:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 5,
+      "minute": 0,
+      "value": 23.93900401871313
+    },
+    {
+      "timestamp": "2013-01-01T09:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 6,
+      "minute": 0,
+      "value": 23.925826577925534
+    },
+    {
+      "timestamp": "2013-01-01T10:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 7,
+      "minute": 0,
+      "value": 24.041787255218455
+    },
+    {
+      "timestamp": "2013-01-01T11:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 8,
+      "minute": 0,
+      "value": 24.385255976119662
+    },
+    {
+      "timestamp": "2013-01-01T12:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 9,
+      "minute": 0,
+      "value": 24.997415024661258
+    },
+    {
+      "timestamp": "2013-01-01T13:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 10,
+      "minute": 0,
+      "value": 25.534531326569063
+    },
+    {
+      "timestamp": "2013-01-01T14:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 11,
+      "minute": 0,
+      "value": 25.85864380457467
+    },
+    {
+      "timestamp": "2013-01-01T15:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 12,
+      "minute": 0,
+      "value": 26.200154830334675
+    },
+    {
+      "timestamp": "2013-01-01T16:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 13,
+      "minute": 0,
+      "value": 26.460904162998474
+    },
+    {
+      "timestamp": "2013-01-01T17:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 14,
+      "minute": 0,
+      "value": 26.649528655410776
+    },
+    {
+      "timestamp": "2013-01-01T18:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 15,
+      "minute": 0,
+      "value": 26.663748758080676
+    },
+    {
+      "timestamp": "2013-01-01T19:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 16,
+      "minute": 0,
+      "value": 26.348326454750218
+    },
+    {
+      "timestamp": "2013-01-01T20:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 17,
+      "minute": 0,
+      "value": 25.85933965077936
+    },
+    {
+      "timestamp": "2013-01-01T21:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 18,
+      "minute": 0,
+      "value": 25.54991840955799
+    },
+    {
+      "timestamp": "2013-01-01T22:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 19,
+      "minute": 0,
+      "value": 25.386857751877088
+    },
+    {
+      "timestamp": "2013-01-01T23:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 20,
+      "minute": 0,
+      "value": 25.253792693487853
+    },
+    {
+      "timestamp": "2013-01-02T00:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 21,
+      "minute": 0,
+      "value": 25.107943098390397
+    },
+    {
+      "timestamp": "2013-01-02T01:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 22,
+      "minute": 0,
+      "value": 24.921821314460914
+    },
+    {
+      "timestamp": "2013-01-02T02:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 23,
+      "minute": 0,
+      "value": 24.747121950737625
+    },
+    {
+      "timestamp": "2013-01-02T03:00:00Z",
+      "month": 1,
+      "day": 1,
+      "hour": 24,
+      "minute": 0,
+      "value": 24.560118280590572
+    },
+    {
+      "timestamp": "2013-01-02T04:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 1,
+      "minute": 0,
+      "value": 24.37057699885223
+    },
+    {
+      "timestamp": "2013-01-02T05:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 2,
+      "minute": 0,
+      "value": 24.184977641651265
+    },
+    {
+      "timestamp": "2013-01-02T06:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 3,
+      "minute": 0,
+      "value": 23.961285126175213
+    },
+    {
+      "timestamp": "2013-01-02T07:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 4,
+      "minute": 0,
+      "value": 23.776381667228634
+    },
+    {
+      "timestamp": "2013-01-02T08:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 5,
+      "minute": 0,
+      "value": 23.658977736671925
+    },
+    {
+      "timestamp": "2013-01-02T09:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 6,
+      "minute": 0,
+      "value": 23.654278713012218
+    },
+    {
+      "timestamp": "2013-01-02T10:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 7,
+      "minute": 0,
+      "value": 23.87003640181979
+    },
+    {
+      "timestamp": "2013-01-02T11:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 8,
+      "minute": 0,
+      "value": 24.53951352762638
+    },
+    {
+      "timestamp": "2013-01-02T12:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 9,
+      "minute": 0,
+      "value": 25.47564793398048
+    },
+    {
+      "timestamp": "2013-01-02T13:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 10,
+      "minute": 0,
+      "value": 26.167539899691945
+    },
+    {
+      "timestamp": "2013-01-02T14:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 11,
+      "minute": 0,
+      "value": 26.52565284506121
+    },
+    {
+      "timestamp": "2013-01-02T15:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 12,
+      "minute": 0,
+      "value": 26.716749012609654
+    },
+    {
+      "timestamp": "2013-01-02T16:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 13,
+      "minute": 0,
+      "value": 26.985045797707347
+    },
+    {
+      "timestamp": "2013-01-02T17:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 14,
+      "minute": 0,
+      "value": 27.182792354420172
+    },
+    {
+      "timestamp": "2013-01-02T18:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 15,
+      "minute": 0,
+      "value": 27.199406129667135
+    },
+    {
+      "timestamp": "2013-01-02T19:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 16,
+      "minute": 0,
+      "value": 27.046160916890795
+    },
+    {
+      "timestamp": "2013-01-02T20:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 17,
+      "minute": 0,
+      "value": 26.68416052405913
+    },
+    {
+      "timestamp": "2013-01-02T21:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 18,
+      "minute": 0,
+      "value": 26.276509279168557
+    },
+    {
+      "timestamp": "2013-01-02T22:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 19,
+      "minute": 0,
+      "value": 26.002452272771475
+    },
+    {
+      "timestamp": "2013-01-02T23:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 20,
+      "minute": 0,
+      "value": 25.851766568692348
+    },
+    {
+      "timestamp": "2013-01-03T00:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 21,
+      "minute": 0,
+      "value": 25.73357443522768
+    },
+    {
+      "timestamp": "2013-01-03T01:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 22,
+      "minute": 0,
+      "value": 25.583233351442676
+    },
+    {
+      "timestamp": "2013-01-03T02:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 23,
+      "minute": 0,
+      "value": 25.391831886486074
+    },
+    {
+      "timestamp": "2013-01-03T03:00:00Z",
+      "month": 1,
+      "day": 2,
+      "hour": 24,
+      "minute": 0,
+      "value": 25.229756407900943
+    },
+    {
+      "timestamp": "2013-01-03T04:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 1,
+      "minute": 0,
+      "value": 25.077357208828584
+    },
+    {
+      "timestamp": "2013-01-03T05:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 2,
+      "minute": 0,
+      "value": 24.896669393944343
+    },
+    {
+      "timestamp": "2013-01-03T06:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 3,
+      "minute": 0,
+      "value": 24.72835858277197
+    },
+    {
+      "timestamp": "2013-01-03T07:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 4,
+      "minute": 0,
+      "value": 24.592049785591872
+    },
+    {
+      "timestamp": "2013-01-03T08:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 5,
+      "minute": 0,
+      "value": 24.489499736682887
+    },
+    {
+      "timestamp": "2013-01-03T09:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 6,
+      "minute": 0,
+      "value": 24.498150797978994
+    },
+    {
+      "timestamp": "2013-01-03T10:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 7,
+      "minute": 0,
+      "value": 24.706624659084348
+    },
+    {
+      "timestamp": "2013-01-03T11:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 8,
+      "minute": 0,
+      "value": 25.350617334115572
+    },
+    {
+      "timestamp": "2013-01-03T12:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 9,
+      "minute": 0,
+      "value": 25.95639388615684
+    },
+    {
+      "timestamp": "2013-01-03T13:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 10,
+      "minute": 0,
+      "value": 26.6396050168892
+    },
+    {
+      "timestamp": "2013-01-03T14:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 11,
+      "minute": 0,
+      "value": 27.231812286735437
+    },
+    {
+      "timestamp": "2013-01-03T15:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 12,
+      "minute": 0,
+      "value": 27.56122721913111
+    },
+    {
+      "timestamp": "2013-01-03T16:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 13,
+      "minute": 0,
+      "value": 27.664399167746737
+    },
+    {
+      "timestamp": "2013-01-03T17:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 14,
+      "minute": 0,
+      "value": 27.810948500674805
+    },
+    {
+      "timestamp": "2013-01-03T18:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 15,
+      "minute": 0,
+      "value": 27.594241859390667
+    },
+    {
+      "timestamp": "2013-01-03T19:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 16,
+      "minute": 0,
+      "value": 27.389529470279175
+    },
+    {
+      "timestamp": "2013-01-03T20:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 17,
+      "minute": 0,
+      "value": 27.28832604356721
+    },
+    {
+      "timestamp": "2013-01-03T21:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 18,
+      "minute": 0,
+      "value": 27.03518149027015
+    },
+    {
+      "timestamp": "2013-01-03T22:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 19,
+      "minute": 0,
+      "value": 26.690379531721828
+    },
+    {
+      "timestamp": "2013-01-03T23:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 20,
+      "minute": 0,
+      "value": 26.506593784093738
+    },
+    {
+      "timestamp": "2013-01-04T00:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 21,
+      "minute": 0,
+      "value": 26.378211348292698
+    },
+    {
+      "timestamp": "2013-01-04T01:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 22,
+      "minute": 0,
+      "value": 26.25100050091941
+    },
+    {
+      "timestamp": "2013-01-04T02:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 23,
+      "minute": 0,
+      "value": 26.117812126501967
+    },
+    {
+      "timestamp": "2013-01-04T03:00:00Z",
+      "month": 1,
+      "day": 3,
+      "hour": 24,
+      "minute": 0,
+      "value": 25.976844184897924
+    }
+  ],
+  "proximo_cursor": null,
+  "_pontos_na_pagina_original": 8760
+}

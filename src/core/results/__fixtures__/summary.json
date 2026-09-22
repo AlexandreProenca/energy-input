@@ -1,0 +1,1163 @@
+{
+  "end_uses": [
+    {
+      "category": "Heating",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Cooling",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Interior Lighting",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Exterior Lighting",
+      "resources": [
+        {
+          "value": 83.06,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Interior Equipment",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Exterior Equipment",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Fans",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Pumps",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Heat Rejection",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Humidification",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Heat Recovery",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Water Systems",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Refrigeration",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    },
+    {
+      "category": "Generators",
+      "resources": [
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Electricity"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Natural Gas"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Gasoline"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Diesel"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Coal"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Fuel Oil No 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Propane"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 1"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "Other Fuel 2"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Cooling"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Water"
+        },
+        {
+          "value": 0,
+          "units": "GJ",
+          "resource": "District Heating Steam"
+        },
+        {
+          "value": 0,
+          "units": "m3",
+          "resource": "Water"
+        }
+      ]
+    }
+  ],
+  "peak_demand": [
+    {
+      "value": 5250,
+      "units": "W",
+      "resource": "Electricity"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "Natural Gas"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "Gasoline"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "Diesel"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "Coal"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "Fuel Oil No 1"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "Fuel Oil No 2"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "Propane"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "Other Fuel 1"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "Other Fuel 2"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "District Cooling"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "District Heating Water"
+    },
+    {
+      "value": 0,
+      "units": "W",
+      "resource": "District Heating Steam"
+    },
+    {
+      "value": 0,
+      "units": "m3/s",
+      "resource": "Water"
+    }
+  ],
+  "comfort": [
+    {
+      "value": 0,
+      "units": "Hours",
+      "name": "occupied_heating_setpoint_not_met"
+    },
+    {
+      "value": 0,
+      "units": "Hours",
+      "name": "occupied_cooling_setpoint_not_met"
+    },
+    {
+      "value": 0,
+      "units": "Hours",
+      "name": "simple_ashrae_55_not_comfortable"
+    }
+  ],
+  "building_area": [
+    {
+      "value": 232.26,
+      "units": "m2",
+      "name": "total"
+    },
+    {
+      "value": 0,
+      "units": "m2",
+      "name": "conditioned"
+    },
+    {
+      "value": 232.26,
+      "units": "m2",
+      "name": "unconditioned"
+    }
+  ],
+  "simulation_id": "sim_01M2KXB9D4TQ7F3S0YJ8N5VZQK",
+  "status": "succeeded",
+  "run_type": "annual"
+}
