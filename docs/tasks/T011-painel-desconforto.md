@@ -140,6 +140,22 @@ Numa segunda rodada, mais três, todos aceitos e todos baratos:
 - **`rotuloDoResumo` decide por ordem de cascata**, e o teste de cobertura conferia presença
   de chave, não unicidade. Há asserção de que as tabelas são disjuntas.
 
+Numa terceira rodada, a revisão declarou explicitamente que nenhum achado era bloqueante, e
+o tom passou de defeito para endurecimento contra mudança futura hipotética. **Dois
+aceitos**, por serem da mesma família que esta tarefa combate:
+
+- `corDoEstado` pintava de **confortável** qualquer código fora de 0..2. É inalcançável hoje
+  — `carpetCells` descarta célula não finita —, mas o fallback apostava a favor do edifício.
+  Agora recebe cinza de "não classificado": errar para "não sei" é o único erro aceitável.
+- `Permanentes` filtrava por **unidade**, então um indicador novo em horas apareceria com o
+  nome em inglês cru. Passa a filtrar por nome conhecido.
+
+**Dois declinados, e vale dizer por quê.** Um pedia validar faixa plausível de temperatura em
+`bandFromDocument` — não há cenário de falha, só a possibilidade de o documento conter um
+número esquisito, que já é problema do documento. O outro era estilo (`meses[0]` como
+protótipo de chaves). Aceitar tudo que uma revisão automática levanta não é rigor; é trocar
+julgamento por obediência, e infla o código com guardas que nunca disparam.
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras

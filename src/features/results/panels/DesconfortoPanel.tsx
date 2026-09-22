@@ -7,7 +7,7 @@ import {
   adaptiveDiscomfort, hoursOutsideBand, monthlyStateHours, summaryComfortHours,
   type ComfortBand, type Discomfort, type HourState,
 } from '@/core/results/comfort';
-import { rotuloDeConforto } from '@/core/results/rotulos';
+import { TABELAS, rotuloDeConforto } from '@/core/results/rotulos';
 import { bandFromDocument } from '@/core/results/setpoints';
 import { useDocumentStore } from '@/store/documentStore';
 import type { Simulation, Summary } from '@/features/simulation/api';
@@ -33,7 +33,17 @@ const ROTULO: Record<HourState, string> = { frio: 'Frio', ok: 'Confortável', qu
  */
 const CODIGO: Record<HourState, number> = { frio: 0, ok: 1, quente: 2 };
 const codigoDoEstado = (e: HourState): number => CODIGO[e] ?? NaN;
-const corDoEstado = (v: number) => CORES[ESTADOS[v] ?? 'ok'];
+/**
+ * Código fora de 0..2 recebe cinza claro de "não classificado", e não a cor de confortável.
+ * Hoje é inalcançável — `carpetCells` descarta célula não finita —, mas o fallback anterior
+ * apostava a favor do edifício: qualquer código inesperado viraria uma hora confortável na
+ * tela. Errar para "não sei" é o único erro aceitável aqui.
+ */
+const NAO_CLASSIFICADO = '#f1f5f9';
+const corDoEstado = (v: number) => {
+  const estado = ESTADOS[v];
+  return estado ? CORES[estado] : NAO_CLASSIFICADO;
+};
 
 type Criterio = 'fixa' | 'adaptativa';
 
@@ -243,7 +253,12 @@ export function DesconfortoPanel({ simulation, summary }: {
  * série existe: são a única coisa que continuará aqui depois de a série expirar.
  */
 function Permanentes({ summary, temSerie }: { summary: Summary; temSerie: boolean }) {
-  const horas = summary.comfort.filter((c) => c.units.toLowerCase().startsWith('hour'));
+  // Filtra por **nome conhecido**, e não só pela unidade. Um indicador novo em horas — horas
+  // de operação, por exemplo — passaria pelo filtro de unidade e apareceria com o nome em
+  // inglês cru, que é o defeito que esta mesma tarefa corrigiu em outros lugares.
+  const horas = summary.comfort.filter(
+    (c) => c.name in TABELAS.conforto && c.units.toLowerCase().startsWith('hour'),
+  );
   if (horas.length === 0) return null;
   return (
     <section className="space-y-2 border-t border-slate-100 pt-3">
