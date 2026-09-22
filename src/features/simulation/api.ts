@@ -108,30 +108,42 @@ export class SimulationApi {
       const valor = query[campo];
       if (valor) q.set(campo, valor);
     }
-    if (query.limit) q.set('limit', String(query.limit));
+    // `!== undefined`, e não truthiness: `limit: 0` é inválido pelo contrato (mínimo 1), e
+    // repassá-lo rende um 422 explícito em vez de o serviço aplicar o default de 10 000
+    // calado — quem pediu 0 receberia 10 000 pontos achando que pediu nenhum.
+    if (query.limit !== undefined) q.set('limit', String(query.limit));
     return this.request<TimeSeries>(`/simulations/${encodeURIComponent(id)}/results/timeseries?${q}`);
   }
   /**
    * Segue `proximo_cursor` até o fim e concatena os pontos, na ordem.
    *
-   * O teto de páginas não é paranoia: um cursor que não avança — por defeito do serviço ou
-   * por página vazia — travaria a aba num laço infinito. Uma série anual horária cabe numa
-   * página só (8 760 pontos, confirmado na T001), então o teto sobra para o caso normal e
-   * só morde no patológico. Ele é reportado, não silenciado: devolver meia série sem avisar
-   * produziria um gráfico plausível e errado.
+   * Duas proteções contra cursor defeituoso, porque o teto sozinho não basta:
+   *
+   * - **Cursor que se repete** interrompe na hora. Só o teto de páginas deixaria o cliente
+   *   concatenar N cópias da mesma página e devolver uma série com pontos duplicados — pior
+   *   que devolver pouco, porque o gráfico sai plausível.
+   * - **Teto de páginas** para o caso de cursores que mudam sem nunca acabar.
+   *
+   * Uma série anual horária cabe numa página só (8 760 pontos, confirmado contra o serviço),
+   * então ambos só mordem no patológico. A interrupção é reportada em `completa`, não
+   * silenciada: devolver meia série sem avisar produziria um gráfico plausível e errado.
    */
   async allTimeseries(id: string, query: TimeSeriesQuery, maxPaginas = 12) {
     const itens: TimeSeriesPoint[] = [];
     let pagina = await this.timeseries(id, query);
     const { variable, utc_offset_hours } = pagina;
+    const vistos = new Set<string>();
     let lidas = 1;
+    let repetiu = false;
     itens.push(...pagina.itens);
     while (pagina.proximo_cursor && lidas < maxPaginas) {
+      if (vistos.has(pagina.proximo_cursor)) { repetiu = true; break; }
+      vistos.add(pagina.proximo_cursor);
       pagina = await this.timeseries(id, { ...query, cursor: pagina.proximo_cursor });
       itens.push(...pagina.itens);
       lidas++;
     }
-    return { variable, utc_offset_hours, itens, completa: !pagina.proximo_cursor, paginas: lidas };
+    return { variable, utc_offset_hours, itens, completa: !repetiu && !pagina.proximo_cursor, paginas: lidas };
   }
   download(id: string, name: string) {
     return this.request<{ download_url: string }>(`/simulations/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(name)}`);

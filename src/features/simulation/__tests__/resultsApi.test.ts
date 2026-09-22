@@ -59,6 +59,14 @@ describe('série temporal', () => {
     expect(urlDe(fetch)).toBe(`/simulation-api/v1/simulations/${SIM}/results/timeseries?variable=Electricity%3AFacility`);
   });
 
+  it('repassa `limit: 0` em vez de engolir, para o serviço recusar com clareza', async () => {
+    // O contrato exige mínimo 1. Omitir faria o serviço aplicar o default de 10 000, e quem
+    // pediu 0 receberia 10 000 pontos sem saber por quê.
+    const fetch = stubFetch(serie);
+    await new SimulationApi().timeseries(SIM, { variable: 'X', limit: 0 });
+    expect(urlDe(fetch)).toContain('limit=0');
+  });
+
   it('a fixture real satisfaz o tipo declarado, inclusive a hora 24', async () => {
     stubFetch(serie);
     const pagina: TimeSeries = await new SimulationApi().timeseries(SIM, { variable: 'Zone Operative Temperature' });
@@ -92,10 +100,22 @@ describe('paginação de série', () => {
     expect(urlDe(fetch, 1)).toContain('variable=X');
   });
 
-  it('para no teto de páginas e avisa em vez de devolver meia série calada', async () => {
-    // Um cursor que nunca acaba travaria a aba. Devolver o que veio sem sinalizar seria
-    // pior: o gráfico ficaria plausível e errado.
-    const fetch = vi.fn(async () => Response.json({ ...serie, itens: [], proximo_cursor: 'sempre' }));
+  it('interrompe no cursor que se repete, sem duplicar pontos', async () => {
+    // Só o teto de páginas deixaria concatenar N cópias da mesma página: a série sairia
+    // com pontos duplicados e o gráfico, plausível e errado. Pior que devolver pouco.
+    const ponto = { timestamp: null, month: 1, day: 1, hour: 1, minute: 0, value: 1 };
+    const fetch = vi.fn(async () => Response.json({ ...serie, itens: [ponto], proximo_cursor: 'sempre' }));
+    vi.stubGlobal('fetch', fetch);
+    const todas = await new SimulationApi().allTimeseries(SIM, { variable: 'X' }, 12);
+    // Primeira página + uma segunda com o mesmo cursor, e para: 2 chamadas, não 12.
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(todas.itens).toHaveLength(2);
+    expect(todas.completa).toBe(false);
+  });
+
+  it('para no teto de páginas quando o cursor muda mas nunca acaba', async () => {
+    let n = 0;
+    const fetch = vi.fn(async () => Response.json({ ...serie, itens: [], proximo_cursor: `c${n++}` }));
     vi.stubGlobal('fetch', fetch);
     const todas = await new SimulationApi().allTimeseries(SIM, { variable: 'X' }, 3);
     expect(todas.paginas).toBe(3);
@@ -138,5 +158,8 @@ describe('erros próprios das séries', () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ detail: 'falhou' }, { status: 500 })));
     const erro = await new SimulationApi('segredo').timeseries(SIM, { variable: 'X' }).catch(e => e);
     expect(String(erro.message)).not.toContain('segredo');
+    // `problem` é superfície nova desta tarefa: ele carrega o corpo cru da resposta, então
+    // precisa entrar na mesma garantia que a mensagem já tinha.
+    expect(JSON.stringify(erro.problem ?? {})).not.toContain('segredo');
   });
 });

@@ -26,7 +26,7 @@ os gráficos.
 - `SimulationApi.variables`, `SimulationApi.timeseries` e `SimulationApi.allTimeseries`.
 - `SimulationApiError` passa a carregar o corpo `problem+json`; helpers `isSeriesExpired` e
   `seriesCandidates`.
-- `src/features/simulation/__tests__/resultsApi.test.ts`: 11 asserções.
+- `src/features/simulation/__tests__/resultsApi.test.ts`: 13 asserções.
 
 ### O que NÃO entra (deliberadamente postergado)
 
@@ -51,10 +51,17 @@ os gráficos.
   chave, esse corpo é a única fonte delas. Campo opcional no fim do construtor: nada que já
   usa `SimulationApiError` muda.
 
-- **`allTimeseries` tem teto de páginas e reporta se parou nele.** Uma série anual horária
-  cabe numa página só — 8 760 pontos, confirmado contra o serviço —, então o teto só morde
-  no caso patológico de um cursor que não avança. Mas devolver meia série em silêncio
-  produziria um gráfico plausível e errado; por isso o retorno traz `completa` e `paginas`.
+- **`allTimeseries` tem duas proteções, não uma.** O teto de páginas sozinho não bastava: um
+  cursor que se repete faria o cliente concatenar N cópias da mesma página e devolver uma
+  série com pontos duplicados — pior que devolver pouco, porque o gráfico sai plausível.
+  Agora o cursor repetido interrompe na hora, e o teto cobre o cursor que muda sem acabar.
+  Os dois são reportados em `completa`, nunca engolidos. (Veio da revisão do PR; meu teste
+  original usava `itens: []` e por isso não expunha a duplicação.)
+
+- **`limit` é repassado com `!== undefined`, não por truthiness.** `limit: 0` é inválido pelo
+  contrato (mínimo 1). Omitir faria o serviço aplicar o default de 10 000, e quem pediu 0
+  receberia 10 000 pontos sem entender por quê. Repassado, o serviço responde **422** —
+  confirmado contra o serviço real.
 
 - **Parâmetros ausentes são omitidos, não enviados vazios.** `key=` vazio não é o mesmo que
   `key` ausente: o serviço procuraria a chave `""`. Há teste para isso.
@@ -69,14 +76,14 @@ os gráficos.
 - `src/features/simulation/api.ts`: reexporta os tipos; `variables`, `timeseries`,
   `allTimeseries`; `isSeriesExpired`, `seriesCandidates`; 410 com mensagem própria; o corpo
   do erro preservado em `SimulationApiError.problem`.
-- `src/features/simulation/__tests__/resultsApi.test.ts`: novo, 11 testes.
+- `src/features/simulation/__tests__/resultsApi.test.ts`: novo, 13 testes.
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 132 testes (eram 121; +11 nesta tarefa)
+- [x] `npm test` — 134 testes (eram 121; +13 nesta tarefa, 2 deles vindos da revisão do PR)
 - [x] `npm run build`
 - [x] **Contra o serviço real**, exercitando os quatro caminhos:
 
@@ -84,8 +91,9 @@ os gráficos.
   | --- | --- |
   | `variables` | 349 tipos, 5 na página, `complete: true`, cursor presente |
   | `timeseries` | `ZONE ONE` / `hourly` / `C`, fuso −3, primeiro ponto idêntico ao da fixture |
-  | `allTimeseries` | **8 760 pontos em 1 página**, `completa: true`, **365 pontos com `hour: 24`** |
+  | `allTimeseries` | **8 760 pontos em 1 página**, `completa: true`, **0 duplicados**, **365 pontos com `hour: 24`** |
   | 422 | `status: 422`, `isSeriesExpired: false`, candidata extraída do corpo |
+  | `limit: 0` | **422 "1 erro(s) de validação"** — recusa explícita, não default silencioso |
 
 ---
 
