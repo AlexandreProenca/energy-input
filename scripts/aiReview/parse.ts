@@ -174,6 +174,10 @@ export function parseReview(bruto: string): Review {
  * O log do CI deste repositório é público e a resposta deriva do diff do PR, então vai para
  * lá o que identifica um problema de formato — tamanho e como a resposta começa — e nada
  * derivado do conteúdo.
+ *
+ * Mede a resposta **crua**, com cerca de bloco e tudo: é ela que chegou, e é sobre ela que
+ * se diagnostica. Medir a versão sem cerca esconderia justamente a diferença que se quer
+ * ver.
  */
 export function describeShape(bruto: string): string {
   const inicio = bruto.trimStart().charAt(0);

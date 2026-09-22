@@ -42,6 +42,7 @@ async function main(): Promise<void> {
     truncado: process.env.TRUNCATED === 'true',
   });
 
+  let texto: string;
   let bruto: string;
   try {
     const resposta = await fetch(ENDPOINT, {
@@ -68,10 +69,19 @@ async function main(): Promise<void> {
       const corpo = await resposta.text().catch(() => '(corpo ilegível)');
       morrer(`A API DeepSeek respondeu ${status}: ${corpo.slice(0, 500)}`);
     }
-    const corpo = await resposta.json() as { choices?: { message?: { content?: string } }[] };
-    bruto = corpo.choices?.[0]?.message?.content ?? '';
+    texto = await resposta.text();
   } catch (e) {
     morrer(`Falha na comunicação com a API DeepSeek: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // A leitura do corpo fica FORA do `catch` de rede. Dentro dele, um corpo que não é JSON
+  // seria reportado como "falha na comunicação" — e a comunicação funcionou; o que falhou
+  // foi o formato. Diagnóstico trocado custa a próxima investigação inteira.
+  try {
+    const corpo = JSON.parse(texto) as { choices?: { message?: { content?: string } }[] };
+    bruto = corpo.choices?.[0]?.message?.content ?? '';
+  } catch {
+    morrer('A API DeepSeek respondeu com um corpo que não é JSON.', describeShape(texto));
   }
 
   try {
@@ -83,7 +93,10 @@ async function main(): Promise<void> {
       // resultado não é portão nenhum.
       morrer(`Resposta do modelo em formato inválido: ${e.message}`, describeShape(bruto));
     }
-    throw e;
+    // Qualquer outra falha aqui — escrita em disco, por exemplo — também precisa da anotação
+    // `::error::`. Relançar deixaria o job vermelho sem dizer por quê no lugar onde o
+    // Actions mostra.
+    morrer(`Falha ao montar o relatório: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 

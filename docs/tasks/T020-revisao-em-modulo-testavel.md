@@ -88,7 +88,7 @@ virou `scripts/simulationRoutes.ts` com teste.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 273 testes (eram 239 na `main`; +34 nesta tarefa, 6 vindos das duas rodadas de revisão do PR)
+- [x] `npm test` — 274 testes (eram 239 na `main`; +35 nesta tarefa, 7 vindos das três rodadas de revisão do PR)
 - [x] `npm run build`
 - [x] YAML válido (`yaml.safe_load`).
 - [x] `npx tsx scripts/aiReview/run.ts` sem chave falha limpo, com a anotação que o Actions
@@ -126,6 +126,18 @@ certa e a outra com o tipo errado, o objeto passava, `findings` virava lista vaz
 relatório anunciava "nenhum defeito" com achados que o modelo tinha escrito. `pareceRevisao`
 agora recusa **qualquer** chave do contrato com tipo errado, em vez de exigir que ao menos
 uma esteja certa.
+
+Numa terceira rodada, mais quatro achados. Três aceitos — corpo não-JSON deixou de ser
+reportado como "falha na comunicação"; falha não relacionada a formato passou a sair com
+anotação `::error::` em vez de só derrubar o processo; e ficou documentado que
+`describeShape` mede a resposta **crua**, com cerca e tudo.
+
+**Um rejeitado, e registrado como limite conhecido:** se o objeto externo não decodificar e
+houver, dentro dele, um objeto bem formado com a forma exata de revisão, a varredura aceita o
+interno. Exige as duas condições ao mesmo tempo, e `response_format: json_object` torna a
+primeira rara. Distinguir "aninhado num objeto quebrado" de "solto depois de prosa" exigiria
+rastrear aberturas não pareadas — mais complexidade do que o risco justifica. Fica anotado
+aqui em vez de meio-resolvido no código.
 
 ---
 

@@ -158,6 +158,13 @@ describe('descrição da forma, para o log público', () => {
     expect(describeShape('')).toBe('forma: vazia, 0 caracteres');
   });
 
+  it('mede a resposta crua, com a cerca incluída', () => {
+    // É a resposta que chegou, e é sobre ela que se diagnostica. Medir a versão sem cerca
+    // esconderia justamente a diferença que se quer ver.
+    const cercado = '```json\n{"findings":[]}\n```';
+    expect(describeShape(cercado)).toBe(`forma: cerca de bloco, ${cercado.length} caracteres`);
+  });
+
   it('não repete nenhum trecho da resposta', () => {
     const segredo = 'senha-do-diff-que-nao-pode-vazar';
     expect(describeShape(`prosa com ${segredo}`)).not.toContain(segredo);
