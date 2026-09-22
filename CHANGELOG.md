@@ -21,6 +21,12 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- `src/core/results/units.ts` e `series.ts`: a aritmética pura sobre a qual os gráficos se
+  apoiam — normalização (com contagem de horas sem dado), dia do ano com ano bissexto,
+  agregação diária e mensal deduzida do que o serviço diz da série, reamostragem por
+  envelope mín/máx que **preserva o pico** e conversão de unidades que recusa o que não é
+  energia. 21 asserções, cada uma escrita para falhar sob a implementação ingênua.
+  (`Refs: T004`)
 - Cliente da API ganha as séries: `variables`, `timeseries` e `allTimeseries` (que segue
   `proximo_cursor` com teto de páginas e reporta se parou nele), mais os tipos em
   `src/core/results/types.ts`. `allTimeseries` interrompe em cursor repetido — só o teto de

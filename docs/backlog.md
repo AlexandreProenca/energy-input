@@ -73,7 +73,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T001 | Execução anual real bem-sucedida e captura de fixtures | — |
 | [x] | T002 | Liberar séries e estudos no proxy de desenvolvimento; paridade do nginx | — |
 | [x] | T003 | Tipos e métodos de série temporal no cliente da API | T001, T002 |
-| [ ] | T004 | `core/results/series.ts` — agregação, reamostragem e conversão de unidades | T001 |
+| [x] | T004 | `core/results/series.ts` — agregação, reamostragem e conversão de unidades | T001 |
 | [ ] | T005 | `core/results/comfort.ts` — horas de desconforto | T004 |
 | [ ] | T006 | Casca do modo Resultados | T003 |
 | [ ] | T007 | Componentes de gráfico SVG reutilizáveis | T004, T006 |
@@ -167,19 +167,27 @@ Verificado contra o serviço real: 8 760 pontos numa página, `completa: true`, 
 com `hour: 24`** — um por dia, a convenção da T001 confirmada em dado vivo. **A T004 precisa
 disso ao montar os baldes diários.**
 
-#### T004 · `core/results/series.ts` — agregação, reamostragem e conversão
+#### T004 · `core/results/series.ts` — agregação e reamostragem — **concluída**
 
-**Entra:** funções puras em `src/core/results/series.ts` —
-`aggregate(points, 'daily'|'monthly', 'sum'|'mean'|'min'|'max')`;
-`downsample(points, targetPoints)` preservando mínimo e máximo por balde, senão a curva
-anual engole os picos; `toKWh(value, units)` para J, GJ e kWh, **recusando** unidade
-desconhecida em vez de adivinhar. Usar o `hour` local do contrato em vez de recalcular do
-`timestamp`, e documentar que `hour` é o fim do intervalo.
+Entregue em [`docs/tasks/T004-series-agregacao.md`](tasks/T004-series-agregacao.md).
 
-`src/core/` não importa React, Zustand, Three.js nem DOM (AGENTS.md §7).
+`units.ts` (`toKwh`, `isEnergyUnit`, `normalizeUnit`, `formatUnit`) e `series.ts`
+(`normalizeSeries`, `dayOfYear`, `defaultAggregation`, `aggregateDaily`, `aggregateMonthly`,
+`downsampleEnvelope`). 21 asserções, todas com contraprova.
 
-**Verificação:** `src/core/results/__tests__/series.test.ts` — 8 760 pontos, ano bissexto,
-série com `value: null` e contraprova de que o downsample preserva o pico.
+**O que a T007 precisa saber ao desenhar:**
+
+- Os componentes recebem baldes prontos e **não calculam nada** — a aritmética toda está aqui.
+- `normalizeSeries` devolve `dropped`: o painel tem de dizer "N horas sem dado", senão o
+  gráfico mente por omissão.
+- Cada balde traz `count`, que distingue dia cheio de dia parcial — dá para esmaecer o
+  trecho incompleto em vez de desenhá-lo com a mesma confiança.
+- Balde sem ponto **não existe**, em vez de valer zero: dia sem medição não é dia de consumo
+  nulo.
+- `downsampleEnvelope` devolve `{x, min, max, mean, count}`: desenhe a banda mín/máx **e** a
+  linha da média. Só a média perderia o pico, que é o número que o engenheiro procura.
+- `toKwh` devolve `null` quando a unidade não é de energia — `end_uses` mistura `GJ` e `m3`
+  na mesma lista. Tratar o `null`, nunca cair para o valor cru.
 
 #### T005 · `core/results/comfort.ts` — horas de desconforto
 
