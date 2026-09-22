@@ -21,6 +21,12 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- `src/core/results/comfort.ts`: horas de desconforto calculadas da série de temperatura
+  operativa, **frio e quente em separado**, com faixa fixa ou adaptativa (ASHRAE 55 /
+  EN 16798). A faixa adaptativa devolve nulo fora do domínio de validade em vez de
+  extrapolar, e o chamador recebe em quantos dias caiu para a fixa. `summaryComfortHours`
+  organiza os três indicadores do resumo permanente, distinguindo "não reportado" de "zero
+  horas". (`Refs: T005`)
 - `src/core/results/units.ts` e `series.ts`: a aritmética pura sobre a qual os gráficos se
   apoiam — normalização (com contagem de horas sem dado), dia do ano com ano bissexto,
   agregação diária e mensal deduzida do que o serviço diz da série, reamostragem por

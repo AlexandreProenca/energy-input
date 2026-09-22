@@ -74,7 +74,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T002 | Liberar séries e estudos no proxy de desenvolvimento; paridade do nginx | — |
 | [x] | T003 | Tipos e métodos de série temporal no cliente da API | T001, T002 |
 | [x] | T004 | `core/results/series.ts` — agregação, reamostragem e conversão de unidades | T001 |
-| [ ] | T005 | `core/results/comfort.ts` — horas de desconforto | T004 |
+| [x] | T005 | `core/results/comfort.ts` — horas de desconforto | T004 |
 | [ ] | T006 | Casca do modo Resultados | T003 |
 | [ ] | T007 | Componentes de gráfico SVG reutilizáveis | T004, T006 |
 | [ ] | T008 | Painel de consumo anual | T007 |
@@ -189,49 +189,29 @@ Entregue em [`docs/tasks/T004-series-agregacao.md`](tasks/T004-series-agregacao.
 - `toKwh` devolve `null` quando a unidade não é de energia — `end_uses` mistura `GJ` e `m3`
   na mesma lista. Tratar o `null`, nunca cair para o valor cru.
 
-#### T005 · `core/results/comfort.ts` — horas de desconforto
+#### T005 · `core/results/comfort.ts` — horas de desconforto — **concluída**
 
-**Armadilha que define esta tarefa.** `src/generators/hvac.ts:37-38` escreve
-`heating_limit: 'NoLimit'` e `cooling_limit: 'NoLimit'` em todo
-`ZoneHVAC:IdealLoadsAirSystem`. Um sistema ideal ilimitado atende o setpoint em
-praticamente toda hora — portanto `Summary.comfort`
-(`occupied_cooling_setpoint_not_met`, o *Comfort and Setpoint Not Met Summary* do
-EnergyPlus) é **estruturalmente próximo de zero** nos modelos que este aplicativo gera.
-Ele mede controle e dimensionamento, não conforto do ocupante.
+Entregue em [`docs/tasks/T005-horas-de-desconforto.md`](tasks/T005-horas-de-desconforto.md).
 
-Logo, **dois indicadores separados, nunca confundidos**:
+`hoursOutsideBand` (frio e quente separados, com classificação por hora para o carpete),
+`adaptiveBand` / `runningMeanOutdoor` / `adaptiveDiscomfort` (ASHRAE 55 / EN 16798, com queda
+para a faixa fixa onde o modelo não vale) e `summaryComfortHours`. 20 asserções.
 
-- **Horas de desconforto** — calculado em `src/core/results/comfort.ts` a partir da série
-  horária de `Zone Operative Temperature`. É o indicador do PRD §9 e o número principal do
-  painel. Exige o preset `conforto` (T009) e `run_type: annual`.
-  - Faixa `fixa` (padrão): horas com `Top` fora de `[setpoint de aquecimento, setpoint de
-    resfriamento]`, tirados de `answers.hvac`. **Separar horas quentes de horas frias** — um
-    agregado único esconde em qual direção o edifício falha, que é justamente o ponto.
-  - Faixa `adaptativa` (ASHRAE 55 / EN 16798): centro `Tc = 0,31·T̄ext + 17,8`, banda ±3,5 K.
-    `T̄ext` sai de `Site Outdoor Air Drybulb Temperature`, que o preset `conforto` já pede.
-    **Fora do domínio de validade do modelo (10 °C ≤ T̄ext ≤ 33,5 °C) a função devolve nulo e
-    o chamador cai na faixa fixa** — extrapolar o modelo adaptativo em silêncio é o bug que
-    esta tarefa precisa testar.
-- **Indicadores do resumo permanente** — `Summary.comfort` traz **três** nomes, todos em
-  horas, confirmados em execução real (T001): `occupied_heating_setpoint_not_met` e
-  `occupied_cooling_setpoint_not_met`, que deram **0 h** nas duas execuções observadas —
-  coerente com o `NoLimit` acima —, e **`simple_ashrae_55_not_comfortable`**, que deu 332,5 h
-  numa delas. Este último é conforto de verdade, é de graça e **sobrevive à retenção que
-  apaga o `.sql`**: quando a série responder 410, é o número que resta.
-  **A confirmar quando a execução voltar (T016):** se os modelos deste aplicativo produzem
-  esse campo — ele depende de os objetos `People` carregarem modelo de conforto. Se
-  produzirem, ele vira o indicador de fallback natural; se não, o cálculo sobre a série é a
-  única fonte.
+**O que a T011 precisa mostrar, além do total:**
 
-Manter a postura de `src/generators/nbr15575.ts` ("Informational only — not a compliance
-check"): nada aqui emite veredito de conformidade.
+- **`fallbackDays`** — em quantos dias a faixa adaptativa não valeu e a fixa entrou no lugar.
+  Faixa que troca de critério no meio do ano sem avisar é gráfico que mente.
+- **`dropped`** (da T004) — horas não medidas. Não contam nem como conforto nem como
+  desconforto, e o painel precisa dizê-lo.
+- **Frio e quente em separado.** 800 horas quentes pedem sombreamento e ventilação; 800
+  frias pedem isolamento e ganho solar. O agregado esconde a decisão.
+- Os indicadores de setpoint do resumo deram **0 h** nas duas execuções reais, como o
+  `NoLimit` do `IdealLoadsAirSystem` prevê. Exibi-los como "desconforto" mostraria zero para
+  sempre — o rótulo honesto é "horas fora do setpoint".
 
-**Não entra:** filtro por horas ocupadas (v1 calcula sobre as 8 760 h e rotula assim);
-PMV/PPD, que exigiria temperatura radiante média, velocidade do ar, clo e met.
-
-**Verificação:** horas quentes e frias contadas em separado, com contraprova de série
-inteiramente dentro e inteiramente acima da faixa; faixa adaptativa devolvendo nulo a 5 °C e
-a 40 °C; horas sem dado não contando nem como conforto nem como desconforto.
+**Pendente da T016:** confirmar se os modelos deste aplicativo produzem
+`simple_ashrae_55_not_comfortable`. Se produzirem, é o fallback quando a série expira (410);
+se não, o cálculo sobre a série é a única fonte e o painel tem de dizer que não há fallback.
 
 ### Fase 2 — Modo Resultados e gráficos
 
