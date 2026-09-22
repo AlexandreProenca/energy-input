@@ -3,7 +3,7 @@ import { BarChart3, CalendarClock, CircleSlash, Hourglass, Play, Search } from '
 import { isSimulationId } from '@/core/ids';
 import { Button, Callout, Field } from '@/ui/primitives';
 import { useSimulationStore } from '@/features/simulation/simulationStore';
-import { terminal } from '@/features/simulation/api';
+import { estadoDoPainel, semAnoCompleto } from './estado';
 
 /**
  * Casca do modo Resultados.
@@ -89,8 +89,10 @@ export default function ResultsShell() {
   const simulation = useSimulationStore((s) => s.simulation);
   const summary = useSimulationStore((s) => s.summary);
 
+  const estado = estadoDoPainel(simulation);
+
   // 1. Nenhuma execução nesta sessão.
-  if (!simulation) {
+  if (estado === 'sem-execucao' || !simulation) {
     return (
       <div className="mx-auto max-w-[1440px] px-4 py-6">
         <Vazio icon={<BarChart3 size={22} />} title="Nenhum resultado para mostrar ainda">
@@ -108,7 +110,7 @@ export default function ResultsShell() {
   }
 
   // 2. Execução em andamento — o painel não tem o que desenhar, mas também não é erro.
-  if (!terminal(simulation.status)) {
+  if (estado === 'em-andamento') {
     return (
       <div className="mx-auto max-w-[1440px] px-4 py-6">
         <Vazio icon={<Hourglass size={22} />} title={`A simulação está ${STATUS[simulation.status] ?? simulation.status}`}>
@@ -120,7 +122,7 @@ export default function ResultsShell() {
   }
 
   // 3. Terminou sem sucesso: o diagnóstico vive no diálogo de simulação, não aqui.
-  if (simulation.status !== 'succeeded') {
+  if (estado === 'sem-sucesso') {
     return (
       <div className="mx-auto max-w-[1440px] px-4 py-6">
         <Vazio
@@ -161,7 +163,7 @@ export default function ResultsShell() {
         O aviso repete o que o diálogo de simulação já diz, de propósito: quem chega aqui
         direto pelo modo Resultados não passou por lá.
       */}
-      {simulation.run_type === 'design_day' && (
+      {semAnoCompleto(simulation) && (
         <Callout tone="warning" icon={<CalendarClock size={18} />} title="Execução em dias de projeto">
           Dias de projeto dimensionam o sistema em duas datas extremas; eles não representam o
           ano. Consumo anual e horas de desconforto só fazem sentido numa execução climática

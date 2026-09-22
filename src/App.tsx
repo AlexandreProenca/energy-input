@@ -19,8 +19,15 @@ const ExpertShell = lazy(() => import('@/features/expert/ExpertShell'));
 const GeometryEditor = lazy(() => import('@/features/geometry/GeometryEditor'));
 const ResultsShell = lazy(() => import('@/features/results/ResultsShell'));
 
-/** Cada modo carregado sob demanda, exceto o assistente, que é a tela inicial. */
-const MODOS: Partial<Record<AppMode, (revision: number) => JSX.Element>> = {
+/**
+ * Cada modo carregado sob demanda, exceto o assistente, que é a tela inicial.
+ *
+ * O tipo é `Record` **total** sobre os modos não-assistente, de propósito: acrescentar um
+ * valor a `AppMode` sem registrá-lo aqui vira **erro de compilação**. Com `Partial` e um
+ * `?? <ExpertShell/>` de reserva — como estava — o modo novo cairia calado no editor de
+ * objetos, que é o defeito do ternário anterior reencenado com outra sintaxe.
+ */
+const MODOS: Record<Exclude<AppMode, 'basic'>, (revision: number) => JSX.Element> = {
   geometry: (revision) => <GeometryEditor key={revision} />,
   expert: (revision) => <ExpertShell key={revision} />,
   results: (revision) => <ResultsShell key={revision} />,
@@ -184,11 +191,11 @@ export function App() {
       ) : (
         <Suspense fallback={<div className="flex h-[60vh] items-center justify-center"><Loader2 className="animate-spin text-brand-600" /></div>}>
           {/*
-            Busca por modo, e não um encadeamento de ternários: com o ternário anterior,
-            qualquer modo novo caía silenciosamente no ExpertShell — o `results` teria
-            aberto o editor de objetos em vez do painel.
+            Busca total por modo. Não há caso de reserva: o `mode === 'basic'` acima já
+            estreitou o tipo, então o TypeScript garante que existe entrada para todo modo
+            que chega aqui.
           */}
-          {MODOS[mode]?.(revision) ?? <ExpertShell key={revision} />}
+          {MODOS[mode](revision)}
         </Suspense>
       )}
       <Suspense fallback={null}><SimulationDialog /></Suspense>

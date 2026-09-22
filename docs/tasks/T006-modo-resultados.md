@@ -64,13 +64,14 @@ ficassem para depois, cada um dos três painéis inventaria o seu.
 - `src/features/results/ResultsShell.tsx`: novo.
 - `src/store/persistence.ts`: `modoValido` na restauração.
 - `src/store/__tests__/persistence.test.ts`: novo, 4 testes.
+- `src/features/results/estado.ts` e `__tests__/estado.test.ts`: novos, 5 testes.
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 186 testes (eram 182; +4 nesta tarefa)
+- [x] `npm test` — 191 testes (eram 182; +9 nesta tarefa, 5 deles vindos da revisão do PR)
 - [x] `npm run build` — **`ResultsShell` sai em chunk próprio** (`ResultsShell-*.js`,
       5,43 kB / 2,21 kB gzip), confirmando que o `lazy()` funciona e o painel não entra no
       bundle principal.
@@ -93,6 +94,22 @@ especialista". Acrescentar `results` sem mexer nisso abriria o editor de objetos
 "Resultados" aceso — um bug que nenhum teste de unidade pegaria e que passaria por descuido
 de leitura. A tabela `MODOS` torna a omissão visível: modo sem entrada não renderiza nada
 específico.
+
+**Trocar o ternário pela tabela não bastava: o caso de reserva reencenava o mesmo bug.** A
+primeira versão era `MODOS[mode]?.(revision) ?? <ExpertShell/>` — com `Partial<Record<…>>` e
+uma reserva, um modo novo continuava caindo calado no editor de objetos, que é exatamente o
+defeito que a tarefa dizia ter corrigido. O tipo virou `Record` **total** sobre
+`Exclude<AppMode, 'basic'>`, sem reserva: o `mode === 'basic'` acima já estreita o tipo, e
+acrescentar um valor a `AppMode` sem registrá-lo passa a ser **erro de compilação**.
+Verificado acrescentando um modo fictício — `error TS2741: Property 'comparar' is missing`.
+Veio da revisão do PR, e é o tipo de correção que uma leitura apressada teria aceitado como
+pronta.
+
+**A decisão de qual tela mostrar saiu do `.tsx`.** `estadoDoPainel` e `semAnoCompleto` vivem
+em `estado.ts` porque o Vitest deste projeto roda em `environment: 'node'`, sem jsdom: lógica
+dentro do componente não tem como ser exercitada. Como função pura, ganhou contraprova —
+inclusive a de que um estado desconhecido do serviço conta como "em andamento", nunca como
+"pronto", que desenharia gráfico sobre resultado que pode não existir.
 
 **`e.currentTarget.value` no `onKeyDown`, não a variável de estado.** A primeira versão
 chamava `abrir()` lendo `id` do fecho do render. Com digitação rápida ou colagem, os
