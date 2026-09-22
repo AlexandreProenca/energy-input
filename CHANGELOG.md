@@ -21,6 +21,14 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- Cliente da API ganha as séries: `variables`, `timeseries` e `allTimeseries` (que segue
+  `proximo_cursor` com teto de páginas e reporta se parou nele), mais os tipos em
+  `src/core/results/types.ts`. `allTimeseries` interrompe em cursor repetido — só o teto de
+  páginas deixaria concatenar cópias da mesma página e devolver série com pontos
+  duplicados. **410** vira "série expirada — o resumo permanente continua
+  disponível", com `isSeriesExpired`; o corpo `problem+json` do erro passa a ser preservado
+  em `SimulationApiError.problem`, sem o qual as candidatas de chave do **422** se perderiam
+  na mensagem achatada. (`Refs: T003`)
 - Portão no CI para o proxy de simulação no contêiner: chama `/simulation-api/v1/engines` e
   reprova se o log do nginx tiver `SSL certificate verify error`. O healthcheck anterior só
   buscava a página estática e por isso ficou verde durante todo o tempo em que o proxy

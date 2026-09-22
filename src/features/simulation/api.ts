@@ -1,4 +1,6 @@
 import { safeFileName } from '@/lib/files';
+import type { ApiProblem, TimeSeries, TimeSeriesPoint, TimeSeriesQuery, VariableCatalog } from '@/core/results/types';
+export type { ApiProblem, CatalogItem, Frequency, SeriesVariable, TimeSeries, TimeSeriesPoint, TimeSeriesQuery, VariableCatalog } from '@/core/results/types';
 /** Contract: https://homolog.ee.dev.br/v1/openapi.json (2026-09-22). */
 export interface Simulation {
   id: string; model_version_id: string; status: string; run_type: 'annual' | 'design_day';
@@ -29,8 +31,24 @@ export interface Artifacts {
   complete: boolean; itens: { name: string; size_bytes: number; expires_at?: string | null }[];
 }
 export class SimulationApiError extends Error {
-  constructor(message: string, public status: number, public retryAfter = 0) { super(message); }
+  constructor(message: string, public status: number, public retryAfter = 0, public problem?: ApiProblem) { super(message); }
 }
+/**
+ * A série vive enquanto o `eplusout.sql` não expirar pela retenção; depois disso o serviço
+ * responde **410** e só `/results/summary` sobrevive. É estado de interface, não falha:
+ * o painel cai para o resumo permanente em vez de mostrar erro.
+ */
+export const isSeriesExpired = (e: unknown): boolean => e instanceof SimulationApiError && e.status === 410;
+/**
+ * **422 cobre dois casos distintos** e só o corpo os separa: variável que a execução não
+ * registrou, e chave ambígua (a mesma variável em mais de uma zona). No segundo, as
+ * candidatas vêm em `errors[]` — é a única forma de descobri-las, já que o catálogo é por
+ * tipo e não traz chave.
+ */
+export const seriesCandidates = (e: unknown): string[] =>
+  e instanceof SimulationApiError && e.status === 422
+    ? (e.problem?.errors ?? []).map(f => f.message ?? '').filter(Boolean)
+    : [];
 export class SimulationApi {
   constructor(private token = '', private base = '/simulation-api/v1') {}
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -43,11 +61,14 @@ export class SimulationApi {
       throw new SimulationApiError('Não foi possível acessar a simulação. Confira a conexão e tente novamente.', 0);
     }
     if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
+      const body = (await response.json().catch(() => ({}))) as ApiProblem;
       const fields = Array.isArray(body.errors) ? body.errors.map((e: { field?: string; message?: string }) => `${e.field ?? ''}: ${e.message ?? ''}`).join('; ') : '';
       const message = response.status === 401 ? 'Credencial ausente, inválida ou expirada. Configure a conexão novamente.'
+        : response.status === 410 ? 'A série horária desta simulação expirou. O resumo permanente continua disponível.'
         : typeof body.detail === 'string' ? body.detail : `A API recusou a solicitação (HTTP ${response.status}).`;
-      throw new SimulationApiError([message, fields, body.request_id ? `Referência: ${body.request_id}` : ''].filter(Boolean).join(' '), response.status, Number(response.headers.get('Retry-After')) || 0);
+      // O corpo inteiro viaja junto: achatá-lo na mensagem perderia as candidatas do 422,
+      // que são a única forma de descobrir as chaves de uma variável (o catálogo não as traz).
+      throw new SimulationApiError([message, fields, body.request_id ? `Referência: ${body.request_id}` : ''].filter(Boolean).join(' '), response.status, Number(response.headers.get('Retry-After')) || 0, body);
     }
     return response.json() as Promise<T>;
   }
@@ -74,6 +95,56 @@ export class SimulationApi {
   summary(id: string) { return this.request<Summary>(`/simulations/${encodeURIComponent(id)}/results/summary`); }
   diagnostics(id: string) { return this.request<Diagnostics>(`/simulations/${encodeURIComponent(id)}/results/errors`); }
   artifacts(id: string) { return this.request<Artifacts>(`/simulations/${encodeURIComponent(id)}/artifacts`); }
+  /** Catálogo RDD/MDD: tipos que o modelo poderia relatar, não o que a execução gravou. */
+  variables(id: string, opts: { limit?: number; cursor?: string } = {}) {
+    const q = new URLSearchParams({ limit: String(opts.limit ?? 200) });
+    if (opts.cursor) q.set('cursor', opts.cursor);
+    return this.request<VariableCatalog>(`/simulations/${encodeURIComponent(id)}/results/variables?${q}`);
+  }
+  /** Uma página da série de **uma** variável. Ambiguidade de chave e variável ausente são 422. */
+  timeseries(id: string, query: TimeSeriesQuery) {
+    const q = new URLSearchParams({ variable: query.variable });
+    for (const campo of ['key', 'frequency', 'from', 'to', 'cursor'] as const) {
+      const valor = query[campo];
+      if (valor) q.set(campo, valor);
+    }
+    // `!== undefined`, e não truthiness: `limit: 0` é inválido pelo contrato (mínimo 1), e
+    // repassá-lo rende um 422 explícito em vez de o serviço aplicar o default de 10 000
+    // calado — quem pediu 0 receberia 10 000 pontos achando que pediu nenhum.
+    if (query.limit !== undefined) q.set('limit', String(query.limit));
+    return this.request<TimeSeries>(`/simulations/${encodeURIComponent(id)}/results/timeseries?${q}`);
+  }
+  /**
+   * Segue `proximo_cursor` até o fim e concatena os pontos, na ordem.
+   *
+   * Duas proteções contra cursor defeituoso, porque o teto sozinho não basta:
+   *
+   * - **Cursor que se repete** interrompe na hora. Só o teto de páginas deixaria o cliente
+   *   concatenar N cópias da mesma página e devolver uma série com pontos duplicados — pior
+   *   que devolver pouco, porque o gráfico sai plausível.
+   * - **Teto de páginas** para o caso de cursores que mudam sem nunca acabar.
+   *
+   * Uma série anual horária cabe numa página só (8 760 pontos, confirmado contra o serviço),
+   * então ambos só mordem no patológico. A interrupção é reportada em `completa`, não
+   * silenciada: devolver meia série sem avisar produziria um gráfico plausível e errado.
+   */
+  async allTimeseries(id: string, query: TimeSeriesQuery, maxPaginas = 12) {
+    const itens: TimeSeriesPoint[] = [];
+    let pagina = await this.timeseries(id, query);
+    const { variable, utc_offset_hours } = pagina;
+    const vistos = new Set<string>();
+    let lidas = 1;
+    let repetiu = false;
+    itens.push(...pagina.itens);
+    while (pagina.proximo_cursor && lidas < maxPaginas) {
+      if (vistos.has(pagina.proximo_cursor)) { repetiu = true; break; }
+      vistos.add(pagina.proximo_cursor);
+      pagina = await this.timeseries(id, { ...query, cursor: pagina.proximo_cursor });
+      itens.push(...pagina.itens);
+      lidas++;
+    }
+    return { variable, utc_offset_hours, itens, completa: !repetiu && !pagina.proximo_cursor, paginas: lidas };
+  }
   download(id: string, name: string) {
     return this.request<{ download_url: string }>(`/simulations/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(name)}`);
   }
