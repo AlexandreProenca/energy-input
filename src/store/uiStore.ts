@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { WizardStepId } from '@/generators/answers';
 
-export type AppMode = 'basic' | 'geometry' | 'expert';
+export type AppMode = 'basic' | 'geometry' | 'expert' | 'results';
 
 export interface Toast {
   id: number;
