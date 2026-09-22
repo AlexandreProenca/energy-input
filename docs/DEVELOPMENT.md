@@ -318,6 +318,42 @@ quanto em `design_day`. Como modelos de origens diferentes também falham desde
 nada executa, não é possível descartar um problema latente no modelo.
 Investigação registrada na T001; acompanhamento na T016 do backlog.
 
+### Dashboards de resultados
+
+O modo **Resultados** (`src/features/results/`, carregado com `lazy()`) desenha três painéis
+a partir de uma execução concluída: **consumo anual**, **temperatura operativa** e **horas de
+desconforto**. Fecha o item 1 do roadmap do PRD §9.
+
+As séries vêm da API **em JSON**, por `GET /v1/simulations/{id}/results/timeseries` — uma
+variável por chamada, paginada por `proximo_cursor`. Nada de `.csv`/`.sql` é baixado nem
+interpretado no navegador. Dois detalhes do contrato custam caro quando esquecidos:
+
+- **`hour` vai de 1 a 24 e é o FIM do intervalo.** A hora 24 pertence ao dia anterior, não ao
+  seguinte. No carpete, `row = hour - 1`, então a linha 0 é a madrugada e fica no **topo**.
+- **`frequency` é a grafia do contrato (`hourly`) e `aggregation` é a do motor (`Avg`).** Não
+  são o mesmo vocabulário.
+
+Toda a matemática mora em `src/core/results/` — `series.ts` (normalização e agregação),
+`comfort.ts` (horas fora da faixa, fixa e adaptativa), `units.ts`, `plot.ts` (escalas,
+caminhos SVG e células do carpete) e `rotulos.ts` (dicionário pt-BR). Os componentes em
+`charts/` **recebem dados já agregados e não calculam nada**: o Vitest roda em
+`environment: 'node'`, sem jsdom, então lógica dentro de `.tsx` não tem como ser testada.
+
+Estados que o painel precisa distinguir, e que não são erro: execução em dias de projeto (não
+há ano para agregar), saída não solicitada antes de simular (**422**), série expirada pela
+retenção do `.sql` (**410** — o resumo permanente continua valendo) e medidor **registrado
+marcando zero**, que é resultado do modelo e não falta de saída.
+
+**Sobre os indicadores de conforto do resumo.** `occupied_heating_setpoint_not_met` e
+`occupied_cooling_setpoint_not_met` são **estruturalmente zero** nos modelos deste
+aplicativo, porque `src/generators/hvac.ts` escreve `NoLimit` — um sistema ideal ilimitado
+sempre atende o setpoint. Eles medem controle, não conforto.
+`simple_ashrae_55_not_comfortable` **não** é zero: o modelo padrão do gerador, rodado
+localmente em anual, reporta 7 587 h. É ele o fallback quando a série expira. Habilitar um
+modelo de conforto detalhado (Fanger, Pierce) no `People` exigiria três agendas que o gerador
+não escreve — `work_efficiency`, `clothing_insulation` e `air_velocity` —, e sem elas o
+EnergyPlus para com `Fatal`.
+
 Isso **não** bloqueia o épico de dashboards: as execuções de 16/09 continuam com
 resultados e artefatos não expirados, e foi delas que saíram as fixtures reais
 (veja abaixo).

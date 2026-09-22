@@ -3,11 +3,11 @@ import { Download, Loader2, Play, RefreshCw, Square } from 'lucide-react';
 import { Button, Callout, Dialog, Field, fmt } from '@/ui/primitives';
 import { useDocumentStore } from '@/store/documentStore';
 import { useValidation } from '@/hooks/useValidation';
+import { rotuloDeRecurso, rotuloDeUsoFinal, rotuloDoResumo } from '@/core/results/rotulos';
 import { SimulationApi, terminal, type Weather } from './api';
 import { useSimulationStore } from './simulationStore';
 
 const STATUS: Record<string, string> = { queued: 'Na fila', running: 'Simulando', succeeded: 'Concluída', failed: 'Falhou', cancelled: 'Cancelada', timeout: 'Tempo limite excedido' };
-const label: Record<string, string> = { total: 'Área total', conditioned: 'Área climatizada', Heating: 'Aquecimento', Cooling: 'Resfriamento', Electricity: 'Eletricidade', InteriorLighting: 'Iluminação interna', InteriorEquipment: 'Equipamentos internos' };
 export function SimulationDialog() {
   const s = useSimulationStore();
   const doc = useDocumentStore(state => state.doc);
@@ -122,9 +122,9 @@ export function SimulationDialog() {
           {result.run_type === 'design_day' && <Callout tone="info">Dias de projeto não representam consumo anual. Energia e conforto podem aparecer zerados.</Callout>}
           <h4 className="font-medium">Resultados</h4>
           <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th className="py-2">Indicador</th><th>Valor</th><th>Unidade</th></tr></thead><tbody>
-            {[...result.building_area, ...result.comfort, ...result.peak_demand.map(r => ({ ...r, name: `Pico · ${label[r.resource] ?? r.resource}` })),
-              ...result.end_uses.flatMap(u => u.resources.map(r => ({ ...r, name: `${label[u.category] ?? u.category} · ${label[r.resource] ?? r.resource}` })))].map((r, i) =>
-              <tr key={i} className="border-t border-slate-100"><td className="py-2 pr-3">{label[r.name] ?? r.name}</td><td className="pr-3 tabular-nums">{fmt(r.value, 2)}</td><td>{r.units}</td></tr>)}
+            {[...result.building_area, ...result.comfort, ...result.peak_demand.map(r => ({ ...r, name: `Pico · ${rotuloDeRecurso(r.resource)}` })),
+              ...result.end_uses.flatMap(u => u.resources.map(r => ({ ...r, name: `${rotuloDeUsoFinal(u.category)} · ${rotuloDeRecurso(r.resource)}` })))].map((r, i) =>
+              <tr key={i} className="border-t border-slate-100"><td className="py-2 pr-3">{rotuloDoResumo(r.name)}</td><td className="pr-3 tabular-nums">{fmt(r.value, 2)}</td><td>{r.units}</td></tr>)}
           </tbody></table></div>
         </div>}
         {s.diagnostics && <details open={s.simulation.status !== 'succeeded'}><summary className="cursor-pointer font-medium">Diagnóstico do EnergyPlus</summary>

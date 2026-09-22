@@ -209,3 +209,39 @@ export function summaryComfortHours(comfort: readonly { name: string; value: num
     ashrae55NotComfortable: achar(NOMES.ashrae55NotComfortable),
   };
 }
+
+/** Horas por estado num período — o que a barra empilhada mensal desenha. */
+export interface StateHours {
+  frio: number;
+  ok: number;
+  quente: number;
+}
+
+/**
+ * Soma as horas de cada estado por mês.
+ *
+ * Recebe os pontos e a classificação **emparelhados por índice**, que é como
+ * `hoursOutsideBand` e `adaptiveDiscomfort` devolvem `hourly`. Se os comprimentos não
+ * baterem, devolve os doze meses zerados em vez de emparelhar o que não corresponde: um
+ * gráfico mensal deslocado é plausível na tela e indefensável no papel.
+ *
+ * Os doze meses vêm sempre, inclusive vazios, porque a barra empilhada precisa de um lugar
+ * por mês — omitir janeiro empurraria fevereiro para a posição de janeiro.
+ */
+export function monthlyStateHours(
+  points: readonly NormalizedPoint[],
+  hourly: readonly HourState[],
+): StateHours[] {
+  const meses: StateHours[] = Array.from({ length: 12 }, () => ({ frio: 0, ok: 0, quente: 0 }));
+  if (points.length !== hourly.length) return meses;
+  for (let i = 0; i < points.length; i++) {
+    const mes = points[i].month;
+    const estado = hourly[i];
+    // O estado é conferido junto com o mês. `meses[m][estadoDesconhecido]++` seria
+    // `undefined + 1`, isto é, `NaN`, e um `NaN` contamina o mês inteiro sem erro nenhum —
+    // a barra empilhada some e nada diz por quê.
+    if (mes < 1 || mes > 12 || !(estado in meses[0])) continue;
+    meses[mes - 1][estado]++;
+  }
+  return meses;
+}

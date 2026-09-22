@@ -5,6 +5,7 @@ import {
   adaptiveBand,
   adaptiveDiscomfort,
   hoursOutsideBand,
+  monthlyStateHours,
   runningMeanOutdoor,
   summaryComfortHours,
 } from '../comfort';
@@ -243,5 +244,66 @@ describe('indicadores do resumo permanente', () => {
     const c = summaryComfortHours(resumo.comfort);
     expect(c.heatingSetpointNotMet).toBe(0);
     expect(c.coolingSetpointNotMet).toBe(0);
+  });
+});
+
+describe('horas por mês, classificadas', () => {
+  const ponto = (month: number, value: number): NormalizedPoint =>
+    ({ month, day: 1, hour: 1, value });
+
+  it('soma cada estado no mês do próprio ponto', () => {
+    const pontos = [ponto(1, 5), ponto(1, 22), ponto(1, 40), ponto(7, 5), ponto(7, 5)];
+    const { hourly } = hoursOutsideBand(pontos, { min: 18, max: 26 });
+    const meses = monthlyStateHours(pontos, hourly);
+    expect(meses[0]).toEqual({ frio: 1, ok: 1, quente: 1 });
+    expect(meses[6]).toEqual({ frio: 2, ok: 0, quente: 0 });
+  });
+
+  it('devolve os doze meses inclusive vazios', () => {
+    // A barra empilhada precisa de um lugar por mês: omitir janeiro empurraria fevereiro
+    // para a posição de janeiro, e o gráfico ficaria deslocado sem nada indicar isso.
+    const meses = monthlyStateHours([ponto(3, 22)], ['ok']);
+    expect(meses).toHaveLength(12);
+    expect(meses[2]).toEqual({ frio: 0, ok: 1, quente: 0 });
+    expect(meses.filter((m) => m.frio + m.ok + m.quente === 0)).toHaveLength(11);
+  });
+
+  it('recusa emparelhar listas de comprimentos diferentes', () => {
+    // Emparelhar por índice o que não corresponde produziria um gráfico mensal deslocado —
+    // plausível na tela e indefensável no papel. Zerado é o resultado honesto.
+    const meses = monthlyStateHours([ponto(1, 5), ponto(2, 5)], ['frio']);
+    expect(meses.every((m) => m.frio + m.ok + m.quente === 0)).toBe(true);
+  });
+
+  it('ignora mês fora de 1..12 em vez de escrever fora do vetor', () => {
+    const meses = monthlyStateHours([ponto(0, 5), ponto(13, 5), ponto(6, 5)], ['frio', 'frio', 'frio']);
+    expect(meses.reduce((a, m) => a + m.frio, 0)).toBe(1);
+    expect(meses[5].frio).toBe(1);
+  });
+
+  /**
+   * `meses[m][estadoDesconhecido]++` seria `undefined + 1`, isto é `NaN`, e um `NaN`
+   * contamina o mês inteiro sem erro nenhum: a barra empilhada some e nada diz por quê.
+   * Veio da revisão do PR da T011.
+   */
+  it('ignora estado desconhecido em vez de produzir NaN', () => {
+    const meses = monthlyStateHours(
+      [ponto(1, 5), ponto(1, 22)],
+      ['frio', 'sem_dado' as never],
+    );
+    expect(meses[0]).toEqual({ frio: 1, ok: 0, quente: 0 });
+    expect(meses.some((m) => Number.isNaN(m.frio + m.ok + m.quente))).toBe(false);
+  });
+
+  it('a soma dos doze meses fecha com o total classificado', () => {
+    // A conta que o painel mostra: o empilhado mensal e os três indicadores têm de vir do
+    // mesmo universo, senão um dos dois está mentindo.
+    const pontos = Array.from({ length: 300 }, (_, i) => ponto((i % 12) + 1, 10 + (i % 25)));
+    const d = hoursOutsideBand(pontos, { min: 18, max: 26 });
+    const meses = monthlyStateHours(pontos, d.hourly);
+    const soma = meses.reduce((a, m) => ({ frio: a.frio + m.frio, ok: a.ok + m.ok, quente: a.quente + m.quente }),
+      { frio: 0, ok: 0, quente: 0 });
+    expect(soma).toEqual({ frio: d.cold, ok: d.comfortable, quente: d.hot });
+    expect(soma.frio + soma.ok + soma.quente).toBe(d.total);
   });
 });

@@ -8,6 +8,20 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- O painel de desconforto classificava as horas contra os setpoints do **assistente**, e não
+  os do modelo aberto. Como o painel abre execução de outra sessão pelo identificador e o
+  Modo Especialista desliga o vínculo com o assistente, as horas podiam ser contadas contra
+  uma faixa que não era a do edifício. Agora a faixa vem do termostato do documento, e a
+  interface diz de onde ela veio. (`Refs: T011`)
+
+- O dicionário de rótulos em `SimulationDialog.tsx` tinha `InteriorLighting` e
+  `InteriorEquipment` grafados **sem espaço**, enquanto a API manda `Interior Lighting` e
+  `Interior Equipment`: as duas entradas nunca casaram. Os três indicadores de conforto e
+  `unconditioned` não tinham entrada nenhuma e apareciam em inglês cru, como
+  `occupied_heating_setpoint_not_met`. (`Refs: T011`)
+- O gráfico de usos finais mostrava a categoria em inglês (`Exterior Lighting`). Os testes de
+  `usosFinaisEmKwh` cobriam a conversão de unidade e não o rótulo, então o texto em inglês
+  não quebrava nada. (`Refs: T011`)
 - O relatório da revisão por IA cortava em **cinco achados sem avisar**: quem lesse um PR com
   doze achados veria cinco e concluiria que viu tudo. Agora diz quantos ficaram de fora.
   Apareceu ao escrever o teste do módulo extraído. (`Refs: T020`)
@@ -52,6 +66,14 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Painel de horas de desconforto**, que fecha os três painéis do PRD §9: horas frias,
+  quentes, confortáveis e **sem dado** lado a lado; barras mensais classificadas; e carpete
+  365 × 24 recolorido por estado de conforto. Dois critérios — a faixa fixa dos setpoints do
+  projeto e a faixa adaptativa da ASHRAE 55 / EN 16798, esta avisando em quantos dias o
+  modelo não valeu e a fixa entrou no lugar. (`Refs: T011`)
+- **Dicionário pt-BR dos nomes do resumo** (`src/core/results/rotulos.ts`): usos finais,
+  recursos, áreas e indicadores de conforto, com cobertura conferida contra a fixture real da
+  API. (`Refs: T011`)
 - A revisão por IA do PR saiu do heredoc no YAML e virou `scripts/aiReview/`, com 28 testes
   no Vitest — três tarefas seguidas tinham mexido nas mesmas vinte linhas com verificação
   descartável. O workflow caiu de 297 para 143 linhas. (`Refs: T020`)
