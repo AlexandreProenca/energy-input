@@ -204,23 +204,29 @@ jobs:
               print(f"::error::Falha na comunicação com a API DeepSeek: {exc}", file=sys.stderr)
               sys.exit(1)
 
+          # Chaves que provam que o objeto é a revisão, e não um exemplo que o modelo
+          # escreveu no meio da prosa. Sem isso, um `{"severity": "high"}` ilustrativo antes
+          # do objeto real é aceito, `findings` vem vazio e o job **passa anunciando que não
+          # há achados** — falha pior que a original, porque é silenciosa.
+          CHAVES_DA_REVISAO = ("findings", "summary")
+
           def extrair_json(texto):
-              """Primeiro objeto JSON do texto, ignorando o que vier antes e depois.
+              """O objeto de revisão dentro da resposta do modelo.
 
               `json.loads` exige que a string inteira seja um documento só, e o modelo às
               vezes acrescenta comentário depois do objeto — o erro era
-              `Extra data: line 3 column 1`. `raw_decode` lê o primeiro documento e informa
-              onde ele terminou: o resto é conversa, não dado.
+              `Extra data: line 3 column 1`. `raw_decode` lê um documento e diz onde ele
+              terminou; o resto é conversa, não dado.
 
-              Percorre **todas** as chaves de abertura, e não só a primeira, porque prosa do
-              tipo `use {chaves} assim` antes do objeto faria a primeira apontar para lixo.
-              E exige `dict`: uma resposta como `[1,2,3]` decodifica sem erro, e o
-              `.get("findings")` seguinte levantaria `AttributeError` — falha correta pela
-              razão errada, com mensagem que não ajuda quem for diagnosticar.
+              Percorre **todas** as chaves de abertura, porque prosa do tipo
+              `use {chaves} assim` faria a primeira apontar para lixo, e devolve o primeiro
+              candidato que **pareça a revisão** — um `dict` com `findings` ou `summary`.
+              Aceitar qualquer `dict` era o furo: objeto ilustrativo antes do real passava,
+              e o job reportava zero achado sem ter lido a revisão.
               """
               texto = texto.strip()
-              # A cerca é removida por conveniência; quem de fato sustenta os casos
-              # estranhos é a varredura de chaves abaixo.
+              # A cerca é removida por conveniência; quem sustenta os casos estranhos é a
+              # varredura abaixo.
               if texto.startswith("```"):
                   texto = re.sub(r"^```\s*[a-zA-Z]*\s*", "", texto)
                   texto = re.sub(r"\s*```$", "", texto).strip()
@@ -229,12 +235,14 @@ jobs:
               while inicio != -1:
                   try:
                       obj, _ = decoder.raw_decode(texto[inicio:])
-                      if isinstance(obj, dict):
+                      if isinstance(obj, dict) and any(k in obj for k in CHAVES_DA_REVISAO):
                           return obj
                   except ValueError:
                       pass
                   inicio = texto.find("{", inicio + 1)
-              raise ValueError("nenhum objeto JSON na resposta")
+              raise ValueError(
+                  "nenhum objeto com 'findings' ou 'summary' na resposta"
+              )
 
           try:
               content = body["choices"][0]["message"]["content"].strip()
@@ -245,12 +253,20 @@ jobs:
               # A resposta vai para o log: sem ela, diagnosticar o próximo formato inesperado
               # exige reproduzir a chamada à mão.
               print(f"::error::Resposta do modelo em formato inválido: {exc}", file=sys.stderr)
-              # O log do CI é público neste repositório, e a resposta deriva do diff do
-              # PR. O começo e o tamanho bastam para identificar um problema de formato;
-              # despejar o corpo inteiro exporia mais do que o diagnóstico exige.
+              # O log do CI é público neste repositório e a resposta deriva do diff do PR,
+              # então o que vai para o log é a **forma** da resposta, não o conteúdo dela:
+              # tamanho, como começa e se há objeto. É o que identifica um problema de
+              # formato — o corpo da revisão não acrescenta diagnóstico e acrescenta
+              # exposição.
               bruto = body.get("choices", [{}])[0].get("message", {}).get("content") or ""
-              print(f"--- resposta recebida ({len(bruto)} caracteres), primeiros 300 ---", file=sys.stderr)
-              print(bruto[:300], file=sys.stderr)
+              inicio = bruto.lstrip()[:1]
+              forma = {"{": "objeto", "[": "array", "`": "cerca de bloco", "": "vazia"}.get(inicio, "prosa")
+              print(
+                  f"::notice::Forma da resposta: {forma}, {len(bruto)} caracteres, "
+                  f"{bruto.count('{')} chaves de abertura, "
+                  f"'findings' presente: {'findings' in bruto}",
+                  file=sys.stderr,
+              )
               sys.exit(1)
 
           severidades = {

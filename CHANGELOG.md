@@ -8,6 +8,11 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- A revisão por IA podia **passar em silêncio sem ter lido a revisão**: ao tolerar preâmbulo
+  em prosa, passou a aceitar o primeiro objeto JSON da resposta, inclusive um exemplo
+  ilustrativo escrito antes do objeto real — `findings` vinha vazio e o check obrigatório
+  dava verde. Agora o objeto precisa trazer `findings` ou `summary`. (`Refs: T019`)
+
 - A revisão por IA no PR reprovava quando o modelo devolvia o objeto JSON **seguido de
   qualquer sobra** — `json.loads` exige que a string inteira seja um documento só. Como é
   check obrigatório e a saída não é determinística, o bloqueio era por sorte. Agora lê o
