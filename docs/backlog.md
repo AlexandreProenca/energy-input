@@ -86,7 +86,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T014 | Montar cenários e criar o estudo | T013 |
 | [ ] | T015 | Tabela comparativa e gráfico do estudo | T014, T007 |
 | [ ] | T016 | Destravar a execução de simulações no serviço | — |
-| [ ] | T018 | Revisão por IA no PR cai quando o modelo devolve JSON com sobra | — |
+| [x] | T018 | Revisão por IA no PR cai quando o modelo devolve JSON com sobra | — |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -437,8 +437,17 @@ objeto JSON seguido de qualquer sobra, o `json.loads` levanta e o job inteiro re
 reexecução resolveu por ser saída não determinística — o que confirma a natureza do
 problema em vez de corrigi-lo.
 
-**Entra:** trocar `json.loads(content)` por `json.JSONDecoder().raw_decode(content)`, que lê
-o primeiro objeto e ignora o resto. Não há como piorar: hoje o mesmo caso é falha total.
+**Concluída.** Entregue em
+[`docs/tasks/T018-revisao-json-robusta.md`](tasks/T018-revisao-json-robusta.md). Voltou a
+acontecer no **PR #11**, com a mesma assinatura, bloqueando a revisão da T011 — por isso saiu.
+
+`raw_decode` no lugar de `json.loads`, começando na primeira `{` para tolerar preâmbulo, mais
+cerca de bloco e log da resposta quando a extração falha. O portão **não** foi afrouxado:
+resposta ilegível continua reprovando.
+
+**Fica registrado:** o Python do workflow não é exercitado por nada — nem `npm test`, nem
+`tsc` — e só roda com um PR aberto, quando falhar bloqueia em vez de avisar. Se mais lógica
+for para lá, o certo é movê-la para um script em `scripts/` que o CI chame.
 
 **Nota:** é workflow do repositório, fora do épico E1 e fora do escopo de qualquer tarefa
 dele — por isso tarefa própria, e não carona numa entrega de dashboards.

@@ -114,6 +114,7 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import re
           import sys
           import urllib.error
           import urllib.request
@@ -203,13 +204,53 @@ jobs:
               print(f"::error::Falha na comunicação com a API DeepSeek: {exc}", file=sys.stderr)
               sys.exit(1)
 
+          def extrair_json(texto):
+              """Primeiro objeto JSON do texto, ignorando o que vier antes e depois.
+
+              `json.loads` exige que a string inteira seja um documento só, e o modelo às
+              vezes acrescenta comentário depois do objeto — o erro era
+              `Extra data: line 3 column 1`. `raw_decode` lê o primeiro documento e informa
+              onde ele terminou: o resto é conversa, não dado.
+
+              Percorre **todas** as chaves de abertura, e não só a primeira, porque prosa do
+              tipo `use {chaves} assim` antes do objeto faria a primeira apontar para lixo.
+              E exige `dict`: uma resposta como `[1,2,3]` decodifica sem erro, e o
+              `.get("findings")` seguinte levantaria `AttributeError` — falha correta pela
+              razão errada, com mensagem que não ajuda quem for diagnosticar.
+              """
+              texto = texto.strip()
+              # A cerca é removida por conveniência; quem de fato sustenta os casos
+              # estranhos é a varredura de chaves abaixo.
+              if texto.startswith("```"):
+                  texto = re.sub(r"^```\s*[a-zA-Z]*\s*", "", texto)
+                  texto = re.sub(r"\s*```$", "", texto).strip()
+              decoder = json.JSONDecoder()
+              inicio = texto.find("{")
+              while inicio != -1:
+                  try:
+                      obj, _ = decoder.raw_decode(texto[inicio:])
+                      if isinstance(obj, dict):
+                          return obj
+                  except ValueError:
+                      pass
+                  inicio = texto.find("{", inicio + 1)
+              raise ValueError("nenhum objeto JSON na resposta")
+
           try:
               content = body["choices"][0]["message"]["content"].strip()
-              review = json.loads(content)
+              review = extrair_json(content)
               findings = review.get("findings", [])
               summary = review.get("summary", "")
           except Exception as exc:
+              # A resposta vai para o log: sem ela, diagnosticar o próximo formato inesperado
+              # exige reproduzir a chamada à mão.
               print(f"::error::Resposta do modelo em formato inválido: {exc}", file=sys.stderr)
+              # O log do CI é público neste repositório, e a resposta deriva do diff do
+              # PR. O começo e o tamanho bastam para identificar um problema de formato;
+              # despejar o corpo inteiro exporia mais do que o diagnóstico exige.
+              bruto = body.get("choices", [{}])[0].get("message", {}).get("content") or ""
+              print(f"--- resposta recebida ({len(bruto)} caracteres), primeiros 300 ---", file=sys.stderr)
+              print(bruto[:300], file=sys.stderr)
               sys.exit(1)
 
           severidades = {
