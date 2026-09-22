@@ -76,7 +76,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T004 | `core/results/series.ts` — agregação, reamostragem e conversão de unidades | T001 |
 | [x] | T005 | `core/results/comfort.ts` — horas de desconforto | T004 |
 | [x] | T006 | Casca do modo Resultados | T003 |
-| [ ] | T007 | Componentes de gráfico SVG reutilizáveis | T004, T006 |
+| [x] | T007 | Componentes de gráfico SVG reutilizáveis | T004, T006 |
 | [ ] | T008 | Painel de consumo anual | T007 |
 | [ ] | T009 | Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR** | T001 |
 | [ ] | T010 | Painel de temperatura operativa | T007, T009 |
@@ -236,16 +236,28 @@ disponível nos três estados em que cabe.
 - Campo com ação por `Enter` lê `e.currentTarget.value`, não a variável de estado: com
   digitação rápida o fecho do render fica desatualizado e a tecla não faz nada, sem erro.
 
-#### T007 · Componentes de gráfico SVG reutilizáveis
+#### T007 · Componentes de gráfico SVG — **concluída**
 
-**Entra:** `src/features/results/charts/` com `LineChart`, `BarChart`, `StackedBarChart` e
-`Carpet` — este último 365×24 em `<canvas>`, porque 8 760 `<rect>` no DOM pesam demais.
-Seguir o precedente de `src/features/wizard/illustrations.tsx:285` (`viewBox`, `<title>`
-como tooltip, `role="img"`, `aria-label`, paleta Tailwind do projeto). Os componentes
-**recebem dados já agregados** e não calculam nada.
+Entregue em [`docs/tasks/T007-componentes-de-grafico.md`](tasks/T007-componentes-de-grafico.md).
 
-**Verificação:** a matemática já está coberta em `src/core/`; o componente se confere no
-navegador, já que `vite.config.ts` roda o Vitest em `environment: 'node'`, sem jsdom.
+`src/core/results/plot.ts` (escalas, marcações, caminhos SVG, células do carpete, cor
+divergente) com 17 asserções, e `src/features/results/charts/` com `ChartFrame`, `BarChart`,
+`LineChart`, `StackedBarChart` e `CarpetPlot`. O primeiro gráfico já está ligado ao resumo
+real na casca.
+
+**Para a T008 e a T010:**
+
+- Os componentes **não calculam nada**: recebem baldes da T004 e cores da `plot.ts`.
+- Todo gráfico passa pelo `ChartFrame`, que **exige** `label` — `<svg>` sem nome acessível é
+  invisível para leitor de tela (PRD §5.2).
+- `LineChart` recebe `EnvelopeBucket[]` e desenha **banda mín/máx e média**. Só a média
+  jogaria fora o pico que a reamostragem preservou.
+- `CarpetPlot` é `<canvas>` e leva tabela `sr-only` junto; passe `resumoMensal`.
+- **Só o `BarChart` foi verificado com dado real na tela.** Os outros três dependem de série
+  temporal, que chega à interface na T010 — até lá a garantia é a geometria pura.
+- **A execução disponível tem um único uso final com consumo** (23.072 kWh em iluminação
+  externa). Há teto de largura de barra por causa disso; conferir o visual de muitas barras
+  quando existir execução com mais usos.
 
 #### T008 · Painel de consumo anual
 
