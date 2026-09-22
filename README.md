@@ -1,320 +1,200 @@
-> **Implementação atual:** além do bloco retangular descrito no briefing abaixo,
-> o aplicativo oferece planta 2D por ambientes, coordenadas em metros, áreas
-> calculadas e geração da maquete 3D para edição de materiais.
-> Veja o fluxo e os limites em [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#planta-2d-por-ambientes).
+# Energy Input
 
-# Prompt: Build a Web App to Create and Edit EnergyPlus epJSON Files
+> **Arquivos epJSON para EnergyPlus** — Modelagem termoenergética rápida, paramétrica e orientada por schema diretamente no navegador.
 
-Copy everything below into your coding tool of choice (Claude Code, Cursor, etc.).
-
----
-
-## Context
-
-I need a web application that lets people **create and edit epJSON files** —
-the JSON-based input format for EnergyPlus (the building energy simulation
-engine), which is replacing the legacy IDF/IDD format — and get to a runnable
-simulation with minimal manual input.
-
-The app has **two modes**:
-
-- **Basic mode (default, this version's priority):** a guided wizard that asks
-  a handful of high-level questions and generates a complete, valid epJSON
-  file underneath. Geometry in this first version is a simple **box/shoebox
-  model** (rectangular footprint, N floors, one thermal zone per floor) — no
-  polygon drawing tool yet.
-- **Expert mode:** a full schema-driven object editor (browse every object
-  type, edit fields directly, raw JSON view) for people who want to hand-edit
-  what the wizard generated, or build a file from scratch. This is the escape
-  hatch, not the front door.
-
-Both modes read/write the same underlying epJSON document, so a user can
-run the Basic wizard, then flip to Expert mode to tweak one field EnergyPlus
-requires that the wizard doesn't expose, then flip back.
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.3-61dafb?logo=react)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-6-646cff?logo=vite)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38b2ac?logo=tailwind-css)](https://tailwindcss.com/)
+[![Three.js](https://img.shields.io/badge/Three.js-0.169-black?logo=three.js)](https://threejs.org/)
+[![EnergyPlus](https://img.shields.io/badge/EnergyPlus-v26.1.0-orange)](https://energyplus.net/)
+[![Tests](https://img.shields.io/badge/Tests-Vitest-success?logo=vitest)](https://vitest.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Nginx%20Alpine-blue?logo=docker)](https://www.docker.com/)
 
 ---
 
-## Background: epJSON format facts
+## 1. O que é o Energy Input?
 
-- An epJSON file is a single JSON object. Each top-level key is an **object
-  type** (e.g. `"Building"`, `"Zone"`, `"Material"`, `"BuildingSurface:Detailed"`).
-- Under each object type is a dictionary keyed by **object name**, whose value
-  is the field data for that instance, e.g.:
-  ```json
-  {
-    "Zone": {
-      "Living Room": {
-        "direction_of_relative_north": 0,
-        "x_origin": 0,
-        "ceiling_height": "autocalculate"
-      }
-    }
-  }
-  ```
-- Field names are snake_case. Fields can be numeric, integer, string (often an
-  enum with a fixed default), autosizable/autocalculable numeric (accepts a
-  number OR the literal string `"Autosize"`/`"Autocalculate"`), or **arrays of
-  extensible groups** (repeated sub-objects, e.g. a surface's list of
-  `{vertex_x_coordinate, vertex_y_coordinate, vertex_z_coordinate}`).
-- Many string fields are **references** to the *name* of another object
-  elsewhere in the file (e.g. a `Zone`'s name is referenced by
-  `BuildingSurface:Detailed.zone_name`). There is no foreign-key enforcement
-  in the JSON itself — validity is purely by convention.
-- Some fields are required, others have documented defaults and may be
-  omitted.
+O **Energy Input** é uma aplicação web moderna (*Single-Page Application* — SPA), 100% *client-side*, projetada para simplificar drasticamente a criação, edição paramétrica, validação e inspeção de arquivos de entrada no formato **epJSON** para o motor de simulação **EnergyPlus**.
 
-### Source of truth for the schema — do not hand-transcribe the docs page
+Historicamente, o uso do EnergyPlus dependia do formato textual legado (IDF/IDD) e de ferramentas complexas com curva de aprendizado íngreme. O **Energy Input** permite partir de decisões conceituais de alto nível (orientação, clima, geometria da planta, materiais, cargas e climatização) e obter em segundos um modelo epJSON válido, robusto e pronto para simulação.
 
-The human-readable reference at
-https://energyplus.readthedocs.io/en/latest/schema.html is a lossy rendering
-of the real, authoritative artifact: EnergyPlus ships a full **JSON Schema**
-file called `Energy+.schema.epJSON`, which formally defines every object
-type and field (name, type, units, default, minimum/maximum, enum values,
-`required`, `extensible` array definitions, `object-list`/`external-list`
-reference annotations, etc.) using JSON Schema syntax plus EnergyPlus-specific
-extension keywords.
-
-- Included in every EnergyPlus release and published in the GitHub repo, e.g.:
-  `https://github.com/NREL/EnergyPlus/blob/develop/idd/Energy%2B.schema.epJSON`
-  (pick a tagged release rather than `develop` for stability).
-- **Build the app to ingest this file directly** (fetched at build time, or
-  bundled and swappable) rather than re-encoding field lists by hand. This
-  guarantees completeness (700+ object types) and lets the app stay current
-  by swapping in a new schema file for a new EnergyPlus version.
-- Custom keywords to handle: `legacy_idd`, `extensible`, `format`
-  (e.g. `singleLine`), `default`, `anyOf` (autosizable/autocalculable fields:
-  `{"type": "number"} | {"type": "string", "enum": ["Autosize"]}`),
-  `object-list` / `reference` / `reference-class-name` (cross-object name
-  references), `minimum`/`maximum` with `exclusiveMinimum`/`exclusiveMaximum`,
-  `type: array` with `items` for extensible groups, and `required`.
+Todo o aplicativo opera sobre uma **única fonte da verdade reativa**: o documento epJSON em memória. Usuários e agentes podem alternar livremente entre três modos integrados de trabalho.
 
 ---
 
-## MODE 1: Basic (Wizard) — build this first
+## 2. Modos de Operação
 
-Goal: a user with no EnergyPlus knowledge answers a short sequence of
-screens and gets a valid, runnable epJSON file. Every wizard screen writes
-into the same underlying epJSON document (visible/editable later in Expert
-mode) — the wizard is a generator, not a separate data model.
+```mermaid
+flowchart LR
+    A[Assistente Guiado\n10 etapas conceituais] <-->|Sincronização com planWizardSync| D[(Documento epJSON\nÚnica Fonte da Verdade)]
+    B[Editor 3D & Planta 2D\nThree.js + Elevação Vetorial] <-->|Manipulação Geométrica e Camadas| D
+    C[Modo Especialista\n700+ objetos do Schema oficial] <-->|Formulários Dinâmicos & CodeMirror| D
+    D -->|Execução Remota| S[API de Simulação\nhomolog.ee.dev.br]
+    D -->|Exportação| F[Arquivo .epJSON]
+```
 
-### Wizard steps
+### 🪄 Modo 1: Assistente Guiado (Wizard)
+Conduz o usuário em 10 etapas lógicas, com geração procedural de objetos epJSON:
+1. **Projeto:** Nome, orientação solar (Norte 0–360°), tipo de terreno e controle de simulação.
+2. **Localização e Clima:** Cidades brasileiras pré-configuradas (zonas bioclimáticas NBR 15220-3, ASHRAE Design Days, temperaturas de solo amortecidas) ou upload de arquivos `.epw` / `.ddy`.
+3. **Período da Simulação:** Ano completo (com suporte a *year-wrapping*), intervalos de datas ou apenas dias de projeto.
+4. **Geometria:**
+   - **Bloco Retangular (*Shoebox*):** Dimensões $X \times Y$, número de pavimentos, pé-direito, lajes intermediárias e condições de contorno de piso/teto.
+   - **Planta 2D por Ambientes:** Editor vetorial interativo com paleta de formas (retângulo, L, triângulo, hexágono), desenho livre com coordenadas em metros, validação topológica, cálculo automático de área/perímetro/volume e divisão automática de paredes compartilhadas em "T".
+5. **Materiais e Envoltória:** Presets habitacionais (**Casa** com alvenaria tradicional e **Apartamento** com blocos de 14 cm, lajes de 12 cm, forro de gesso e lajes de borda adiabáticas), com cálculo em tempo real de Transmitância ($U$) e Capacidade Térmica ($CT$).
+6. **Janelas e Esquadrias:** Taxa de abertura de fachada (WWR) por orientação e catálogo de vidros (simples, duplos, Low-E, esquadrias de PVC com `WindowProperty:FrameAndDivider`).
+7. **Uso do Edifício:** Presets de ocupação, iluminação, equipamentos e horários (`Schedule:Compact`).
+8. **Climatização (HVAC):** Modelagem de cargas com `ZoneHVAC:IdealLoadsAirSystem` e termostatos de duplo setpoint.
+9. **Resultados:** Seleção de variáveis e tabelas de saída (`Output:Table:SummaryReports` `AllSummary`, conforto térmico, etc.).
+10. **Revisão e Download:** Resumo visual, pré-visualização do JSON bruto, exportação `.epJSON` ou disparo direto para simulação na nuvem.
 
-1. **Project setup**
-   - Building name.
-   - North axis orientation (compass rotation of the building), default 0.
-   - Terrain type: pick from `Country` / `Suburbs` / `City` / `Ocean` /
-     `Urban` (maps directly to `Building.terrain`).
-   - → generates `Building`, `SimulationControl`, `Timestep` (default 6/hr),
-     `HeatBalanceAlgorithm` (default CTF) with sensible defaults, no user
-     input needed beyond what's asked.
+### 🧊 Modo 2: Editor 3D e Geometria Paramétrica
+Permite inspecionar e manipular graficamente a edificação:
+- Visualização interativa com **Three.js** e **React Three Fiber** (órbita, pan, zoom e isolamento por pavimento).
+- **Espessura real de materiais:** As paredes são extrudadas para dentro conforme a espessura total de sua respectiva `Construction`.
+- **Paredes e lajes compartilhadas (`sharedSurfaces.ts`):** Identificação geométrica rigorosa (tolerância de 0,1 mm e normais opostas). O 3D exibe um único elemento físico centrado, enquanto o epJSON gera dois objetos `Surface` pareados com construções invertidas.
+- **Aberturas em paredes compartilhadas:** Inserção de portas, janelas e portas de vidro entre zonas térmicas, atualizando simultaneamente as duas zonas com coordenadas locais e espelhamento correto.
+- **Elevação 2D interativa (`WallElevation`):** Posicionamento e dimensionamento de aberturas com *snap* de 5 cm ou digitação numérica exata.
+- **Editor de camadas de materiais:** Reordenação de camadas, ajuste de espessuras e controle de escopo (*"aplicar a todos os elementos"* vs. *"copiar e aplicar apenas a este"*).
 
-2. **Location & climate**
-   - Let the user search/pick a location (city or lat/long), or upload/pick
-     an `.epw` weather file.
-   - If only a location is picked (no EPW upload), pull representative design
-     day and site data — either bundle a small curated set of common EPW
-     files, or fetch design day values from a public source (e.g. ASHRAE
-     climate design data, or the EnergyPlus weather file repository at
-     https://energyplus.net/weather or https://climate.onebuilding.org).
-   - → generates `Site:Location`, `SizingPeriod:DesignDay` (winter + summer
-     design days), ground temperature objects with typical climate defaults,
-     and stores a reference to the chosen EPW filename for the run.
+### 🛠️ Modo 3: Modo Especialista (Schema-Driven)
+Editor completo e de baixo nível governado pelo **JSON Schema oficial** do EnergyPlus (`Energy+.schema.epJSON` v26.1):
+- Sidebar categorizada com todos os **700+ tipos de objetos** e contagem de instâncias.
+- Formulários tipados gerados dinamicamente (números com unidades do SI, enums, seletores `anyOf` com `"Autosize"`/`"Autocalculate"`).
+- Integridade referencial inteligente: campos de `object-list` possuem autocomplete buscando instâncias válidas existentes no arquivo, alerta de referências órfãs e criação *inline*.
+- Tabelas extensíveis para listas de vértices de polígonos e tabelas de horários.
+- Renomeação segura com propagação automática em cascata por todo o documento.
+- Editor de código JSON integrado (**CodeMirror 6**) sincronizado bidirecionalmente.
+- Validação contínua com **Ajv 8** e mensagens de diagnóstico traduzidas para pt-BR.
 
-3. **Run period**
-   - Simple choice: "Full year" (default) or a specific date range.
-   - → generates `RunPeriod`.
-
-4. **Geometry — box model (this version's scope)**
-   - Inputs: footprint width (X), footprint depth (Y), number of floors,
-     floor-to-floor height, optional footprint orientation/rotation.
-   - Optional simple refinements: flat vs. simple gable roof (flat only for
-     v1 is fine), whether the ground floor is slab-on-grade vs. above grade.
-   - Generate **one thermal zone per floor** as a rectangular box:
-     - `Zone` per floor.
-     - `BuildingSurface:Detailed` (or the simpler `Wall:Exterior` /
-       `Floor:GroundContact` / `Ceiling:Adiabatic` / `Roof` convenience
-       objects) for 4 walls + floor + ceiling/roof per zone, computed from
-       the box dimensions — floor and roof only exposed on the bottom/top
-       zone, interzone floor/ceiling pairs between stacked zones.
-     - `GlobalGeometryRules` (required object, one per file, fixed sensible
-       values e.g. `UpperLeftCorner`, `Counterclockwise`, `Relative`).
-   - This is a pure geometry-generation function: `generateBoxGeometry(width,
-     depth, floors, floorHeight, ...) -> epJSON object fragments`. Keep it
-     isolated so it can later be swapped for a polygon/footprint-drawing tool
-     without touching the rest of the wizard.
-
-5. **Envelope / constructions**
-   - Instead of asking about material conductivity directly, offer a small
-     **template library** keyed by climate zone + vintage (e.g. "ASHRAE
-     90.1-2019, Climate Zone 4, exterior wall/roof/floor/window template"),
-     or a simpler v1: 3-4 named presets ("Lightweight / Standard / Well
-     insulated") each mapping to pre-defined `Material` + `Construction`
-     objects with reasonable R-values.
-   - → generates `Material`, `Construction` objects and assigns them as the
-     `construction_name` for the generated surfaces.
-
-6. **Windows**
-   - Simple input: window-to-wall ratio (%) per facade or a single overall
-     value, and a glazing template pick (e.g. "single pane / double pane /
-     double pane low-E").
-   - → generates window surfaces (via `Window` convenience object attached to
-     each exterior wall) sized from the WWR, plus `WindowMaterial:
-     SimpleGlazingSystem` + `Construction` for the chosen glazing template.
-
-7. **Internal loads & schedules**
-   - Building-use template picker (Office / Residential / Retail / School /
-     Warehouse — start with 2-3 templates for v1).
-   - Each template bundles: occupancy density, lighting power density,
-     equipment power density, and standard operating `Schedule:Compact`
-     definitions (occupied hours, etc.) — generates `People`, `Lights`,
-     `ElectricEquipment`, `ScheduleTypeLimits`, `Schedule:Compact` objects
-     applied to the generated `ZoneList`.
-
-8. **HVAC**
-   - v1 default and only option: `ZoneHVAC:IdealLoadsAirSystem` per zone
-     (EnergyPlus's "assume ideal heating/cooling capacity" system) plus the
-     required `ZoneHVAC:EquipmentList` / `ZoneHVAC:EquipmentConnections`
-     plumbing objects, with a simple heating/cooling setpoint schedule input
-     (e.g. two numbers: heating setpoint, cooling setpoint) driving
-     `ThermostatSetpoint:DualSetpoint` + `ZoneControl:Thermostat`.
-   - Note in the UI that this models the *load*, not real equipment
-     performance — real HVAC systems (packaged RTU, VAV, etc.) are a
-     later/expert-mode feature.
-
-9. **Outputs**
-   - Checkbox list of common reports mapped to `Output:Variable`/
-     `Output:Meter`/`Output:Table:SummaryReports` entries: e.g. "Zone Energy
-     Use Summary," "Comfort (temperature/humidity)," "Monthly utility bills
-     estimate." Default a sensible minimal set even if the user checks
-     nothing (at least `Output:Table:SummaryReports` with `AllSummary`).
-
-10. **Review & generate**
-    - Show a plain-language summary of the choices made (not raw JSON) plus
-      an option to view the generated epJSON.
-    - "Open in Expert mode" button to jump straight into the full editor on
-      this generated document.
-    - Export `.epJSON` file. (Actually running the simulation via the
-      EnergyPlus executable is out of scope for this version — see Non-goals.)
-
-### Wizard implementation notes
-
-- Structure each step as a pure function: `(userInputs) -> partial epJSON
-  fragment`, merged into one document at the end (or incrementally after each
-  step, so switching to Expert mode mid-wizard shows a valid partial file).
-- Validate each generated fragment against the real JSON Schema as it's
-  produced — the wizard should never be able to emit something that fails
-  schema validation. Treat schema validation failures during generation as
-  bugs in the generator, not user-facing errors.
-- Keep the template libraries (constructions, glazing, building-use loads,
-  weather/design-day defaults) as clearly separated, swappable data files —
-  this is where the most future iteration will happen (more templates, more
-  climate zones, real EPW ingestion) and it should not be tangled with the
-  wizard UI code.
+### ☁️ Módulo de Simulação em Nuvem
+- Conexão direta com a API de homologação (`https://homolog.ee.dev.br/v1`).
+- Upload multipart do modelo epJSON, seleção de versões compatíveis do motor EnergyPlus e arquivos climáticos EPW.
+- Acompanhamento reativo de status (`queued`, `running`, `completed`, `failed`), exibição de logs/erros e download de artefatos gerados.
+- Segurança rigorosa: credenciais mantidas apenas em memória volátil da sessão.
 
 ---
 
-## MODE 2: Expert — full schema-driven editor
+## 3. Arquitetura e Princípios de Engenharia
 
-1. **File management** — new file, open/import an existing `.epJSON` file
-   (including one generated by the Basic wizard), save/export.
+Para humanos e agentes de IA que contribuem neste repositório, os seguintes princípios arquiteturais são **invioláveis**:
 
-2. **Schema-driven object browser**
-   - Sidebar listing all object types available in the loaded schema, grouped
-     by category (Simulation Parameters, Location and Climate, Schedules,
-     Surface Construction Elements, Thermal Zones and Surfaces, Internal
-     Gains, HVAC, Output, etc.).
-   - Search/filter by object type name; show instance counts per type.
-
-3. **Schema-driven form editor**
-   - Selecting an object type lists its named instances; selecting/creating
-     an instance renders a form generated from that object's JSON Schema
-     fragment:
-     - Correct widget per field type (number, integer, text, enum dropdown,
-       Yes/No toggle, Autosize/Autocalculate-vs-numeric switch).
-     - Required fields visibly marked; blocks save until filled, with inline
-       errors.
-     - Defaults pre-filled/greyed when a field is empty; units and
-       descriptions shown as help text from the schema.
-     - Extensible array fields as a repeatable table (add/remove/reorder
-       rows) — e.g. surface vertices, schedule day/value pairs.
-     - Reference (`object-list`) fields as a searchable autocomplete
-       populated from existing matching objects, with inline "create new"
-       if the target doesn't exist yet.
-   - Duplicate/clone an instance; rename with optional propagation of the
-     rename to every object referencing the old name.
-
-4. **Raw JSON view** — syntax-highlighted, formatted JSON (Monaco/CodeMirror)
-   for the whole file or the selected object, kept in sync with the form
-   view, validated on edit.
-
-5. **Validation**
-   - Validate against the loaded JSON Schema (e.g. `ajv`) on every change and
-     before export; surface errors per object/field.
-   - Best-effort cross-reference check: flag `object-list` fields whose value
-     doesn't match the name of any existing object of the expected type/class.
-
-6. **Quality-of-life** — undo/redo, duplicate-name detection within a type,
-   diff/preview before overwriting an imported file, autosave to local
-   storage.
+1. **`src/core/` é 100% puro e isolado (Framework-Free):**
+   - Lógica de epJSON, validação, parsers climáticos, cálculo de $U$/$CT$ e algoritmos de geometria residem em `src/core/`.
+   - **NÃO** importe React, hooks, Zustand, Three.js ou objetos do DOM (`window`/`document`) dentro de `src/core/`. Todas as funções devem ser determinísticas e testáveis diretamente no Vitest via terminal.
+2. **`schema/` é a fonte da verdade do EnergyPlus:**
+   - O arquivo `schema/<versão>/Energy+.schema.epJSON` é extraído do pacote oficial de release do EnergyPlus. Não edite este arquivo manualmente.
+   - O script `npm run schema` compila a versão servida em `public/schema/<versão>/schema.json`.
+3. **Proteção contra perda de dados (`planWizardSync`):**
+   - O assistente nunca sobrescreve silenciosamente objetos customizados pelo usuário no Modo Especialista ou 3D. Quando há divergência de intenção, o diálogo de resolução de conflitos deve ser disparado. Objetos novos criados pelo usuário nunca são apagados.
+4. **Nenhum segredo em bundle nem em storage persistente:**
+   - Tokens como `SIMULATION_API_TOKEN` funcionam apenas no proxy local do Vite via `.env.local` (nunca com prefixo `VITE_`). No navegador em produção, residem apenas em memória volátil.
+5. **Conformidade de Marca:**
+   - O nome oficial do produto é **Energy Input** ("Arquivos epJSON para EnergyPlus"). Nunca utilize "EnergyPlus API" como nome comercial (cláusula 4 da licença do EnergyPlus).
 
 ---
 
-## Suggested architecture
+## 4. Estrutura de Diretórios
 
-- Frontend-only SPA is sufficient for this version — no simulation is being
-  run, just authoring a JSON file. React + TypeScript.
-- Load `Energy+.schema.epJSON` as a static asset (pin one EnergyPlus version);
-  optionally support uploading a different schema file for other versions.
-- `ajv` (+ `ajv-formats` if needed) for schema validation.
-- Write a small custom "JSON-Schema-fragment → form field spec" mapper for
-  the Expert-mode form generator, rather than relying on a generic
-  do-everything JSON-schema-form library — epJSON's custom keywords
-  (`extensible`, `object-list`, autosize `anyOf`) need special-cased
-  rendering that generic libraries won't get right out of the box, though you
-  can start from one (e.g. react-jsonschema-form) and layer custom field
-  templates for these cases.
-- Monaco Editor or CodeMirror 6 for the raw JSON view.
-- State management: React context + `useReducer`, or Zustand — this doesn't
-  need Redux-scale infrastructure.
-- Keep the Basic-mode generator functions (geometry, construction templates,
-  load templates, weather/design-day defaults) in their own modules, decoupled
-  from both the wizard UI and the Expert-mode editor, since both modes read
-  and write the same underlying document via a shared epJSON data layer.
+```
+energy-input/
+├── docs/                   # Documentação técnica e histórico do projeto
+│   ├── PRD.md              # Requisitos de produto (fonte da verdade do escopo)
+│   ├── DEVELOPMENT.md      # Notas técnicas de arquitetura, geometria e simulação
+│   ├── backlog.md          # Tarefas ativas, pendências e dependências
+│   ├── tasks/              # Histórico de tarefas executadas (baseado em _template.md)
+│   └── adr/                # Decisões de arquitetura registradas
+├── schema/                 # Schemas oficiais do EnergyPlus (ex: 26.1/Energy+.schema.epJSON)
+├── public/                 # Assets estáticos e schema compilado servido pelo Vite
+├── src/
+│   ├── core/               # Domínio puro (epjson, geometry, schema, sync, validation, weather)
+│   ├── generators/         # Geradores funcionais puros: (respostas) -> fragmento epJSON
+│   │   ├── geometry/       # boxGeometry.ts (shoebox) e floorPlan.ts (planta 2D)
+│   │   └── compose.ts      # Função que orquestra e mescla os fragmentos
+│   ├── templates/          # Catálogos desacoplados (climas, materiais, cargas, esquadrias)
+│   ├── store/              # Stores globais Zustand (documentStore, wizardStore, etc.)
+│   ├── features/           # Módulos de interface
+│   │   ├── wizard/         # 10 etapas do assistente, ilustrações SVG, conflitos
+│   │   ├── geometry/       # Editor 3D (Three.js/R3F), elevação e árvore de elementos
+│   │   ├── expert/         # Navegador de tipos, formulários dinâmicos e CodeMirror
+│   │   ├── simulation/     # Diálogo de envio à API, polling de status e artefatos
+│   │   └── preview/        # Visualizador 3D compacto
+│   ├── ui/                 # Primitivas de interface (botões, modais, inputs, comboboxes)
+│   ├── App.tsx             # Shell da aplicação, cabeçalho e listeners de atalhos
+│   └── main.tsx            # Ponto de entrada React
+├── scripts/                # Scripts utilitários (build-schema, eplus-check, fetch-schema)
+├── docker/                 # Configuração do Nginx de produção e proxy de simulação
+├── Dockerfile              # Build multi-stage (Node 20 Alpine -> Nginx Alpine ~56 MB)
+├── docker-compose.yml      # Execução local do container estático
+├── AGENTS.md               # Instruções de trabalho para agentes de IA e desenvolvedores
+└── CONTEXT.md              # Briefing original e contexto de fundação do projeto
+```
 
-## Non-goals (explicitly out of scope unless I ask later)
+---
 
-- Do not implement the actual EnergyPlus simulation engine or call out to it
-  — this app produces the input file only.
-- Do not implement polygon/footprint drawing or non-rectangular geometry yet
-  — box/shoebox geometry only for this version.
-- Do not implement real HVAC system templates (VAV, packaged RTU, etc.) yet
-  — `ZoneHVAC:IdealLoadsAirSystem` only for this version.
-- Do not try to support the legacy IDF text format — epJSON only.
+## 5. Guia Rápido de Instalação e Uso
 
-## Deliverable
+### Pré-requisitos
+- **Node.js** $\ge \text{20.x}$
+- **npm** $\ge \text{10.x}$
+- (Opcional) **Docker** e **Docker Compose** para execução do container de produção.
+- (Opcional) **EnergyPlus v26.1.0** instalado localmente caso deseje executar os smoke tests com o motor real.
 
-Start by:
-1. Fetching/confirming the structure of `Energy+.schema.epJSON` for a
-   specific EnergyPlus version (ask me which version if unspecified, or
-   default to the latest stable release) and summarizing its shape (top-level
-   keys, a couple of representative object definitions, how
-   `extensible`/`object-list`/autosize `anyOf` actually appear in practice).
-2. Proposing a concrete file/folder structure, the field-type-to-widget
-   mapping table for Expert mode, and the exact epJSON object list the Basic
-   wizard's box-geometry generator will need to emit for a single-zone box —
-   confirm this before writing the full app.
-3. Then build incrementally: schema loader/validator → Basic-mode box
-   geometry generator + wizard steps 1-3 → construction/glazing/load
-   templates (steps 5-7) → HVAC + outputs (steps 8-9) → review/export (step
-   10) → Expert-mode object browser and dynamic form renderer → raw JSON
-   view → cross-reference autocomplete → polish.
+### 🚀 Rodando em Desenvolvimento
 
+```bash
+# 1. Instale as dependências
+npm install
 
-### Simular no serviço de homologação
+# 2. Inicie o servidor Vite (compila os schemas automaticamente)
+npm run dev
+```
+Abra [http://localhost:5173](http://localhost:5173) no navegador.
 
-Use **Simular modelo** no cabeçalho ou na revisão. Configure
-`SIMULATION_API_TOKEN` em `.env.local` para desenvolvimento local (veja
-`.env.example`), clique em **Conectar à API**, selecione o motor e o clima
-e envie o modelo. O painel acompanha o status, mostra resultados e erros,
-permite cancelar e oferece os arquivos produzidos. Em produção, a chave ou
-token é informado no painel e permanece somente em memória.
+### 🧪 Portões de Qualidade e Testes
+
+Antes de enviar alterações ou abrir Pull Requests, certifique-se de que os portões locais estão verdes:
+
+```bash
+# Validação estrita de tipos TypeScript (tsc -b --noEmit)
+npm run typecheck
+
+# Execução da suíte completa de testes (Vitest)
+npm test
+
+# Validação do build de produção estático (dist/)
+npm run build
+
+# (Opcional) Teste de conformidade com EnergyPlus local real
+EPLUS_DIR=/Applications/EnergyPlus-26-1-0 npm run eplus-check
+```
+
+### 🐳 Executando com Docker
+
+O projeto possui build multi-stage gerando uma imagem Nginx ultraleve (~56 MB):
+
+```bash
+# Construir e rodar via Compose
+docker compose up --build
+```
+Acesse a aplicação em [http://localhost:8080](http://localhost:8080).
+
+---
+
+## 6. Mapa da Documentação
+
+| Arquivo | Finalidade |
+|---|---|
+| [`docs/PRD.md`](docs/PRD.md) | **Fonte da verdade de produto:** escopo funcional, personas, critérios de aceite e requisitos. |
+| [`AGENTS.md`](AGENTS.md) | **Protocolo de trabalho:** convenções de branch, commit, testes e regras invioláveis para agentes e humanos. |
+| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | **Notas técnicas de engenharia:** algoritmos de geometria, paredes compartilhadas, tolerâncias e API. |
+| [`docs/backlog.md`](docs/backlog.md) | **Gestão de tarefas:** quadro de tarefas ativas, dependências e backlog. |
+| [`docs/tasks/_template.md`](docs/tasks/_template.md) | **Template de tarefa:** padrão para documentação imutável de entregas em `docs/tasks/`. |
+| [`CONTEXT.md`](CONTEXT.md) | **Briefing original:** documento de concepção inicial do projeto. |
+
+---
+
+## 7. Licença
+
+Este projeto é desenvolvido para geração e manipulação de arquivos do **EnergyPlus** (motor desenvolvido pelo Departamento de Energia dos EUA — DOE / NREL). O Energy Input segue as diretrizes da licença oficial do EnergyPlus e os termos de código aberto aplicáveis.
