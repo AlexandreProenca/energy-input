@@ -27,6 +27,12 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- Componentes de gráfico próprios, sem dependência nova: `BarChart`, `LineChart` (com banda
+  mín/máx, para o pico sobreviver à reamostragem), `StackedBarChart` e `CarpetPlot` (em
+  `<canvas>`, com tabela `sr-only` ao lado, porque canvas é invisível para leitor de tela).
+  A geometria — escalas, marcações, caminhos SVG, células e cores — fica em
+  `src/core/results/plot.ts`, onde o Vitest alcança. O primeiro gráfico já mostra o consumo
+  por uso final da execução adotada. (`Refs: T007`)
 - **Modo Resultados**, o quarto do aplicativo, com carregamento sob demanda e os quatro
   estados de exceção resolvidos antes dos gráficos: sem execução, em andamento, terminou sem
   sucesso e concluída — com aviso quando a execução foi em dias de projeto, em que consumo

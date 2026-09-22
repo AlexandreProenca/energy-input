@@ -3,7 +3,8 @@ import { BarChart3, CalendarClock, CircleSlash, Hourglass, Play, Search } from '
 import { isSimulationId } from '@/core/ids';
 import { Button, Callout, Field } from '@/ui/primitives';
 import { useSimulationStore } from '@/features/simulation/simulationStore';
-import { estadoDoPainel, semAnoCompleto } from './estado';
+import { estadoDoPainel, semAnoCompleto, usosFinaisEmKwh } from './estado';
+import { BarChart } from './charts/BarChart';
 
 /**
  * Casca do modo Resultados.
@@ -171,11 +172,24 @@ export default function ResultsShell() {
         </Callout>
       )}
 
+      {summary && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <h2 className="text-sm font-semibold text-slate-900">Consumo por uso final</h2>
+          <p className="mb-3 text-xs text-slate-500">Do resumo permanente da execução, convertido para kWh.</p>
+          <BarChart
+            label="Consumo anual por uso final, em quilowatt-hora"
+            unidade="kWh"
+            barras={usosFinaisEmKwh(summary.end_uses)}
+            vazio={usosFinaisEmKwh(summary.end_uses).length === 0
+              ? 'Esta execução não registrou consumo em nenhum uso final.'
+              : undefined}
+          />
+        </section>
+      )}
+
       <Callout tone="info" title="Painéis em construção">
-        Consumo anual, temperaturas operativas e horas de desconforto entram nas próximas
-        tarefas do épico. O resumo permanente desta execução já pode ser consultado no
-        diálogo de simulação.
-        {summary && <> Foram lidos {summary.end_uses.length} usos finais e {summary.comfort.length} indicadores de conforto.</>}
+        As curvas mensais, o carpete de temperatura operativa e as horas de desconforto
+        entram nas próximas tarefas do épico.
       </Callout>
     </div>
   );

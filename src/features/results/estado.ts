@@ -1,3 +1,4 @@
+import { isEnergyUnit, toKwh } from '@/core/results/units';
 import { terminal, type Simulation } from '@/features/simulation/api';
 
 /**
@@ -29,3 +30,27 @@ export function estadoDoPainel(simulation: Simulation | undefined): EstadoDoPain
  * consumo anual e horas de desconforto não existem nessas execuções.
  */
 export const semAnoCompleto = (simulation: Simulation): boolean => simulation.run_type === 'design_day';
+
+/**
+ * Uso final em kWh, a partir do resumo permanente.
+ *
+ * Duas filtragens, e as duas importam. O motor devolve os **14 recursos sempre**, inclusive
+ * zerados: sem filtrar, o gráfico teria dezenas de barras invisíveis. E mistura unidades na
+ * mesma lista, com água em `m3` ao lado de energia em `GJ` — `toKwh` devolve `null` para o
+ * que não é energia, e esse `null` precisa ser descartado, nunca somado como zero silencioso.
+ */
+export function usosFinaisEmKwh(
+  endUses: readonly { category: string; resources: readonly { resource: string; value: number; units: string }[] }[],
+): { rotulo: string; valor: number }[] {
+  return endUses
+    .map((uso) => ({
+      rotulo: uso.category,
+      valor: uso.resources
+        .filter((r) => isEnergyUnit(r.units))
+        .reduce((total, r) => total + (toKwh(r.value, r.units) ?? 0), 0),
+    }))
+    // `!== 0`, e não `> 0`: geração no local pode deixar um uso final com saldo negativo, e
+    // esconder isso apagaria justamente o resultado mais interessante do projeto. Zerado
+    // continua fora, porque o motor devolve os 14 recursos sempre.
+    .filter((b) => b.valor !== 0);
+}
