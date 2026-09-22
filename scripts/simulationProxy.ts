@@ -1,15 +1,15 @@
 import type { Plugin } from 'vite';
 import { loadEnv } from 'vite';
+import { isAllowedSimulationRoute } from './simulationRoutes';
 
 const UPSTREAM = 'https://homolog.ee.dev.br';
-const allowed = /^\/v1\/(?:engines|weather(?:\?[^#]*)?|models(?:\?[^#]*)?|simulations(?:\/sim_[0-7][0-9A-HJKMNP-TV-Z]{25}(?:\/(?:cancel|logs|results\/(?:summary|errors)|artifacts(?:\/[^/?#]+)?))?)?)$/;
 /** Same-origin transport; the optional server credential is restricted to loopback development. */
 export function simulationProxy(): Plugin {
   const install: NonNullable<Plugin['configureServer']> = server => {
     server.middlewares.use('/simulation-api', async (req, res) => {
       res.setHeader('Cache-Control', 'no-store');
       const fail = (status: number, detail: string) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ detail })); };
-      if (!req.url || !allowed.test(req.url) || !['GET', 'POST'].includes(req.method ?? '')) return fail(404, 'Rota de simulação não disponível.');
+      if (!isAllowedSimulationRoute(req.method, req.url)) return fail(404, 'Rota de simulação não disponível.');
       const origin = req.headers.origin;
       try {
         if (origin && new URL(origin).host !== req.headers.host) return fail(403, 'Origem não permitida.');

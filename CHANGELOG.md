@@ -6,8 +6,36 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Corrigido
+
+- **O proxy de simulação nunca funcionou na imagem Docker:** toda chamada a
+  `/simulation-api` devolvia **502** (`unable to get local issuer certificate`). A causa não
+  era bundle de CA desatualizado — o `openssl` no mesmo contêiner verifica a cadeia sem
+  reclamar — e sim o `proxy_ssl_verify_depth` do nginx, cujo padrão é 1 contra uma cadeia de
+  três níveis. Com `proxy_ssl_verify_depth 3`, a série anual responde 200 pelo contêiner.
+  (`Refs: T002`)
+- **Travessia de caminho codificada no nome do artefato:** o padrão `[^/?#]+` barrava a
+  barra literal, mas `..%2f..%2fetc%2fpasswd` passava, e o proxy repassa a URL crua.
+  Apertado para `[A-Za-z0-9][A-Za-z0-9._-]*`, que cobre os 19 nomes que o motor produz.
+  (`Refs: T002`)
+
 ### Adicionado
 
+- Portão no CI para o proxy de simulação no contêiner: chama `/simulation-api/v1/engines` e
+  reprova se o log do nginx tiver `SSL certificate verify error`. O healthcheck anterior só
+  buscava a página estática e por isso ficou verde durante todo o tempo em que o proxy
+  devolvia 502. (`Refs: T017`)
+- Rotas de série (`results/variables`, `results/timeseries`) e de estudo paramétrico
+  (`/v1/studies`, `…/runs`, `…/results`, `…/cancel`) liberadas no proxy de desenvolvimento,
+  com query string. Antes respondiam 404 do próprio proxy. (`Refs: T002`)
+- `scripts/simulationRoutes.ts`: o allowlist virou módulo puro e testável, com
+  `DENIED_BY_DESIGN` exportado e percorrido pelo teste — ampliar as rotas por descuido
+  quebra o teste. 30 asserções onde antes não havia nenhuma. (`Refs: T002`)
+- `src/core/ids.ts`: padrões de identificador da API num lugar só, eliminando as três
+  cópias do ULID. (`Refs: T002`)
+- `docker/nginx.conf`: `gzip_proxied any` (sem ele o nginx **nunca** comprime resposta de
+  proxy — a série anual cai de 904 KB para 148 KB), HTTP/1.1 no upstream, buffers de
+  32k/16×64k/128k e `proxy_read_timeout 120s`. (`Refs: T002`)
 - Script opcional `scripts/capture-results-fixtures.ts`: captura de uma execução concluída
   (`SIMULATION_ID=sim_…`) ou executa uma simulação **anual** nova, e grava em
   `src/core/results/__fixtures__/` o formato real de resumo, catálogo de variáveis, séries
