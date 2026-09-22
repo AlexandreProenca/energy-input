@@ -87,6 +87,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T015 | Tabela comparativa e gráfico do estudo | T014, T007 |
 | [ ] | T016 | Destravar a execução de simulações no serviço | — |
 | [x] | T018 | Revisão por IA no PR cai quando o modelo devolve JSON com sobra | — |
+| [x] | T019 | Revisão por IA podia passar em silêncio sem ter lido a revisão | T018 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -492,3 +493,24 @@ que talvez não se tome deixa buraco na sequência e promete documento que não 
   Decide se a T005 tem um indicador permanente de fallback ou não.
 - **Retenção do `.sql`.** O contrato diz que a série vira 410 depois de um prazo que ele não
   numera. Afeta se vale guardar as séries localmente.
+
+#### T019 · Revisão por IA podia passar em silêncio sem ter lido a revisão — **concluída**
+
+Entregue em [`docs/tasks/T019-revisao-objeto-certo.md`](tasks/T019-revisao-objeto-certo.md).
+**Regressão introduzida pela T018**, apontada pela revisão do próprio PR #12.
+
+Ao varrer todas as chaves de abertura, a T018 passou a aceitar o primeiro `dict` — inclusive
+um objeto **ilustrativo** que o modelo escreva antes da revisão. `findings` vinha vazio e o
+job dava verde anunciando que não havia achados. O defeito original era barulhento; este era
+silencioso, num check obrigatório.
+
+Agora o objeto precisa ter `findings` ou `summary`.
+
+**Fica registrado, e vale além deste workflow:** ao afrouxar o reconhecimento de uma entrada,
+conferir separadamente **o que passa a ser aceito** — não basta verificar que o caso que
+falhava agora passa.
+
+**E o conserto de fundo continua não feito.** Duas tarefas seguidas mexeram no Python do
+`ai-pr-review.yml` com roteiro descartável de verificação, porque ele não é exercitado por
+`npm test` nem por `tsc`. Se houver uma terceira, mover a função para `scripts/` com teste de
+verdade deixa de ser preferência e vira o trabalho certo.
