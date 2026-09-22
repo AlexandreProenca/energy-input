@@ -8,6 +8,10 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- O eixo de horas do carpete estava invertido: a linha do topo é a hora 1 (intervalo 0h–1h),
+  e os rótulos diziam `24h` ali. Só leitura de pixel provou — o desenho parecia plausível nas
+  duas orientações. (`Refs: T010`)
+
 - `defaultOn`, em `src/templates/outputs/outputs.json`, era **dado morto**: nada o lia, e o
   conjunto padrão real era uma lista literal em `answers.ts`. As duas fontes coincidiam por
   acaso, e quem tentasse mudar o padrão editando só o JSON não mudaria nada. O padrão agora
@@ -32,6 +36,10 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Painel de temperatura operativa**: curva anual com banda diária de mínima e máxima,
+  carpete 365 × 24 hora a hora e a temperatura externa para comparação. Descobre a zona pelo
+  422 de ambiguidade quando a execução tem mais de uma, e trata série expirada (410) como
+  estado próprio, não como erro. (`Refs: T010`)
 - **O preset de conforto passa a vir ligado por padrão**, e com ele a temperatura operativa e
   a externa no epJSON gerado — sem elas, os painéis de temperatura e de horas de desconforto
   não teriam fonte, e a ausência só apareceria depois da execução inteira.

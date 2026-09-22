@@ -141,3 +141,17 @@ describe('escala da moldura com domínio de borda', () => {
     }
   });
 });
+
+describe('orientação do carpete', () => {
+  it('a linha 0 é a madrugada e a 23 é o fim da noite', () => {
+    // O eixo do painel precisa rotular o TOPO como 0h: a linha 0 é a hora 1 do contrato,
+    // isto é, o intervalo 0h–1h. Os rótulos estavam invertidos e diziam 24h no topo.
+    const cells = carpetCells(
+      [{ hour: 1, value: 1 }, { hour: 13, value: 2 }, { hour: 24, value: 3 }],
+      () => 0,
+    );
+    expect(cells.find((c) => c.value === 1)!.row).toBe(0); // 0h–1h, no topo
+    expect(cells.find((c) => c.value === 2)!.row).toBe(12); // 12h–13h, no meio
+    expect(cells.find((c) => c.value === 3)!.row).toBe(23); // 23h–24h, na base
+  });
+});
