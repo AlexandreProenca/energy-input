@@ -75,7 +75,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T003 | Tipos e métodos de série temporal no cliente da API | T001, T002 |
 | [x] | T004 | `core/results/series.ts` — agregação, reamostragem e conversão de unidades | T001 |
 | [x] | T005 | `core/results/comfort.ts` — horas de desconforto | T004 |
-| [ ] | T006 | Casca do modo Resultados | T003 |
+| [x] | T006 | Casca do modo Resultados | T003 |
 | [ ] | T007 | Componentes de gráfico SVG reutilizáveis | T004, T006 |
 | [ ] | T008 | Painel de consumo anual | T007 |
 | [ ] | T009 | Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR** | T001 |
@@ -215,15 +215,26 @@ se não, o cálculo sobre a série é a única fonte e o painel tem de dizer que
 
 ### Fase 2 — Modo Resultados e gráficos
 
-#### T006 · Casca do modo Resultados
+#### T006 · Casca do modo Resultados — **concluída**
 
-**Entra:** `AppMode` ganha `'results'` (`src/store/uiStore.ts:4`); entrada no `Segmented` de
-`src/App.tsx:54-56`; **o ternário de `App.tsx:173-177` vira um `switch`** — hoje qualquer
-modo diferente de `basic`/`geometry` cai no `ExpertShell`. Migrar snapshots antigos em
-`persistence.ts:51` e `resetProject.ts:21`. Novo `src/features/results/ResultsShell.tsx`
-com `lazy()` e estado vazio ("nenhuma simulação nesta sessão").
+Entregue em [`docs/tasks/T006-modo-resultados.md`](tasks/T006-modo-resultados.md).
 
-**Verificação:** portões locais; teste de `persistence` restaurando snapshot sem `mode`.
+Quarto modo aberto, com `lazy()` confirmado por chunk próprio no build. Quatro estados de
+exceção resolvidos **antes** dos gráficos, para que os três painéis não inventem cada um o
+seu: sem execução, em andamento, terminou sem sucesso, e concluída. Adoção por identificador
+disponível nos três estados em que cabe.
+
+**Para a T007 e os painéis:**
+
+- O ternário de modos virou a tabela `MODOS` em `App.tsx`. Modo novo sem entrada ali não
+  renderiza nada específico, em vez de cair calado no `ExpertShell`.
+- O aviso de **dias de projeto** já está na casca: consumo anual e horas de desconforto não
+  existem nessas execuções, e os painéis não precisam repeti-lo.
+- **Falta o quinto estado — série expirada (410)** —, que entra na T010 porque só aparece
+  quando houver consulta de série. `isSeriesExpired` já existe no cliente (T003); o painel
+  cai para o resumo permanente com aviso, nunca para tela de erro.
+- Campo com ação por `Enter` lê `e.currentTarget.value`, não a variável de estado: com
+  digitação rápida o fecho do render fica desatualizado e a tecla não faz nada, sem erro.
 
 #### T007 · Componentes de gráfico SVG reutilizáveis
 

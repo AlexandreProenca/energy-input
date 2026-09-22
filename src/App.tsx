@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Box, Play, Download, Loader2, Redo2, RotateCcw, Sparkles, TriangleAlert, Undo2, Wrench, Zap } from 'lucide-react';
+import { BarChart3, Box, Play, Download, Loader2, Redo2, RotateCcw, Sparkles, TriangleAlert, Undo2, Wrench, Zap } from 'lucide-react';
 import { useSchemaStore } from '@/store/schemaStore';
-import { useUiStore } from '@/store/uiStore';
+import { useUiStore, type AppMode } from '@/store/uiStore';
 import { useWizardStore } from '@/store/wizardStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { restoreSnapshot, startAutosave } from '@/store/persistence';
@@ -17,6 +17,14 @@ import { ConflictDialog } from '@/features/wizard/ConflictDialog';
 const SimulationDialog = lazy(() => import('@/features/simulation/SimulationDialog').then(m => ({ default: m.SimulationDialog })));
 const ExpertShell = lazy(() => import('@/features/expert/ExpertShell'));
 const GeometryEditor = lazy(() => import('@/features/geometry/GeometryEditor'));
+const ResultsShell = lazy(() => import('@/features/results/ResultsShell'));
+
+/** Cada modo carregado sob demanda, exceto o assistente, que é a tela inicial. */
+const MODOS: Partial<Record<AppMode, (revision: number) => JSX.Element>> = {
+  geometry: (revision) => <GeometryEditor key={revision} />,
+  expert: (revision) => <ExpertShell key={revision} />,
+  results: (revision) => <ResultsShell key={revision} />,
+};
 
 function Logo() {
   return (
@@ -54,6 +62,7 @@ function Header() {
               { value: 'basic', label: <span className="hidden sm:inline">Assistente</span>, icon: <Sparkles size={15} /> },
               { value: 'geometry', label: <span className="hidden sm:inline">Editor 3D</span>, icon: <Box size={15} /> },
               { value: 'expert', label: <span className="hidden sm:inline">Especialista</span>, icon: <Wrench size={15} /> },
+              { value: 'results', label: <span className="hidden sm:inline">Resultados</span>, icon: <BarChart3 size={15} /> },
             ]}
           />
         </div>
@@ -174,7 +183,12 @@ export function App() {
         <WizardShell key={revision} />
       ) : (
         <Suspense fallback={<div className="flex h-[60vh] items-center justify-center"><Loader2 className="animate-spin text-brand-600" /></div>}>
-          {mode === 'geometry' ? <GeometryEditor key={revision} /> : <ExpertShell key={revision} />}
+          {/*
+            Busca por modo, e não um encadeamento de ternários: com o ternário anterior,
+            qualquer modo novo caía silenciosamente no ExpertShell — o `results` teria
+            aberto o editor de objetos em vez do painel.
+          */}
+          {MODOS[mode]?.(revision) ?? <ExpertShell key={revision} />}
         </Suspense>
       )}
       <Suspense fallback={null}><SimulationDialog /></Suspense>

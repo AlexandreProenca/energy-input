@@ -39,6 +39,15 @@ export function clearSnapshot() {
   }
 }
 
+const MODOS: readonly AppMode[] = ['basic', 'geometry', 'expert', 'results'];
+/**
+ * O autosave é lido de `localStorage`, que sobrevive a versões do aplicativo e pode ter sido
+ * escrito por outra. Um modo desconhecido — de uma versão futura, ou de storage corrompido —
+ * viraria um `mode` que nenhuma tela reconhece: o usuário abriria o app numa página em
+ * branco, sem entender por quê. Cair no assistente é o comportamento seguro.
+ */
+const modoValido = (m: unknown): AppMode => (MODOS.includes(m as AppMode) ? (m as AppMode) : 'basic');
+
 /** Restores the last session. Returns the save date when something was restored. */
 export function restoreSnapshot(): string | undefined {
   const s = readSnapshot();
@@ -48,7 +57,7 @@ export function restoreSnapshot(): string | undefined {
     ? { kind: 'upload', doc: structuredClone(s.doc), fileName: s.fileName, recovered: true }
     : { kind: 'generated' }) });
   useWizardStore.getState().hydrate({ answers: s.answers, owned: s.owned ?? {}, linked: s.linked ?? true });
-  useUiStore.setState({ mode: s.mode ?? 'basic', wizardStep: s.wizardStep ?? 'project', visitedSteps: s.visitedSteps ?? ['project'] });
+  useUiStore.setState({ mode: modoValido(s.mode), wizardStep: s.wizardStep ?? 'project', visitedSteps: s.visitedSteps ?? ['project'] });
   return s.savedAt;
 }
 

@@ -8,6 +8,12 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- O seletor de modo era um encadeamento de ternários em que **qualquer modo não previsto caía
+  silenciosamente no Modo Especialista**. Virou uma tabela por modo: omissão fica visível em
+  vez de abrir a tela errada. (`Refs: T006`)
+- Modo desconhecido vindo do autosave (versão futura ou storage corrompido) abriria o
+  aplicativo numa tela que nenhum componente reconhece. Agora cai no assistente. (`Refs: T006`)
+
 - **O proxy de simulação nunca funcionou na imagem Docker:** toda chamada a
   `/simulation-api` devolvia **502** (`unable to get local issuer certificate`). A causa não
   era bundle de CA desatualizado — o `openssl` no mesmo contêiner verifica a cadeia sem
@@ -21,6 +27,11 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Modo Resultados**, o quarto do aplicativo, com carregamento sob demanda e os quatro
+  estados de exceção resolvidos antes dos gráficos: sem execução, em andamento, terminou sem
+  sucesso e concluída — com aviso quando a execução foi em dias de projeto, em que consumo
+  anual e horas de desconforto não existem. Inclui adoção de uma execução pelo identificador.
+  (`Refs: T006`)
 - `src/core/results/comfort.ts`: horas de desconforto calculadas da série de temperatura
   operativa, **frio e quente em separado**, com faixa fixa ou adaptativa (ASHRAE 55 /
   EN 16798). A faixa adaptativa devolve nulo fora do domínio de validade em vez de
