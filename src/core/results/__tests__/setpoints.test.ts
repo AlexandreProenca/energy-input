@@ -74,4 +74,30 @@ describe('quando não há faixa que se possa afirmar', () => {
     expect(bandFromDocument(doc(agenda(26), agenda(18)))).toBeUndefined();
     expect(bandFromDocument(doc(agenda(22), agenda(22)))).toBeUndefined();
   });
+
+  /**
+   * O assistente escreve um termostato só para todas as zonas, mas o Modo Especialista pode
+   * criar vários. Quando discordam não existe **uma** faixa do edifício, e pegar o primeiro
+   * escolheria por ordem de chave — o painel mostraria horas de frio medidas contra o
+   * termostato de outra zona. Veio da revisão do PR da T011.
+   */
+  it('exige que todos os termostatos concordem', () => {
+    const doisIguais = {
+      'ThermostatSetpoint:DualSetpoint': {
+        A: { heating_setpoint_temperature_schedule_name: 'Aq', cooling_setpoint_temperature_schedule_name: 'Re' },
+        B: { heating_setpoint_temperature_schedule_name: 'Aq2', cooling_setpoint_temperature_schedule_name: 'Re' },
+      },
+      'Schedule:Compact': { Aq: agenda(18), Aq2: agenda(18), Re: agenda(26), Re2: agenda(24) },
+    } as unknown as EpJsonDocument;
+    expect(bandFromDocument(doisIguais)).toEqual({ min: 18, max: 26 });
+
+    const discordam = {
+      ...doisIguais,
+      'ThermostatSetpoint:DualSetpoint': {
+        A: { heating_setpoint_temperature_schedule_name: 'Aq', cooling_setpoint_temperature_schedule_name: 'Re' },
+        B: { heating_setpoint_temperature_schedule_name: 'Aq', cooling_setpoint_temperature_schedule_name: 'Re2' },
+      },
+    } as unknown as EpJsonDocument;
+    expect(bandFromDocument(discordam)).toBeUndefined();
+  });
 });

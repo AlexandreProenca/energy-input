@@ -40,17 +40,14 @@ function valoresDaAgenda(doc: EpJsonDocument, nome: string): number[] {
  * significa alguma coisa. Usar os valores de recuo declararia confortável a madrugada em
  * que ninguém está.
  *
- * Devolve `undefined` quando o documento não tem termostato de duplo setpoint, quando
- * alguma das agendas não tem número, ou quando a faixa sai invertida — casos em que quem
- * chama precisa dizer que não encontrou, e não exibir uma faixa inventada.
+ * Devolve `undefined` quando o documento não tem termostato de duplo setpoint, quando alguma
+ * das agendas não tem número, quando a faixa sai invertida, ou quando há **mais de um
+ * termostato e eles discordam** — casos em que quem chama precisa dizer que não encontrou
+ * uma faixa única, e não exibir uma inventada.
  */
-export function bandFromDocument(doc: EpJsonDocument): ComfortBand | undefined {
-  const termostatos = doc['ThermostatSetpoint:DualSetpoint'] as Record<string, EpObject> | undefined;
-  const primeiro = termostatos && Object.values(termostatos)[0];
-  if (!primeiro) return undefined;
-
-  const nomeAquecimento = primeiro.heating_setpoint_temperature_schedule_name;
-  const nomeResfriamento = primeiro.cooling_setpoint_temperature_schedule_name;
+function faixaDoTermostato(doc: EpJsonDocument, termostato: EpObject): ComfortBand | undefined {
+  const nomeAquecimento = termostato.heating_setpoint_temperature_schedule_name;
+  const nomeResfriamento = termostato.cooling_setpoint_temperature_schedule_name;
   if (typeof nomeAquecimento !== 'string' || typeof nomeResfriamento !== 'string') return undefined;
 
   const aquecimento = valoresDaAgenda(doc, nomeAquecimento);
@@ -62,4 +59,23 @@ export function bandFromDocument(doc: EpJsonDocument): ComfortBand | undefined {
   // Faixa invertida não é faixa. Acontece se as agendas forem trocadas no Modo Especialista,
   // e classificar contra ela poria todas as horas fora — um resultado que parece medição.
   return min < max ? { min, max } : undefined;
+}
+
+export function bandFromDocument(doc: EpJsonDocument): ComfortBand | undefined {
+  const termostatos = doc['ThermostatSetpoint:DualSetpoint'] as Record<string, EpObject> | undefined;
+  const todos = termostatos ? Object.values(termostatos) : [];
+  if (todos.length === 0) return undefined;
+
+  // Todos os termostatos precisam concordar. O assistente escreve um só para todas as zonas,
+  // mas o Modo Especialista pode criar vários — e aí não existe **uma** faixa do edifício.
+  // Pegar o primeiro da lista escolheria por ordem de chave, que não é critério nenhum:
+  // o painel mostraria "horas de frio" medidas contra o termostato de outra zona.
+  let faixa: ComfortBand | undefined;
+  for (const t of todos) {
+    const desta = faixaDoTermostato(doc, t);
+    if (!desta) return undefined;
+    if (!faixa) faixa = desta;
+    else if (desta.min !== faixa.min || desta.max !== faixa.max) return undefined;
+  }
+  return faixa;
 }

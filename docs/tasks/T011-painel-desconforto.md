@@ -83,7 +83,7 @@ dicionário pt-BR que faltava para os nomes do resumo permanente.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 295 testes; +21 desta tarefa (8 vindos da revisão do PR), o resto das T018–T020
+- [x] `npm test` — 297 testes; +23 desta tarefa (10 vindos das duas rodadas de revisão do PR), o resto das T018–T020
 - [x] `npm run build`
 - [x] **Prova negativa** da guarda de comprimento em `monthlyStateHours`: removida, o teste
       "recusa emparelhar listas de comprimentos diferentes" reprova; devolvida, passa.
@@ -127,6 +127,18 @@ Os outros três:
 | o carpete indexava `hourly[i]` sem guarda, ao contrário de `monthlyStateHours` | guarda de comprimento; sem ela, hora de frio seria pintada de "confortável" em silêncio |
 | `monthlyStateHours` não validava o estado: um quarto valor viraria `NaN` | confere a chave junto com o mês |
 | a tabela `sr-only` do carpete dizia "média por mês" para uma soma de horas | `CarpetPlot` ganha `resumoDescricao`; a alternativa textual descreve o que está desenhado |
+
+Numa segunda rodada, mais três, todos aceitos e todos baratos:
+
+- **`bandFromDocument` pegava o primeiro termostato**, o que em documento multizona escolhe
+  por ordem de chave. Agora exige que todos concordem; discordando, não há uma faixa do
+  edifício e o painel diz isso.
+- **O carpete guardava contra comprimento e não contra estado desconhecido** — e o
+  comentário reconhecia o primeiro risco sem cobrir o segundo. Estado fora do conjunto vira
+  `NaN`, e `carpetCells` descarta célula não finita: a hora não é desenhada, em vez de ser
+  pintada de "confortável".
+- **`rotuloDoResumo` decide por ordem de cascata**, e o teste de cobertura conferia presença
+  de chave, não unicidade. Há asserção de que as tabelas são disjuntas.
 
 ---
 

@@ -31,6 +31,18 @@ describe('cobertura dos nomes que a API realmente devolve', () => {
 });
 
 describe('rotuloDoResumo', () => {
+  /**
+   * A busca é em cascata — áreas, conforto, recursos, usos finais — e a primeira tabela
+   * vence. Se um nome existisse em duas com traduções diferentes, a precedência decidiria em
+   * silêncio, e o teste de cobertura não pegaria: ele confere presença de chave, não
+   * unicidade entre tabelas. Veio da revisão do PR da T011.
+   */
+  it('as tabelas são disjuntas, então a ordem da cascata não decide nada', () => {
+    const chaves = [TABELAS.areas, TABELAS.conforto, TABELAS.recursos, TABELAS.usosFinais]
+      .flatMap((t) => Object.keys(t));
+    expect(new Set(chaves).size).toBe(chaves.length);
+  });
+
   it('acha o nome sem que quem chama saiba de qual lista ele veio', () => {
     // É o que a tabela do diálogo precisa: ela concatena as três listas e ali o nome já
     // perdeu a origem.

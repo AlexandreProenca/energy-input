@@ -23,8 +23,16 @@ const CORES: Record<HourState, string> = { frio: '#5b9bc0', ok: '#cbd5e1', quent
 const ESTADOS: HourState[] = ['frio', 'ok', 'quente'];
 const ROTULO: Record<HourState, string> = { frio: 'Frio', ok: 'Confortável', quente: 'Quente' };
 
-/** O estado vira número para caber em `CarpetCell.value`, e a cor volta dele. */
+/**
+ * O estado vira número para caber em `CarpetCell.value`, e a cor volta dele.
+ *
+ * Estado desconhecido vira `NaN`, e não um código: `carpetCells` **descarta** célula com
+ * valor não finito, então a hora simplesmente não é desenhada. Mapeá-lo para um código
+ * faria `corDoEstado` cair no fallback e pintar de "confortável" uma hora que não foi
+ * classificada — mentira silenciosa, que é o mesmo defeito da guarda de comprimento.
+ */
 const CODIGO: Record<HourState, number> = { frio: 0, ok: 1, quente: 2 };
+const codigoDoEstado = (e: HourState): number => CODIGO[e] ?? NaN;
 const corDoEstado = (v: number) => CORES[ESTADOS[v] ?? 'ok'];
 
 type Criterio = 'fixa' | 'adaptativa';
@@ -83,7 +91,7 @@ export function DesconfortoPanel({ simulation, summary }: {
       mensal: monthlyStateHours(serie.points, d.hourly),
       emparelhado,
       celulas: !emparelhado ? [] : carpetCells(
-        serie.points.map((p, i) => ({ hour: p.hour, value: CODIGO[d.hourly[i]] })),
+        serie.points.map((p, i) => ({ hour: p.hour, value: codigoDoEstado(d.hourly[i]) })),
         (i) => {
           const p = serie.points[i];
           return dayOfYear(p.month, p.day, serie.leap) - 1;
@@ -120,7 +128,7 @@ export function DesconfortoPanel({ simulation, summary }: {
             label="Critério de conforto"
             hint={
               criterio === 'fixa'
-                ? `${fmt(faixaFixa.min, 1)} °C a ${fmt(faixaFixa.max, 1)} °C, ${doDocumento ? 'do termostato do modelo aberto' : 'valores usuais de referência — o modelo aberto não tem termostato'}.`
+                ? `${fmt(faixaFixa.min, 1)} °C a ${fmt(faixaFixa.max, 1)} °C, ${doDocumento ? 'do termostato do modelo aberto' : 'valores usuais de referência — o modelo aberto não define uma faixa única'}.`
                 : 'Faixa da ASHRAE 55 / EN 16798, recalculada a cada dia pela média externa predominante.'
             }
           >
