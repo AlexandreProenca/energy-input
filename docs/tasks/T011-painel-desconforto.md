@@ -83,7 +83,7 @@ dicionário pt-BR que faltava para os nomes do resumo permanente.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 252 testes (eram 239; +13 nesta tarefa)
+- [x] `npm test` — 295 testes; +21 desta tarefa (8 vindos da revisão do PR), o resto das T018–T020
 - [x] `npm run build`
 - [x] **Prova negativa** da guarda de comprimento em `monthlyStateHours`: removida, o teste
       "recusa emparelhar listas de comprimentos diferentes" reprova; devolvida, passa.
@@ -97,6 +97,36 @@ dicionário pt-BR que faltava para os nomes do resumo permanente.
         pico de frio em **4h–5h**;
       - a faixa adaptativa muda o diagnóstico e reporta `fallbackDays` = 1 dia;
       - o `StackedBarChart` recebe dado não nulo em três séries pela primeira vez.
+
+---
+
+## 5.1 Revisão do PR
+
+Quatro achados, todos aceitos.
+
+**O mais importante: a faixa fixa vinha de `answers.hvac`.** Este painel abre execução de
+outra sessão pelo identificador — o próprio campo diz "mesmo de outra sessão" — e o Modo
+Especialista desliga o vínculo com o assistente (PRD §3.2). Nos dois casos as respostas do
+assistente não têm relação com o modelo na tela, e as horas seriam classificadas contra uma
+faixa que não é a do edifício: número plausível na tela e indefensável no papel, que é
+exatamente o que esta tarefa condena em outros lugares.
+
+Agora a faixa vem do **documento**, por `bandFromDocument` — novo em `src/core/results/`,
+puro e com 7 testes. Com recuo noturno ligado, usa o par do período **ocupado**: o
+aquecimento mais alto e o resfriamento mais baixo. Sem termostato no documento, cai numa
+faixa de referência **e diz que caiu**.
+
+Continua sendo o documento local, não o que foi simulado — a API não devolve os setpoints da
+execução. Por isso o painel apresenta a faixa como critério escolhido, e a dica diz de onde
+ela veio.
+
+Os outros três:
+
+| Achado | O que mudou |
+| --- | --- |
+| o carpete indexava `hourly[i]` sem guarda, ao contrário de `monthlyStateHours` | guarda de comprimento; sem ela, hora de frio seria pintada de "confortável" em silêncio |
+| `monthlyStateHours` não validava o estado: um quarto valor viraria `NaN` | confere a chave junto com o mês |
+| a tabela `sr-only` do carpete dizia "média por mês" para uma soma de horas | `CarpetPlot` ganha `resumoDescricao`; a alternativa textual descreve o que está desenhado |
 
 ---
 

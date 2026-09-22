@@ -14,13 +14,19 @@ const MESES = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
  * mensais em `sr-only`. O PRD §5.2 compromete acessibilidade, e um elemento que só existe
  * como pixel não a cumpre.
  */
-export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, vazio, cor, legenda }: {
+export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, resumoDescricao, vazio, cor, legenda }: {
   label: string;
   cells: CarpetCell[];
   dominio: Range;
   unidade?: string;
-  /** Média por mês, para a alternativa textual. */
+  /** Resumo por mês, para a alternativa textual do `<canvas>`. */
   resumoMensal?: { mes: number; valor: number }[];
+  /**
+   * O que o resumo mensal mede. O padrão descreve a escala contínua; com cor categórica a
+   * grandeza é outra, e anunciar "média" seria descrever para o leitor de tela um gráfico
+   * diferente do que está desenhado.
+   */
+  resumoDescricao?: string;
   vazio?: string;
   /**
    * Cor de cada célula. O padrão é a escala divergente contínua, que é o que o carpete de
@@ -99,7 +105,7 @@ export function CarpetPlot({ label, cells, dominio, unidade, resumoMensal, vazio
       )}
       {resumoMensal && resumoMensal.length > 0 && (
         <table className="sr-only">
-          <caption>{`${label} — média por mês`}</caption>
+          <caption>{`${label} — ${resumoDescricao ?? 'média por mês'}`}</caption>
           <tbody>
             {resumoMensal.map((r) => (
               <tr key={r.mes}>

@@ -281,6 +281,20 @@ describe('horas por mês, classificadas', () => {
     expect(meses[5].frio).toBe(1);
   });
 
+  /**
+   * `meses[m][estadoDesconhecido]++` seria `undefined + 1`, isto é `NaN`, e um `NaN`
+   * contamina o mês inteiro sem erro nenhum: a barra empilhada some e nada diz por quê.
+   * Veio da revisão do PR da T011.
+   */
+  it('ignora estado desconhecido em vez de produzir NaN', () => {
+    const meses = monthlyStateHours(
+      [ponto(1, 5), ponto(1, 22)],
+      ['frio', 'sem_dado' as never],
+    );
+    expect(meses[0]).toEqual({ frio: 1, ok: 0, quente: 0 });
+    expect(meses.some((m) => Number.isNaN(m.frio + m.ok + m.quente))).toBe(false);
+  });
+
   it('a soma dos doze meses fecha com o total classificado', () => {
     // A conta que o painel mostra: o empilhado mensal e os três indicadores têm de vir do
     // mesmo universo, senão um dos dois está mentindo.

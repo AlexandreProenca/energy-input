@@ -8,7 +8,8 @@ import {
   type ComfortBand, type Discomfort, type HourState,
 } from '@/core/results/comfort';
 import { rotuloDeConforto } from '@/core/results/rotulos';
-import { useWizardStore } from '@/store/wizardStore';
+import { bandFromDocument } from '@/core/results/setpoints';
+import { useDocumentStore } from '@/store/documentStore';
 import type { Simulation, Summary } from '@/features/simulation/api';
 import { StackedBarChart } from '../charts/StackedBarChart';
 import { CarpetPlot } from '../charts/CarpetPlot';
@@ -29,6 +30,13 @@ const corDoEstado = (v: number) => CORES[ESTADOS[v] ?? 'ok'];
 type Criterio = 'fixa' | 'adaptativa';
 
 /**
+ * Último recurso, quando o documento não tem termostato de duplo setpoint — um modelo sem
+ * climatização, por exemplo. São os valores usuais de conforto para ambiente residencial, e
+ * o painel diz que vieram daqui.
+ */
+const FAIXA_PADRAO: ComfortBand = { min: 18, max: 26 };
+
+/**
  * Painel de horas de desconforto.
  *
  * Mostra **frio e quente em separado**, e não um agregado: 800 horas quentes pedem
@@ -43,15 +51,18 @@ export function DesconfortoPanel({ simulation, summary }: {
   const externa = useResultsStore((s) => s.externa);
   const carregandoTemperatura = useResultsStore((s) => s.carregandoTemperatura);
   const expirada = useResultsStore((s) => s.expirada);
-  // Os setpoints do assistente são a faixa fixa. É o critério que o próprio usuário
-  // declarou, e não um número da literatura que ele nunca viu.
-  const hvac = useWizardStore((s) => s.answers.hvac);
+  // A faixa fixa vem do **documento**, e não de `answers.hvac`. Este painel abre execução de
+  // outra sessão pelo identificador, e o Modo Especialista desliga o vínculo com o
+  // assistente (PRD §3.2): nos dois casos as respostas do assistente não têm relação com o
+  // modelo na tela, e classificar horas contra elas daria um número plausível e
+  // indefensável.
+  const doc = useDocumentStore((s) => s.doc);
   const [criterio, setCriterio] = useState<Criterio>('fixa');
 
-  const faixaFixa: ComfortBand = useMemo(
-    () => ({ min: hvac.heatingSetpoint, max: hvac.coolingSetpoint }),
-    [hvac.heatingSetpoint, hvac.coolingSetpoint],
-  );
+  const doDocumento = useMemo(() => bandFromDocument(doc), [doc]);
+  // Sem termostato no documento, a faixa da literatura entra como último recurso — e o
+  // painel diz de onde ela veio, porque 18–26 °C sem procedência é número mágico.
+  const faixaFixa: ComfortBand = doDocumento ?? FAIXA_PADRAO;
 
   const calculado = useMemo(() => {
     if (!interna) return undefined;
@@ -60,11 +71,18 @@ export function DesconfortoPanel({ simulation, summary }: {
       ? adaptiveDiscomfort(serie, normalizeSeries(externa.itens), faixaFixa)
       : undefined;
     const d: Discomfort = adaptativa ?? hoursOutsideBand(serie.points, faixaFixa);
+    // `hourly` é paralelo a `points` por contrato das duas funções, e hoje sempre bate. A
+    // guarda existe porque a falha seria **silenciosa**: `CODIGO[undefined]` é `undefined`,
+    // `corDoEstado` cai no fallback e o carpete pintaria de "confortável" horas de frio ou
+    // calor, sem nada indicar. `monthlyStateHours` já se protege disso; não havia motivo
+    // para o carpete não se proteger.
+    const emparelhado = d.hourly.length === serie.points.length;
     return {
       serie, d,
       fallbackDays: adaptativa?.fallbackDays,
       mensal: monthlyStateHours(serie.points, d.hourly),
-      celulas: carpetCells(
+      emparelhado,
+      celulas: !emparelhado ? [] : carpetCells(
         serie.points.map((p, i) => ({ hour: p.hour, value: CODIGO[d.hourly[i]] })),
         (i) => {
           const p = serie.points[i];
@@ -102,7 +120,7 @@ export function DesconfortoPanel({ simulation, summary }: {
             label="Critério de conforto"
             hint={
               criterio === 'fixa'
-                ? `Os setpoints do projeto: ${fmt(faixaFixa.min, 1)} °C a ${fmt(faixaFixa.max, 1)} °C.`
+                ? `${fmt(faixaFixa.min, 1)} °C a ${fmt(faixaFixa.max, 1)} °C, ${doDocumento ? 'do termostato do modelo aberto' : 'valores usuais de referência — o modelo aberto não tem termostato'}.`
                 : 'Faixa da ASHRAE 55 / EN 16798, recalculada a cada dia pela média externa predominante.'
             }
           >
@@ -184,7 +202,9 @@ export function DesconfortoPanel({ simulation, summary }: {
               cor={corDoEstado}
               legenda={ESTADOS.map((e) => ({ rotulo: ROTULO[e], cor: CORES[e] }))}
               resumoMensal={calculado.mensal.map((m, i) => ({ mes: i + 1, valor: m.frio + m.quente }))}
-              unidade="h fora da faixa"
+              resumoDescricao="horas fora da faixa por mês"
+              unidade="h"
+              vazio={calculado.emparelhado ? undefined : 'Não foi possível parear a classificação com as horas da série.'}
             />
           </section>
 

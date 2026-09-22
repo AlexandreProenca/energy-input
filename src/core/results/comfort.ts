@@ -236,8 +236,12 @@ export function monthlyStateHours(
   if (points.length !== hourly.length) return meses;
   for (let i = 0; i < points.length; i++) {
     const mes = points[i].month;
-    if (mes < 1 || mes > 12) continue;
-    meses[mes - 1][hourly[i]]++;
+    const estado = hourly[i];
+    // O estado é conferido junto com o mês. `meses[m][estadoDesconhecido]++` seria
+    // `undefined + 1`, isto é, `NaN`, e um `NaN` contamina o mês inteiro sem erro nenhum —
+    // a barra empilhada some e nada diz por quê.
+    if (mes < 1 || mes > 12 || !(estado in meses[0])) continue;
+    meses[mes - 1][estado]++;
   }
   return meses;
 }

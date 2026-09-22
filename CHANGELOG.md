@@ -8,6 +8,12 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- O painel de desconforto classificava as horas contra os setpoints do **assistente**, e não
+  os do modelo aberto. Como o painel abre execução de outra sessão pelo identificador e o
+  Modo Especialista desliga o vínculo com o assistente, as horas podiam ser contadas contra
+  uma faixa que não era a do edifício. Agora a faixa vem do termostato do documento, e a
+  interface diz de onde ela veio. (`Refs: T011`)
+
 - O dicionário de rótulos em `SimulationDialog.tsx` tinha `InteriorLighting` e
   `InteriorEquipment` grafados **sem espaço**, enquanto a API manda `Interior Lighting` e
   `Interior Equipment`: as duas entradas nunca casaram. Os três indicadores de conforto e
