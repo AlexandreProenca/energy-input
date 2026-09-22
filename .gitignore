@@ -4,3 +4,7 @@ dist
 public/schema
 *.log
 *.tsbuildinfo
+
+.env
+.env.*
+!.env.example

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Box, Download, Loader2, Redo2, RotateCcw, Sparkles, TriangleAlert, Undo2, Wrench, Zap } from 'lucide-react';
+import { Box, Play, Download, Loader2, Redo2, RotateCcw, Sparkles, TriangleAlert, Undo2, Wrench, Zap } from 'lucide-react';
 import { useSchemaStore } from '@/store/schemaStore';
 import { useUiStore } from '@/store/uiStore';
 import { useWizardStore } from '@/store/wizardStore';
@@ -11,8 +11,10 @@ import { exportCurrentDocument } from '@/lib/exportDocument';
 import { Button, Dialog, IconButton, Segmented } from '@/ui/primitives';
 import { Toasts } from '@/ui/Toasts';
 import { WizardShell } from '@/features/wizard/WizardShell';
+import { useSimulationStore } from '@/features/simulation/simulationStore';
 import { ConflictDialog } from '@/features/wizard/ConflictDialog';
 
+const SimulationDialog = lazy(() => import('@/features/simulation/SimulationDialog').then(m => ({ default: m.SimulationDialog })));
 const ExpertShell = lazy(() => import('@/features/expert/ExpertShell'));
 const GeometryEditor = lazy(() => import('@/features/geometry/GeometryEditor'));
 
@@ -65,6 +67,7 @@ function Header() {
           <IconButton label="Resetar edição" onClick={() => setResetOpen(true)}>
             <RotateCcw size={17} />
           </IconButton>
+          <IconButton label="Simular modelo" onClick={() => useSimulationStore.getState().setOpen(true)}><Play size={17} /></IconButton>
           <Button variant="primary" size="sm" icon={<Download size={15} />} onClick={() => exportCurrentDocument()} className="ml-1" aria-label="Baixar arquivo .epJSON">
             <span className="hidden sm:inline">Baixar</span>
           </Button>
@@ -174,6 +177,7 @@ export function App() {
           {mode === 'geometry' ? <GeometryEditor key={revision} /> : <ExpertShell key={revision} />}
         </Suspense>
       )}
+      <Suspense fallback={null}><SimulationDialog /></Suspense>
       <ConflictDialog />
       <Toasts />
     </div>

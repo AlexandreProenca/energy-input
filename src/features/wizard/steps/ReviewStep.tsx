@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { CheckCircle2, Code2, Copy, Download, ExternalLink, Pencil, Terminal, TriangleAlert, Wrench } from 'lucide-react';
+import { CheckCircle2, Code2, Copy, Download, ExternalLink, Pencil, Play, Terminal, TriangleAlert, Wrench } from 'lucide-react';
 import { byId, templates } from '@/templates';
 import { WIZARD_STEPS, type WizardStepId } from '@/generators/answers';
 import { locationDisplayName } from '@/generators/location';
@@ -12,6 +12,7 @@ import { countObjects } from '@/core/epjson/document';
 import { exportCurrentDocument } from '@/lib/exportDocument';
 import { safeFileName } from '@/lib/files';
 import { Badge, Button, Callout, IconButton, fmt } from '@/ui/primitives';
+import { useSimulationStore } from '@/features/simulation/simulationStore';
 import { STEP_META } from '../steps';
 import { JsonPreviewDialog } from '../JsonPreviewDialog';
 
@@ -111,6 +112,7 @@ export function ReviewStep() {
         <SummaryRow step="outputs">Relatório resumido{outputs.length ? ` + ${outputs.join(', ')}` : ''}.</SummaryRow>
       </ul>
 
+      <Button variant="primary" size="lg" icon={<Play size={18} />} onClick={() => useSimulationStore.getState().setOpen(true)}>Simular modelo na API</Button>
       <div className="grid gap-3 sm:grid-cols-3">
         <Button variant="primary" size="lg" icon={<Download size={18} />} onClick={() => exportCurrentDocument(fileName)}>
           Baixar .epJSON
@@ -125,7 +127,7 @@ export function ReviewStep() {
 
       <div className="rounded-2xl bg-slate-900 p-5 text-slate-100">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <Terminal size={16} /> Como rodar a simulação
+          <Terminal size={16} /> Como rodar localmente (opcional)
         </h3>
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
           <li>
@@ -165,7 +167,7 @@ export function ReviewStep() {
           </button>
         </div>
         <p className="mt-3 text-xs text-slate-400">
-          Os resultados ficam em <code>resultados/eplustbl.htm</code>. <Badge tone="slate">A simulação não roda neste aplicativo.</Badge>
+          Os resultados ficam em <code>resultados/eplustbl.htm</code>. <Badge tone="slate">Execução local no seu computador.</Badge>
         </p>
       </div>
       <JsonPreviewDialog open={jsonOpen} onClose={() => setJsonOpen(false)} />

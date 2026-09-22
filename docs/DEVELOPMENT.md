@@ -255,3 +255,48 @@ Validação: testes `residentialPresets.test.ts` cobrem planta e caixa, contato
 adiabático, pares internos, revestimentos, espessura do vidro, esquadria e
 troca de preset. O smoke test `CASE=apartamento` usa dois pavimentos, ambientes
 adjacentes, janela PVC e porta interna semi-oca entre zonas.
+
+
+### Simulação pela API de homologação
+
+O botão **Simular modelo** (ícone de executar no cabeçalho e ação na revisão)
+abre a integração com `https://homolog.ee.dev.br/v1`, conforme o OpenAPI
+consultado em 22/09/2026. Envia a cópia atual do documento como multipart
+`file` em `/models`, usa `versao.id` em `/simulations` e preserva o mesmo
+`Idempotency-Key` quando uma solicitação precisa ser retomada. A cópia enviada
+é independente das edições posteriores. Consultas de status são sequenciais
+a cada cinco segundos, param nos estados terminais e pausam em erro de rede
+ou autenticação; **Atualizar status** retoma o acompanhamento.
+
+A conexão consulta `/engines`; somente versões compatíveis com o modelo
+podem ser escolhidas. Execução climática (`annual`, inclusive o período
+limitado pelo RunPeriod do modelo) exige seleção de `weather_id` no catálogo
+ou upload EPW com licença declarada. `design_day` dispensa EPW. Os resultados
+incluem summary, errors, logs e artifacts. Um erro em um desses recursos não
+esconde os demais. Também é possível consultar uma execução pelo ID.
+
+Desenvolvimento: copie `.env.example` para `.env.local` e configure
+`SIMULATION_API_TOKEN`. O middleware Vite usa essa credencial apenas em
+requisições locais (loopback e Host localhost/127.0.0.1), recusa origens
+cruzadas e nunca a inclui no bundle. Não use `VITE_` para segredos. Na versão
+Docker/nginx, o usuário informa Bearer no painel (somente memória); o proxy
+não tem credencial compartilhada. Um futuro login de aplicação poderá
+substituir esse campo. O segredo não entra no autosave nem em sessionStorage.
+
+O proxy `/simulation-api/v1` elimina a dependência de CORS no serviço. Em
+downloads, transforma o 302 em `{download_url}`; o navegador abre o link
+pré-assinado sem enviar Authorization ao armazenamento. O link não é
+persistido. Credenciais e conteúdo dos modelos não são registrados em logs.
+O identificador da execução e o pedido idempotente ficam em sessionStorage
+para retomar após recarregar a mesma aba. `vite preview` serve apenas os
+arquivos estáticos; use `npm run dev` ou Docker/nginx para a integração.
+
+Validação automática: testes de transporte e ciclo de vida; smoke test real
+(opt-in) `node --import tsx scripts/simulation-api-check.ts` contra o Vite
+local com credencial configurada. Esse script cria um modelo sintético,
+verifica idempotência e acompanha a execução. Em 22/09/2026, autenticação,
+catálogo, upload, criação e repetição idempotente funcionaram. A execução
+`sim_01M34AR1Y55GWWB936547KMXPZ` terminou em `failed` após três tentativas, com
+`err_available: false` e diagnóstico indisponível. Portanto a validação real
+de resultado bem-sucedido e download permanece pendente da execução no
+serviço; essa falha não deve ser reportada como sucesso da simulação.

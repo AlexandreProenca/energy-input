@@ -308,3 +308,13 @@ Start by:
    templates (steps 5-7) → HVAC + outputs (steps 8-9) → review/export (step
    10) → Expert-mode object browser and dynamic form renderer → raw JSON
    view → cross-reference autocomplete → polish.
+
+
+### Simular no serviço de homologação
+
+Use **Simular modelo** no cabeçalho ou na revisão. Configure
+`SIMULATION_API_TOKEN` em `.env.local` para desenvolvimento local (veja
+`.env.example`), clique em **Conectar à API**, selecione o motor e o clima
+e envie o modelo. O painel acompanha o status, mostra resultados e erros,
+permite cancelar e oferece os arquivos produzidos. Em produção, a chave ou
+token é informado no painel e permanece somente em memória.
