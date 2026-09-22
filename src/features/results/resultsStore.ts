@@ -149,9 +149,10 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
       if (!atual()) return;
       tempEmCurso = undefined;
       const candidatas = seriesCandidates(e);
-      if (candidatas.length) {
-        // 422 de ambiguidade: as candidatas são as zonas. Guardá-las é o que permite
-        // oferecer o seletor — sem elas, o painel só saberia que "deu erro".
+      // Só a consulta SEM zona descobre candidatas. Se o usuário já escolheu uma e ela
+      // falhou, repor a lista e limpar a escolha o devolveria ao seletor para escolher de
+      // novo, em laço — o erro tem de aparecer.
+      if (candidatas.length && !zona) {
         set({ carregandoTemperatura: false, zonas: candidatas, zonaEscolhida: undefined });
         return;
       }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { CalendarClock, Loader2, Thermometer } from 'lucide-react';
 import { Callout, Field, StatTile, fmt } from '@/ui/primitives';
-import { aggregateMonthly, dayOfYear, downsampleEnvelope, normalizeSeries } from '@/core/results/series';
+import { aggregateDaily, aggregateMonthly, dayOfYear, normalizeSeries } from '@/core/results/series';
 import { carpetCells } from '@/core/results/plot';
 import type { Simulation } from '@/features/simulation/api';
 import { LineChart } from '../charts/LineChart';
@@ -14,17 +14,23 @@ const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'O
 /**
  * Prepara a série de temperatura para os dois desenhos.
  *
- * A curva usa `downsampleEnvelope` com um balde por dia do ano: cada balde reúne as 24 horas
- * e guarda mínimo, máximo e média. É a banda diária que o painel mostra — só a média
+ * A curva mostra a amplitude de cada dia: mínimo, máximo e média das 24 horas. Só a média
  * esconderia a amplitude, que é justamente o que revela inércia térmica e ganho solar.
  */
 export function prepararTemperatura(serie: SerieCarregada) {
   const normalizada = normalizeSeries(serie.itens);
-  const dias = new Set(normalizada.points.map((p) => dayOfYear(p.month, p.day, normalizada.leap))).size;
+  // Agrupado pelo dia do calendário, e não por fatia de índice. `downsampleEnvelope` divide
+  // a lista em partes iguais, o que só coincide com os dias quando a série está completa:
+  // com horas faltando, os baldes escorregam e um deles mistura o fim de um dia com o começo
+  // do seguinte — e o rótulo "amplitude do dia" passa a ser falso.
+  const min = aggregateDaily(normalizada, 'min');
+  const max = aggregateDaily(normalizada, 'max');
+  const media = aggregateDaily(normalizada, 'mean');
   return {
     normalizada,
-    // Um balde por dia presente; com menos de um dia, ao menos um balde.
-    envelope: downsampleEnvelope(normalizada.points, Math.max(dias, 1)),
+    envelope: media.map((b, i) => ({
+      x: i, min: min[i].value, max: max[i].value, mean: b.value, count: b.count,
+    })),
     celulas: carpetCells(
       normalizada.points.map((p) => ({ hour: p.hour, value: p.value })),
       (i) => {
@@ -33,12 +39,25 @@ export function prepararTemperatura(serie: SerieCarregada) {
       },
     ),
     mensal: aggregateMonthly(normalizada, 'mean').map((b) => ({ mes: b.index, valor: b.value })),
+    extremos: normalizada.points.length === 0 ? undefined : {
+      min: Math.min(...min.map((b) => b.value)),
+      max: Math.max(...max.map((b) => b.value)),
+      media: normalizada.points.reduce((a, p) => a + p.value, 0) / normalizada.points.length,
+    },
   };
 }
 
 export function TemperaturaPanel({ simulation }: { simulation: Simulation }) {
-  const { interna, externa, zonas, zonaEscolhida, carregandoTemperatura, expirada, erro, carregarTemperaturas } =
-    useResultsStore();
+  // Um seletor por campo: assinar o store inteiro faria o componente redesenhar a cada
+  // mudança, inclusive nas dos medidores, carregando arrays de 8 760 pontos sem necessidade.
+  const interna = useResultsStore((s) => s.interna);
+  const externa = useResultsStore((s) => s.externa);
+  const zonas = useResultsStore((s) => s.zonas);
+  const zonaEscolhida = useResultsStore((s) => s.zonaEscolhida);
+  const carregandoTemperatura = useResultsStore((s) => s.carregandoTemperatura);
+  const expirada = useResultsStore((s) => s.expirada);
+  const erro = useResultsStore((s) => s.erro);
+  const carregarTemperaturas = useResultsStore((s) => s.carregarTemperaturas);
 
   useEffect(() => { void carregarTemperaturas(); }, [carregarTemperaturas, simulation.id]);
 
@@ -101,10 +120,15 @@ export function TemperaturaPanel({ simulation }: { simulation: Simulation }) {
 
       {preparada && interna && (
         <>
+          {/*
+            `Math.min()` de lista vazia é `Infinity`, e apareceria assim no indicador. Série
+            inteiramente sem dado é raro, não impossível — `normalizeSeries` descarta hora
+            sem valor, e nada garante que sobre alguma.
+          */}
           <div className="grid gap-2 sm:grid-cols-3">
-            <StatTile label="Mínima do ano" value={fmt(Math.min(...preparada.envelope.map((b) => b.min)), 1)} unit="°C" icon={<Thermometer size={13} />} />
-            <StatTile label="Média do ano" value={fmt(preparada.normalizada.points.reduce((a, p) => a + p.value, 0) / preparada.normalizada.points.length, 1)} unit="°C" />
-            <StatTile label="Máxima do ano" value={fmt(Math.max(...preparada.envelope.map((b) => b.max)), 1)} unit="°C" />
+            <StatTile label="Mínima do ano" value={preparada.extremos ? fmt(preparada.extremos.min, 1) : '—'} unit={preparada.extremos ? '°C' : undefined} icon={<Thermometer size={13} />} />
+            <StatTile label="Média do ano" value={preparada.extremos ? fmt(preparada.extremos.media, 1) : '—'} unit={preparada.extremos ? '°C' : undefined} />
+            <StatTile label="Máxima do ano" value={preparada.extremos ? fmt(preparada.extremos.max, 1) : '—'} unit={preparada.extremos ? '°C' : undefined} />
           </div>
 
           <section className="space-y-1">
@@ -129,10 +153,7 @@ export function TemperaturaPanel({ simulation }: { simulation: Simulation }) {
             <CarpetPlot
               label={`Temperatura operativa por dia e hora em ${interna.variable.key || 'zona única'}`}
               cells={preparada.celulas}
-              dominio={{
-                min: Math.min(...preparada.envelope.map((b) => b.min)),
-                max: Math.max(...preparada.envelope.map((b) => b.max)),
-              }}
+              dominio={preparada.extremos ?? { min: 0, max: 1 }}
               unidade="°C"
               resumoMensal={preparada.mensal}
             />

@@ -40,10 +40,11 @@ vez.
   zona só, e devolve **422 com as candidatas** quando há várias. `seriesCandidates`, criada
   na T003 exatamente para isto, transforma esse erro no seletor de zonas.
 
-- **A banda diária vem de `downsampleEnvelope` com um balde por dia.** Cada balde reúne as
-  24 horas e guarda mínimo, máximo e média — é a amplitude diária que revela inércia térmica
-  e ganho solar, e só a média a esconderia. Reusa a função já testada da T004 em vez de somar
-  um `aggregateDaily` com mín e máx separados.
+- **A banda diária vem de `aggregateDaily` três vezes (mín, máx, média), agrupando pelo dia do
+  calendário.** A primeira versão usava `downsampleEnvelope` com um balde por dia, o que
+  divide a lista em partes **iguais** — coincide com os dias só quando a série está completa.
+  Com horas faltando, os baldes escorregam e um deles mistura o fim de um dia com o começo do
+  seguinte, tornando falso o rótulo "amplitude do dia". Veio da revisão do PR.
 
 - **A externa falta sem invalidar o painel.** Ela só é necessária para a faixa adaptativa da
   T011; a fixa continua valendo. A consulta dela é `.catch(() => undefined)`.
@@ -68,7 +69,7 @@ vez.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 236 testes (eram 235)
+- [x] `npm test` — 239 testes (eram 235; +4 nesta tarefa, 3 deles vindos da revisão do PR)
 - [x] `npm run build`
 - [x] **No navegador, contra o serviço real** (`sim_01M2NEQ…`):
       - carpete em **365 × 24** — uma coluna por dia, uma linha por hora;
@@ -95,6 +96,19 @@ quente, como tem de ser no início da tarde, o que fixa a orientação. Há test
 
 **Vale como método:** para gráfico cuja aparência é plausível em mais de uma configuração,
 a verificação tem de sair do olho e ir para o número.
+
+**Assinar o store inteiro redesenha o painel a cada mudança.** `useResultsStore()` sem
+seletor faz o componente reagir também às mudanças dos medidores, recarregando arrays de
+8 760 pontos sem necessidade. Um seletor por campo resolve. Vale para qualquer painel novo.
+
+**`Math.min()` de lista vazia é `Infinity`, e aparece assim no indicador.** Série
+inteiramente sem dado é raro, não impossível: `normalizeSeries` descarta hora sem valor e
+nada garante que sobre alguma. Os três indicadores mostram travessão nesse caso.
+
+**Escolher uma zona que falha não pode devolver ao seletor.** A primeira versão repunha a
+lista de candidatas e limpava a escolha em qualquer 422 — inclusive no que vinha **depois**
+de o usuário escolher, o que o mandava escolher de novo em laço. Só a consulta **sem zona**
+descobre candidatas; com zona, o erro tem de aparecer.
 
 **A verificação da T007 está fechada.** `LineChart` e `CarpetPlot` receberam dado real — 8 760
 pontos, 365 colunas. O `StackedBarChart` continua sem dado não nulo, porque depende de vários

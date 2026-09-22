@@ -91,3 +91,55 @@ describe('carga de medidores', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('carga de temperaturas', () => {
+  const serieDe = (nome: string, key: string) => ({
+    variable: { name: nome, key, frequency: 'hourly' as const, units: 'C', aggregation: 'Avg', is_meter: false },
+    utc_offset_hours: -3,
+    itens: [{ timestamp: null, month: 1, day: 1, hour: 1, minute: 0, value: 22 }],
+    completa: true,
+    paginas: 1,
+  });
+
+  it('carrega a externa junto, e o signal compartilhado não a cancela', async () => {
+    // As duas consultas usam o mesmo AbortController, de propósito: ele só dispara quando
+    // uma carga mais nova assume. Sequencialmente, o sinal não está abortado.
+    vi.spyOn(SimulationApi.prototype, 'allTimeseries').mockImplementation(
+      (async (_id: string, q: { variable: string }) => serieDe(q.variable, 'ZONE ONE')) as never,
+    );
+    await useResultsStore.getState().carregarTemperaturas();
+    const s = useResultsStore.getState();
+    expect(s.interna?.variable.name).toBe('Zone Operative Temperature');
+    expect(s.externa?.variable.name).toBe('Site Outdoor Air Drybulb Temperature');
+  });
+
+  it('a externa ausente não invalida o painel', async () => {
+    // Ela só é necessária para a faixa adaptativa; a fixa continua valendo.
+    vi.spyOn(SimulationApi.prototype, 'allTimeseries').mockImplementation(
+      (async (_id: string, q: { variable: string }) => {
+        if (q.variable.startsWith('Site')) throw new SimulationApiError('não registrou', 422);
+        return serieDe(q.variable, 'ZONE ONE');
+      }) as never,
+    );
+    await useResultsStore.getState().carregarTemperaturas();
+    expect(useResultsStore.getState().interna).toBeDefined();
+    expect(useResultsStore.getState().externa).toBeUndefined();
+  });
+
+  it('escolher uma zona que falha mostra o erro, em vez de voltar ao seletor em laço', async () => {
+    // Repor a lista de candidatas e limpar a escolha devolveria o usuário ao seletor para
+    // escolher de novo, indefinidamente.
+    const ambiguo = new SimulationApiError('ambígua', 422, 0, {
+      errors: [{ field: 'key', message: 'ZONA 1' }, { field: 'key', message: 'ZONA 2' }],
+    });
+    vi.spyOn(SimulationApi.prototype, 'allTimeseries').mockRejectedValue(ambiguo as never);
+
+    await useResultsStore.getState().carregarTemperaturas();
+    expect(useResultsStore.getState().zonas).toEqual(['ZONA 1', 'ZONA 2']);
+
+    await useResultsStore.getState().carregarTemperaturas('ZONA 1');
+    const s = useResultsStore.getState();
+    expect(s.erro).toBeDefined();
+    expect(s.zonaEscolhida).toBe('ZONA 1');
+  });
+});
