@@ -75,6 +75,17 @@ describe('o que precisa reprovar', () => {
     reprova('{"findings": {"a": 1}}');
   });
 
+  /**
+   * Achado da revisão do PR #14, e o mais perigoso desta rodada. Com uma chave certa e a
+   * outra errada, o objeto era aceito, `findings` virava lista vazia **em silêncio** e o
+   * relatório anunciava "nenhum defeito" com achados que o modelo tinha escrito. É a mesma
+   * família de passe silencioso da T019.
+   */
+  it('recusa quando uma chave está certa e a outra tem o tipo errado', () => {
+    reprova('{"summary": "ok", "findings": "texto"}');
+    reprova('{"summary": 42, "findings": []}');
+  });
+
   it('recusa resposta vazia, sem objeto e com JSON truncado', () => {
     reprova('');
     reprova('   ');
@@ -104,6 +115,14 @@ describe('ambiguidade reprova em vez de adivinhar', () => {
   it('não se confunde com chave dentro de string', () => {
     const bruto = '{"summary": "veja o trecho { isto }", "findings": []}';
     expect(parseReview(bruto).summary).toBe('veja o trecho { isto }');
+  });
+
+  it('não se confunde com aspas escapadas dentro de string', () => {
+    // A busca pelo fim do objeto conta chaves fora de string, e precisa respeitar a barra
+    // invertida: sem isso, uma aspa escapada fecharia a string cedo e a contagem de chaves
+    // terminaria no lugar errado.
+    expect(parseReview('{"summary": "ele disse \\"oi\\"", "findings": []}').summary)
+      .toBe('ele disse "oi"');
   });
 });
 

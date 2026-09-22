@@ -35,18 +35,21 @@ const numero = (v: unknown, padrao: number): number =>
   typeof v === 'number' && Number.isFinite(v) ? v : padrao;
 
 /**
- * Um objeto **parece uma revisão** quando tem `findings` como lista ou `summary` como texto.
+ * Um objeto **parece uma revisão** quando traz ao menos uma das chaves do contrato e
+ * **nenhuma delas com o tipo errado**.
  *
- * Conferir o tipo, e não só a presença da chave: a T019 aceitava qualquer objeto que tivesse
- * a chave, e a revisão do PR apontou que um exemplo ilustrativo com `"findings"` dentro
- * passaria pelo mesmo buraco, só que com outra forma.
+ * As duas metades importam, e a segunda veio da revisão do PR #14. Exigir só que uma esteja
+ * certa deixa passar `{"summary": "ok", "findings": "texto"}`: o objeto é aceito, `findings`
+ * é normalizado para lista vazia e o relatório anuncia "nenhum defeito" com achados que o
+ * modelo escreveu. É a mesma família de passe silencioso da T019 — o portão obrigatório dá
+ * verde sem ter lido a revisão.
  */
 function pareceRevisao(v: unknown): v is Record<string, unknown> {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return false;
   const o = v as Record<string, unknown>;
-  const temFindings = Array.isArray(o.findings);
-  const temSummary = typeof o.summary === 'string';
-  return temFindings || temSummary;
+  if ('findings' in o && !Array.isArray(o.findings)) return false;
+  if ('summary' in o && typeof o.summary !== 'string') return false;
+  return 'findings' in o || 'summary' in o;
 }
 
 function normalizar(o: Record<string, unknown>): Review {

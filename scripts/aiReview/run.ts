@@ -60,8 +60,13 @@ async function main(): Promise<void> {
       signal: AbortSignal.timeout(120_000),
     });
     if (!resposta.ok) {
-      // O corpo do erro é da API, não do diff: pode ir para o log inteiro.
-      morrer(`A API DeepSeek respondeu ${resposta.status}: ${(await resposta.text()).slice(0, 500)}`);
+      // O status é lido antes de qualquer outro `await`. Se `text()` rejeitasse — fluxo
+      // interrompido, por exemplo —, o `catch` de baixo reportaria "falha na comunicação" e
+      // esconderia o código HTTP, que é o que de fato diagnostica. O corpo do erro é da API,
+      // não do diff, então pode ir para o log.
+      const status = resposta.status;
+      const corpo = await resposta.text().catch(() => '(corpo ilegível)');
+      morrer(`A API DeepSeek respondeu ${status}: ${corpo.slice(0, 500)}`);
     }
     const corpo = await resposta.json() as { choices?: { message?: { content?: string } }[] };
     bruto = corpo.choices?.[0]?.message?.content ?? '';

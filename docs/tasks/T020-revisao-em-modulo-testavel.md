@@ -88,7 +88,7 @@ virou `scripts/simulationRoutes.ts` com teste.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 267 testes (eram 239 na `main`; +28 nesta tarefa)
+- [x] `npm test` — 272 testes (eram 239 na `main`; +33 nesta tarefa, 5 vindos da revisão do PR)
 - [x] `npm run build`
 - [x] YAML válido (`yaml.safe_load`).
 - [x] `npx tsx scripts/aiReview/run.ts` sem chave falha limpo, com a anotação que o Actions
@@ -101,6 +101,26 @@ virou `scripts/simulationRoutes.ts` com teste.
       dentro de string.
 - [x] Teste afirmando que `describeShape` **não** repete trecho da resposta.
 - [x] A chamada HTTP é exercitada pelo próprio PR desta tarefa.
+
+---
+
+## 5.1 Revisão do PR
+
+Cinco achados. **Quatro aceitos**, um rejeitado por ser factualmente errado.
+
+| Achado | Veredito |
+| --- | --- |
+| `{"summary": "ok", "findings": "texto"}` aceito, esvaziando `findings` em silêncio | **aceito** — o mais grave da rodada |
+| a linha "os demais são de severidade menor" não tinha lastro, porque nada ordenava | **aceito** — agora ordena por gravidade e desempata por confiança |
+| `resposta.text()` rejeitando mascararia o código HTTP | **aceito** — o status é lido antes de qualquer outro `await` |
+| aspas escapadas dentro de string | **teste aceito**, premissa não: já funcionava, e agora há asserção |
+| `describeShape` diria "objeto" para cerca com texto depois | **rejeitado** — ele roda sobre a resposta crua, não sobre a sem cerca; conferido, devolve "cerca de bloco" |
+
+O primeiro é o que mais importa, e é a mesma família da regressão da T019: com uma chave
+certa e a outra com o tipo errado, o objeto passava, `findings` virava lista vazia e o
+relatório anunciava "nenhum defeito" com achados que o modelo tinha escrito. `pareceRevisao`
+agora recusa **qualquer** chave do contrato com tipo errado, em vez de exigir que ao menos
+uma esteja certa.
 
 ---
 

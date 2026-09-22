@@ -70,3 +70,40 @@ describe('corte em cinco achados', () => {
     expect(renderReport(muitos(MAXIMO_DE_ACHADOS))).not.toContain('Mais ');
   });
 });
+
+describe('ordenação por gravidade', () => {
+  /**
+   * O corte em cinco só é defensável se os cinco forem **os mais graves**. Sem ordenar, o
+   * corte seguia a ordem em que o modelo escreveu, e a linha "os demais são de severidade
+   * menor" seria afirmação sem lastro. Veio da revisão do PR #14.
+   */
+  it('mostra os mais graves, não os primeiros que o modelo escreveu', () => {
+    const md = renderReport({
+      summary: 'x',
+      findings: [
+        ...Array.from({ length: 5 }, (_, i) => achado({ severity: 'low', title: `Leve ${i}` })),
+        achado({ severity: 'critical', title: 'A grave' }),
+      ],
+    });
+    expect(md).toContain('A grave');
+    expect(md).toContain('Mais 1 achado');
+  });
+
+  it('desempata pela confiança', () => {
+    const md = renderReport({
+      summary: 'x',
+      findings: [
+        achado({ severity: 'high', confidence: 0.2, title: 'Duvidosa' }),
+        achado({ severity: 'high', confidence: 0.9, title: 'Segura' }),
+      ],
+    });
+    expect(md.indexOf('Segura')).toBeLessThan(md.indexOf('Duvidosa'));
+  });
+
+  it('não altera a lista recebida', () => {
+    // `sort` é destrutivo, e o chamador pode querer os achados na ordem original.
+    const findings = [achado({ severity: 'low', title: 'A' }), achado({ severity: 'critical', title: 'B' })];
+    renderReport({ findings, summary: 'x' });
+    expect(findings[0].title).toBe('A');
+  });
+});
