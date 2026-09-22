@@ -22,6 +22,13 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
   com 15 tarefas, dependências e as armadilhas levantadas no contrato da API.
 - `CHANGELOG.md` e `MEMORY.md`, exigidos pelo `AGENTS.md` §3 e até então inexistentes.
   (`Refs: T001`)
+- `src/core/results/__fixtures__/README.md`: proveniência das fixtures, o que foi alterado
+  em relação à resposta original e o aviso de que `_pontos_na_pagina_original` é campo
+  sintético do script, não da API. (`Refs: T001`)
+- Guarda de regressão da higienização: varre **todos** os arquivos do diretório de fixtures
+  — inclusive os que o teste não importa — e recusa identificador real da conta, `owner`
+  de tenant ou `request_id` não substituído. Também verifica que os próprios marcadores
+  respeitam os padrões de identificador do contrato. (`Refs: T001`)
 
 ### Documentado
 
@@ -34,6 +41,13 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 - `AGENTS.md` §2 e §3 diziam `docs/tasks/NNN-slug.md`, enquanto o template da tarefa, o
   nome da branch e o rodapé do commit usavam `TNNN`. Padronizado em `TNNN`. (`Refs: T001`)
+- Dois marcadores de higienização tinham corpo ULID curto (`mdl_` com 25 e `mv_` com 24
+  caracteres, contra os 26 do contrato), contrariando a promessa de que casariam com os
+  padrões. Ainda não haviam vazado para nenhuma fixture. (`Refs: T001`)
+- `scripts/capture-results-fixtures.ts` não removia aspas ao ler `.env.local`, divergindo
+  do `loadEnv` do Vite que o proxy usa sobre o mesmo arquivo: `TOKEN="abc"` viraria um
+  Bearer com aspas e daria 401 sem explicação. O token também passou a entrar no mapa de
+  higienização, por precaução. (`Refs: T001`)
 
 ## [0.1.0] — 2026-09-22
 

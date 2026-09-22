@@ -31,14 +31,19 @@ const BASE = 'https://homolog.ee.dev.br/v1';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const outDir = join(root, 'src', 'core', 'results', '__fixtures__');
 
-/** O token nunca é impresso; só se confirma que existe. */
+/**
+ * O token nunca é impresso; só se confirma que existe. As aspas são removidas para
+ * casar com o `loadEnv` do Vite, que o proxy de desenvolvimento usa sobre o mesmo
+ * arquivo: sem isso, `TOKEN="abc"` aqui viraria um Bearer com aspas e daria 401.
+ */
 function readToken(): string {
-  const fromEnv = process.env.SIMULATION_API_TOKEN?.trim();
-  if (fromEnv) return fromEnv;
+  const unquote = (v: string) => v.trim().replace(/^(['"])(.*)\1$/s, '$2').trim();
+  const fromEnv = process.env.SIMULATION_API_TOKEN;
+  if (fromEnv && unquote(fromEnv)) return unquote(fromEnv);
   const envFile = join(root, '.env.local');
   if (existsSync(envFile)) {
     const line = readFileSync(envFile, 'utf8').split(/\r?\n/).find((l) => l.startsWith('SIMULATION_API_TOKEN='));
-    const value = line?.slice('SIMULATION_API_TOKEN='.length).trim();
+    const value = line && unquote(line.slice('SIMULATION_API_TOKEN='.length));
     if (value) return value;
   }
   throw new Error('Defina SIMULATION_API_TOKEN no ambiente ou em .env.local.');
@@ -48,7 +53,12 @@ const token = readToken();
 const api = new SimulationApi(token, BASE);
 const log = (stage: string, detail: unknown) => console.log(`[${stage}] ${JSON.stringify(detail)}`);
 
-const ids = new Map<string, string>();
+/**
+ * O token entra no mapa de higienização por precaução: se o serviço um dia ecoar a
+ * credencial em algum campo, ela é trocada antes de virar arquivo versionado
+ * (AGENTS.md §7: nenhum segredo versionado). Hoje nenhuma resposta a devolve.
+ */
+const ids = new Map<string, string>([[token, '<token>']]);
 /**
  * Troca identificadores da conta por marcadores estáveis que ainda casam com os padrões
  * do contrato, para que os testes possam validar o formato. Números, nomes de campo e
@@ -103,7 +113,7 @@ async function runNewSimulation(): Promise<Simulation> {
   log('modelo', { zonas: generated.info.zones.map((z) => z.name) });
 
   const model = await api.uploadModel(JSON.stringify(generated.document), 'captura-resultados.epJSON');
-  ids.set(model.id, 'mdl_01M2KXB16RP92SR9SCA3PBVMS').set(model.versao.id, 'mv_01M2KXB16RP92SR9SCA3PBVM');
+  ids.set(model.id, 'mdl_01M2KXAZ9WQK8YT4N6P0R2S5V7').set(model.versao.id, 'mv_01M2KXB16RP92SR9SCA3PBVMSF');
   ids.set(station.id, 'wx_bra_sc_florianopolis_838970_tenant');
   log('upload', { modelo: model.id, versao: model.versao.id });
 
@@ -142,7 +152,7 @@ if (chosen) {
   sim = await runNewSimulation();
   log('terminou', { status: sim.status, motivo: sim.failure_reason ?? null, duracao: sim.duration_seconds ?? null });
 }
-ids.set(sim.id, 'sim_01M2KXB9D4TQ7F3S0YJ8N5VZQK').set(sim.model_version_id, 'mv_01M2KXB16RP92SR9SCA3PBVM');
+ids.set(sim.id, 'sim_01M2KXB9D4TQ7F3S0YJ8N5VZQK').set(sim.model_version_id, 'mv_01M2KXB16RP92SR9SCA3PBVMSF');
 
 if (sim.status !== 'succeeded') {
   // O diagnóstico é o entregável quando a execução falha — é o que destrava (ou para) o épico.

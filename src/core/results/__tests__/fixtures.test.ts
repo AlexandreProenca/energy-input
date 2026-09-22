@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import summary from '../__fixtures__/summary.json';
 import catalogo from '../__fixtures__/catalogo-variaveis.json';
@@ -124,5 +125,50 @@ describe('contrato do erro de série', () => {
     expect(erro422.detail).toBe('variável inexistente nesta simulação');
     expect(erro422.errors[0].field).toBe('variable');
     expect(erro422.errors[0].message).toContain('Electricity:Facility');
+  });
+});
+
+describe('higienização das fixtures', () => {
+  // Guarda de segurança, não de contrato: as fixtures vêm de uma conta real e são
+  // versionadas. Se alguém regravar com `scripts/capture-results-fixtures.ts` e o mapa de
+  // troca falhar, um identificador da conta entra no repositório em silêncio. Este teste
+  // varre o diretório — inclusive fixtures futuras, que os imports acima não alcançam.
+  const dir = new URL('../__fixtures__/', import.meta.url);
+  const arquivos = readdirSync(dir).filter((f) => f.endsWith('.json'));
+
+  const PLACEHOLDERS = new Set([
+    'sim_01M2KXB9D4TQ7F3S0YJ8N5VZQK',
+    'mdl_01M2KXAZ9WQK8YT4N6P0R2S5V7',
+    'mv_01M2KXB16RP92SR9SCA3PBVMSF',
+  ]);
+
+  it('varre todas as fixtures, inclusive as que este arquivo não importa', () => {
+    expect(arquivos.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('usa marcadores que respeitam os padrões de identificador do contrato', () => {
+    // Um marcador com corpo de tamanho errado passaria despercebido — a fixture pareceria
+    // higienizada e ao mesmo tempo violaria o formato que a T003 vai validar nos tipos.
+    // Os padrões são os do OpenAPI: prefixo + ULID Crockford de 26 caracteres.
+    const padroes: Record<string, RegExp> = {
+      sim: /^sim_[0-7][0-9A-HJKMNP-TV-Z]{25}$/,
+      mdl: /^mdl_[0-7][0-9A-HJKMNP-TV-Z]{25}$/,
+      mv: /^mv_[0-7][0-9A-HJKMNP-TV-Z]{25}$/,
+    };
+    for (const marcador of PLACEHOLDERS) {
+      const prefixo = marcador.slice(0, marcador.indexOf('_'));
+      expect(padroes[prefixo], `sem padrão conhecido para "${prefixo}"`).toBeDefined();
+      expect(marcador).toMatch(padroes[prefixo]);
+    }
+  });
+
+  it.each(arquivos)('%s não carrega identificador real da conta', (arquivo) => {
+    const texto = readFileSync(new URL(arquivo, dir), 'utf8');
+    // Qualquer ULID com os prefixos do contrato precisa ser um dos marcadores conhecidos.
+    const encontrados = texto.match(/\b(?:sim|mdl|mv|tnt)_[0-7][0-9A-HJKMNP-TV-Z]{25}\b/g) ?? [];
+    for (const id of encontrados) expect(PLACEHOLDERS).toContain(id);
+    // `owner` e `request_id` identificam o tenant e a requisição; nenhum deles é contrato.
+    expect(texto).not.toMatch(/"owner"\s*:\s*"tnt_/);
+    expect(texto).not.toMatch(/"request_id"\s*:\s*"(?!<request_id>)/);
   });
 });
