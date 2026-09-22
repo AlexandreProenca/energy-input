@@ -24,7 +24,7 @@ unidades sem mentir. Tudo puro, para ser testado no terminal — os componentes 
 - `src/core/results/units.ts`: `toKwh`, `isEnergyUnit`, `normalizeUnit`, `formatUnit`.
 - `src/core/results/series.ts`: `normalizeSeries`, `dayOfYear`, `defaultAggregation`,
   `aggregateDaily`, `aggregateMonthly`, `downsampleEnvelope`.
-- `src/core/results/__tests__/series.test.ts`: 21 asserções.
+- `src/core/results/__tests__/series.test.ts`: 25 asserções.
 
 ### O que NÃO entra (deliberadamente postergado)
 
@@ -72,14 +72,14 @@ unidades sem mentir. Tudo puro, para ser testado no terminal — os componentes 
 
 - `src/core/results/units.ts`: novo.
 - `src/core/results/series.ts`: novo.
-- `src/core/results/__tests__/series.test.ts`: novo, 21 testes.
+- `src/core/results/__tests__/series.test.ts`: novo, 25 testes.
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 155 testes (eram 134; +21 nesta tarefa)
+- [x] `npm test` — 159 testes (eram 134; +25 nesta tarefa, 4 deles vindos da revisão do PR)
 - [x] `npm run build`
 - [x] Contraprovas exigidas pelo AGENTS.md §5, cada uma escrita para falhar sob a
       implementação ingênua:
@@ -92,6 +92,12 @@ unidades sem mentir. Tudo puro, para ser testado no terminal — os componentes 
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
+
+**`dayOfYear` fora de faixa colidia em silêncio.** Mês 13 caía num `?? 0` e devolvia 1 —
+o mesmo balde de 1º de janeiro, somando dois dias distintos. Agora lança `RangeError`, e
+`normalizeSeries` filtra a posição inválida para `dropped` antes de chegar lá: a série vem
+de fora e uma linha corrompida não deve derrubar o painel, mas também não pode ser aceita.
+Veio da revisão do PR.
 
 **Multiplicar por recíproco perde precisão, e o teste pegou.** A primeira versão guardava o
 fator direto para kWh (`1 / 3.600.000`), e `toKwh(3_600_000, 'J')` devolvia
@@ -109,5 +115,6 @@ com 24 têm médias comparáveis e confiabilidades diferentes — a T007 pode us
 esmaecer o trecho parcial em vez de desenhá-lo igual.
 
 **O calendário dos testes sintéticos usa meses de 31 dias.** É suficiente para exercitar os
-baldes e mantém o gerador legível; não confunda com o calendário real, que `dayOfYear`
-trata corretamente e tem teste próprio nos limites de mês.
+baldes e mantém o gerador legível. O calendário real é coberto por dois testes próprios: os
+limites de mês em `dayOfYear`, e uma agregação diária atravessando fevereiro com datas reais
+(28/2 → 59, 1/3 → 60, 31/12 → 365).

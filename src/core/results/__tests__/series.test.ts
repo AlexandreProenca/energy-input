@@ -45,6 +45,21 @@ describe('normalização', () => {
     expect(dropped).toBe(1);
   });
 
+  it('descarta posição fora de faixa em vez de explodir ou aceitá-la', () => {
+    // A série vem de fora: uma linha corrompida não deve derrubar o painel, mas também
+    // não pode ser aceita — colidiria com um dia legítimo no balde.
+    const { points, dropped } = normalizeSeries([
+      { timestamp: null, month: 13, day: 1, hour: 1, minute: 0, value: 1 },
+      { timestamp: null, month: 1, day: 0, hour: 1, minute: 0, value: 2 },
+      { timestamp: null, month: 1, day: 1, hour: 25, minute: 0, value: 3 },
+      { timestamp: null, month: 1.5, day: 1, hour: 1, minute: 0, value: 4 },
+      { timestamp: null, month: 1, day: 1, hour: 1, minute: 0, value: 5 },
+    ]);
+    expect(points).toHaveLength(1);
+    expect(points[0].value).toBe(5);
+    expect(dropped).toBe(4);
+  });
+
   it('detecta ano bissexto pela presença de 29 de fevereiro, não pelo ano do carimbo', () => {
     // O ano do `timestamp` vem do arquivo climático (2013 nas fixtures) e não corresponde
     // ao calendário da execução — inferir bissexto dele erraria.
@@ -60,6 +75,14 @@ describe('dia do ano', () => {
     expect(dayOfYear(1, 1)).toBe(1);
     expect(dayOfYear(12, 31)).toBe(365);
     expect(dayOfYear(3, 1)).toBe(60);
+  });
+
+  it('recusa mês fora de faixa em vez de colidir com janeiro', () => {
+    // Antes da revisão do PR isto devolvia 1 em silêncio: mês 13 caía num `?? 0` e somava
+    // com 1º de janeiro no mesmo balde. Erro de calendário tem de ser ruidoso.
+    expect(() => dayOfYear(13, 1)).toThrow(RangeError);
+    expect(() => dayOfYear(0, 1)).toThrow(RangeError);
+    expect(dayOfYear(12, 31)).toBe(365);
   });
 
   it('desloca um dia depois de fevereiro em ano bissexto, e só depois', () => {
@@ -94,6 +117,18 @@ describe('agregação', () => {
     const meses = aggregateMonthly(serie, 'sum');
     expect(meses.reduce((a, m) => a + m.value, 0)).toBeCloseTo(totalPontos, 6);
     expect(meses.reduce((a, m) => a + m.count, 0)).toBe(serie.points.length);
+  });
+
+  it('agrega sobre o calendário real, e não sobre meses de tamanho fixo', () => {
+    // Os geradores sintéticos deste arquivo usam meses de 31 dias por simplicidade; este
+    // teste atravessa fevereiro com datas reais para provar que os baldes diários caem no
+    // dia do ano certo — 28 de fevereiro é 59, 1º de março é 60.
+    const serie = normalizeSeries([
+      { timestamp: null, month: 2, day: 28, hour: 1, minute: 0, value: 1 },
+      { timestamp: null, month: 3, day: 1, hour: 1, minute: 0, value: 2 },
+      { timestamp: null, month: 12, day: 31, hour: 1, minute: 0, value: 3 },
+    ]);
+    expect(aggregateDaily(serie, 'sum').map(d => d.index)).toEqual([59, 60, 365]);
   });
 
   it('não inventa balde para dia sem nenhum ponto', () => {
@@ -134,6 +169,17 @@ describe('reamostragem por envelope', () => {
       month: 1, day: 1, hour: 1, value: i === 777 ? -50 : 1,
     }));
     expect(Math.min(...downsampleEnvelope(pontos, 50).map(b => b.min))).toBe(-50);
+  });
+
+  it('devolve exatamente os baldes pedidos, com x contíguo de 0 a n-1', () => {
+    // O gráfico posiciona pelo `x`. Um salto viraria lacuna visual onde não há lacuna de
+    // dado, e menos baldes que o pedido encolheria a curva sem aviso.
+    const pontos: NormalizedPoint[] = Array.from({ length: 8760 }, (_, i) => ({ month: 1, day: 1, hour: 1, value: i }));
+    for (const n of [1, 7, 100, 800, 8759]) {
+      const baldes = downsampleEnvelope(pontos, n);
+      expect(baldes).toHaveLength(n);
+      expect(baldes.map(b => b.x)).toEqual(Array.from({ length: n }, (_, i) => i));
+    }
   });
 
   it('todo ponto entra em exatamente um balde', () => {

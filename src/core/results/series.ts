@@ -38,9 +38,19 @@ const ANTES_DO_MES = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
  * passa o que observou na própria série.
  */
 export function dayOfYear(month: number, day: number, leap = false): number {
-  const base = ANTES_DO_MES[month - 1] ?? 0;
+  const base = ANTES_DO_MES[month - 1];
+  // Sem esta guarda, mês 13 cairia no `?? 0` e devolveria 1 — colidindo em silêncio com
+  // 1º de janeiro, e somando dois dias distintos no mesmo balde. Erro de calendário tem
+  // de ser ruidoso, não virar dado plausível.
+  if (base === undefined) throw new RangeError(`Mês fora de faixa: ${month}`);
   return base + day + (leap && month > 2 ? 1 : 0);
 }
+
+/** Posição de calendário que não colide com outra — o que `dayOfYear` exige para não mentir. */
+const posicaoValida = (month: number, day: number, hour: number): boolean =>
+  Number.isInteger(month) && month >= 1 && month <= 12 &&
+  Number.isInteger(day) && day >= 1 && day <= 31 &&
+  Number.isInteger(hour) && hour >= 1 && hour <= 24;
 
 /**
  * Descarta pontos sem valor ou sem posição de calendário, e informa quantos.
@@ -56,6 +66,13 @@ export function normalizeSeries(points: readonly TimeSeriesPoint[]): NormalizedS
   for (const p of points) {
     if (p.month === 2 && p.day === 29) leap = true;
     if (p.value == null || !Number.isFinite(p.value) || p.month == null || p.day == null || p.hour == null) {
+      dropped++;
+      continue;
+    }
+    // Posição fora de faixa entra em `dropped` junto com os valores ausentes, em vez de
+    // explodir: a série vem de fora e uma linha corrompida não deve derrubar o painel
+    // inteiro. Mas também não pode ser aceita — ela colidiria com um dia legítimo.
+    if (!posicaoValida(p.month, p.day, p.hour)) {
       dropped++;
       continue;
     }
@@ -97,7 +114,9 @@ export function aggregateDaily(series: NormalizedSeries, how: How): Bucket[] {
   const por = new Map<number, number[]>();
   for (const p of series.points) {
     const d = dayOfYear(p.month, p.day, series.leap);
-    (por.get(d) ?? por.set(d, []).get(d)!).push(p.value);
+    const balde = por.get(d);
+    if (balde) balde.push(p.value);
+    else por.set(d, [p.value]);
   }
   return [...por.entries()]
     .sort(([a], [b]) => a - b)
@@ -107,7 +126,11 @@ export function aggregateDaily(series: NormalizedSeries, how: How): Bucket[] {
 /** Agrega por mês (1 a 12). */
 export function aggregateMonthly(series: NormalizedSeries, how: How): Bucket[] {
   const por = new Map<number, number[]>();
-  for (const p of series.points) (por.get(p.month) ?? por.set(p.month, []).get(p.month)!).push(p.value);
+  for (const p of series.points) {
+    const balde = por.get(p.month);
+    if (balde) balde.push(p.value);
+    else por.set(p.month, [p.value]);
+  }
   return [...por.entries()]
     .sort(([a], [b]) => a - b)
     .map(([index, valores]) => ({ index, value: reduzir(valores, how), count: valores.length }));
