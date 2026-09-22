@@ -51,9 +51,13 @@ export function renderReport(review: Review): string {
 
   // Achado omitido precisa aparecer como número: um relatório que mostra cinco de doze sem
   // dizer nada deixa quem lê achando que viu tudo.
+  //
+  // A frase não afirma que os omitidos são menos graves. Eles vêm depois na ordenação, o que
+  // com seis achados `critical` significa "menor confiança", e não "menor severidade" — a
+  // redação anterior era falsa justamente no caso mais preocupante. Veio da revisão do PR.
   const omitidos = ordenados.length - mostrados.length;
   if (omitidos > 0) {
-    blocos.push(`_Mais ${omitidos} ${omitidos === 1 ? 'achado' : 'achados'} de severidade menor não ${omitidos === 1 ? 'foi listado' : 'foram listados'}._`);
+    blocos.push(`_Mais ${omitidos} ${omitidos === 1 ? 'achado não foi listado' : 'achados não foram listados'}._`);
   }
 
   return `${blocos.join('\n\n')}\n\n### Resumo da Análise\n\n${resumo}`;

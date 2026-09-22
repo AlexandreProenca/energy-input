@@ -63,7 +63,21 @@ describe('corte em cinco achados', () => {
   });
 
   it('concorda no singular', () => {
-    expect(renderReport(muitos(MAXIMO_DE_ACHADOS + 1))).toContain('Mais 1 achado de severidade menor não foi listado');
+    expect(renderReport(muitos(MAXIMO_DE_ACHADOS + 1))).toContain('Mais 1 achado não foi listado');
+  });
+
+  /**
+   * A frase não pode afirmar que os omitidos são menos graves. Com seis achados `critical`,
+   * o sexto é omitido por ter menor **confiança**, não menor severidade — e a redação
+   * anterior mentia justamente no caso mais preocupante. Veio da revisão do PR #14.
+   */
+  it('não alega severidade menor quando todos têm a mesma', () => {
+    const md = renderReport({
+      summary: 'x',
+      findings: Array.from({ length: 6 }, (_, i) => achado({ severity: 'critical', confidence: 1 - i / 10 })),
+    });
+    expect(md).toContain('Mais 1 achado não foi listado');
+    expect(md).not.toContain('severidade menor');
   });
 
   it('não diz nada quando nada ficou de fora', () => {
