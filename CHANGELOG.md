@@ -27,6 +27,10 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Painel de consumo anual**: indicadores de consumo medido, consumo por uso final e pico de
+  demanda; barras mensais por medidor, agregadas da frequência que a execução tiver; e barras
+  por uso final. Distingue medidor **ausente** de medidor **registrado marcando zero** — são
+  diagnósticos com correções opostas. (`Refs: T008`)
 - Componentes de gráfico próprios, sem dependência nova: `BarChart`, `LineChart` (com banda
   mín/máx, para o pico sobreviver à reamostragem), `StackedBarChart` e `CarpetPlot` (em
   `<canvas>`, com tabela `sr-only` ao lado, porque canvas é invisível para leitor de tela).

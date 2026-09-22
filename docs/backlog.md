@@ -77,7 +77,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T005 | `core/results/comfort.ts` — horas de desconforto | T004 |
 | [x] | T006 | Casca do modo Resultados | T003 |
 | [x] | T007 | Componentes de gráfico SVG reutilizáveis | T004, T006 |
-| [ ] | T008 | Painel de consumo anual | T007 |
+| [x] | T008 | Painel de consumo anual | T007 |
 | [ ] | T009 | Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR** | T001 |
 | [ ] | T010 | Painel de temperatura operativa | T007, T009 |
 | [ ] | T011 | Painel de horas de desconforto | T005, T007, T009 |
@@ -259,23 +259,30 @@ real na casca.
   externa). Há teto de largura de barra por causa disso; conferir o visual de muitas barras
   quando existir execução com mais usos.
 
-#### T008 · Painel de consumo anual
+#### T008 · Painel de consumo anual — **concluída**
 
-**Entra:** barras mensais empilhadas por uso final, a partir dos medidores mensais do preset
-`conta`, mais os totais de `Summary.end_uses`. Converter com `toKWh` — as séries vêm em J;
-só as tabelas do motor usam `JtoKWH`. Em `run_type === 'design_day'`, mostrar o estado
-explicativo em vez de gráfico vazio, honrando o aviso que já existe em
-`SimulationDialog.tsx:122`.
+Entregue em [`docs/tasks/T008-painel-consumo.md`](tasks/T008-painel-consumo.md).
 
-**Armadilha:** com `ZoneHVAC:IdealLoadsAirSystem` a climatização **não** aparece como
-`Electricity`, e sim em `DistrictHeatingWater:Facility` / `DistrictCooling:Facility` — é o
-que o preset `conta` mede. O gráfico e o dicionário de rótulos precisam tratar esses
-recursos como aquecimento e resfriamento, senão o painel mostra climatização zerada.
+`resultsStore` (busca de medidores, nada persistido) e `ConsumoPanel` com indicadores,
+barras mensais e barras por uso final.
 
-**Armadilha confirmada na T001:** `end_uses` devolve os **14 recursos sempre**, inclusive
-zerados, e com **unidades mistas** — energia em `GJ`, água em `m3`, na mesma lista. Um
-gráfico que não filtrar valores nulos desenha 14 séries vazias por categoria, e uma
-conversão cega para kWh mente na linha de água.
+**Desvio do que este backlog previa:** o painel **agrega a frequência que encontrar** em
+meses, em vez de ler os medidores mensais do preset `conta`. A execução real não tem nenhum
+deles — gravou `EnergyTransfer:Facility` **por hora**. Um painel que só lesse medidor mensal
+ficaria vazio diante de dado que existe.
+
+**Para a T010 e a T011:**
+
+- A descoberta de série é **por tentativa**, tratando o 422 como ausência esperada. O
+  catálogo não diz o que foi gravado.
+- Nada do que o store carrega é persistido: 8 760 pontos por variável estouram a cota do
+  `sessionStorage`, e resultados ficam só em memória por regra (AGENTS.md §7).
+- **"Ausente" e "zerado" precisam de mensagens diferentes.** A execução disponível registrou
+  um medidor que marca zero o ano inteiro; dizer "não registrou nenhum medidor" mandava o
+  usuário corrigir o que já estava certo.
+- **As barras mensais e a pilha ainda não receberam dado não nulo.** A execução disponível
+  só tem consumo em iluminação externa. Reconferir quando houver execução com consumo
+  distribuído — a T016 produzirá uma, se destravar.
 
 #### T009 · Ligar o preset `conforto` por padrão e fechar a divergência de defaults — **ADR**
 
