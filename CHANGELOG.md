@@ -16,6 +16,21 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 - O gráfico de usos finais mostrava a categoria em inglês (`Exterior Lighting`). Os testes de
   `usosFinaisEmKwh` cobriam a conversão de unidade e não o rótulo, então o texto em inglês
   não quebrava nada. (`Refs: T011`)
+- O relatório da revisão por IA cortava em **cinco achados sem avisar**: quem lesse um PR com
+  doze achados veria cinco e concluiria que viu tudo. Agora diz quantos ficaram de fora.
+  Apareceu ao escrever o teste do módulo extraído. (`Refs: T020`)
+
+- A revisão por IA podia **passar em silêncio sem ter lido a revisão**: ao tolerar preâmbulo
+  em prosa, passou a aceitar o primeiro objeto JSON da resposta, inclusive um exemplo
+  ilustrativo escrito antes do objeto real — `findings` vinha vazio e o check obrigatório
+  dava verde. Agora o objeto precisa trazer `findings` ou `summary`. (`Refs: T019`)
+
+- A revisão por IA no PR reprovava quando o modelo devolvia o objeto JSON **seguido de
+  qualquer sobra** — `json.loads` exige que a string inteira seja um documento só. Como é
+  check obrigatório e a saída não é determinística, o bloqueio era por sorte. Agora lê o
+  primeiro objeto e ignora o resto, tolerando também cerca de bloco e preâmbulo em prosa. O
+  portão não foi afrouxado: resposta ilegível continua reprovando, agora dizendo o que
+  recebeu. (`Refs: T018`)
 
 - O eixo de horas do carpete estava invertido: a linha do topo é a hora 1 (intervalo 0h–1h),
   e os rótulos diziam `24h` ali. Só leitura de pixel provou — o desenho parecia plausível nas
@@ -53,6 +68,9 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 - **Dicionário pt-BR dos nomes do resumo** (`src/core/results/rotulos.ts`): usos finais,
   recursos, áreas e indicadores de conforto, com cobertura conferida contra a fixture real da
   API. (`Refs: T011`)
+- A revisão por IA do PR saiu do heredoc no YAML e virou `scripts/aiReview/`, com 28 testes
+  no Vitest — três tarefas seguidas tinham mexido nas mesmas vinte linhas com verificação
+  descartável. O workflow caiu de 297 para 143 linhas. (`Refs: T020`)
 
 - **Painel de temperatura operativa**: curva anual com banda diária de mínima e máxima,
   carpete 365 × 24 hora a hora e a temperatura externa para comparação. Descobre a zona pelo

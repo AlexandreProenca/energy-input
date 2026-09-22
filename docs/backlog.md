@@ -86,7 +86,9 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T014 | Montar cenários e criar o estudo | T013 |
 | [ ] | T015 | Tabela comparativa e gráfico do estudo | T014, T007 |
 | [ ] | T016 | Destravar a execução de simulações no serviço | — |
-| [ ] | T018 | Revisão por IA no PR cai quando o modelo devolve JSON com sobra | — |
+| [x] | T018 | Revisão por IA no PR cai quando o modelo devolve JSON com sobra | — |
+| [x] | T019 | Revisão por IA podia passar em silêncio sem ter lido a revisão | T018 |
+| [x] | T020 | Tirar a revisão por IA do heredoc e pô-la em módulo testado | T019 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -456,8 +458,17 @@ objeto JSON seguido de qualquer sobra, o `json.loads` levanta e o job inteiro re
 reexecução resolveu por ser saída não determinística — o que confirma a natureza do
 problema em vez de corrigi-lo.
 
-**Entra:** trocar `json.loads(content)` por `json.JSONDecoder().raw_decode(content)`, que lê
-o primeiro objeto e ignora o resto. Não há como piorar: hoje o mesmo caso é falha total.
+**Concluída.** Entregue em
+[`docs/tasks/T018-revisao-json-robusta.md`](tasks/T018-revisao-json-robusta.md). Voltou a
+acontecer no **PR #11**, com a mesma assinatura, bloqueando a revisão da T011 — por isso saiu.
+
+`raw_decode` no lugar de `json.loads`, começando na primeira `{` para tolerar preâmbulo, mais
+cerca de bloco e log da resposta quando a extração falha. O portão **não** foi afrouxado:
+resposta ilegível continua reprovando.
+
+**Fica registrado:** o Python do workflow não é exercitado por nada — nem `npm test`, nem
+`tsc` — e só roda com um PR aberto, quando falhar bloqueia em vez de avisar. Se mais lógica
+for para lá, o certo é movê-la para um script em `scripts/` que o CI chame.
 
 **Nota:** é workflow do repositório, fora do épico E1 e fora do escopo de qualquer tarefa
 dele — por isso tarefa própria, e não carona numa entrega de dashboards.
@@ -502,3 +513,46 @@ que talvez não se tome deixa buraco na sequência e promete documento que não 
   Decide se a T005 tem um indicador permanente de fallback ou não.
 - **Retenção do `.sql`.** O contrato diz que a série vira 410 depois de um prazo que ele não
   numera. Afeta se vale guardar as séries localmente.
+
+#### T019 · Revisão por IA podia passar em silêncio sem ter lido a revisão — **concluída**
+
+Entregue em [`docs/tasks/T019-revisao-objeto-certo.md`](tasks/T019-revisao-objeto-certo.md).
+**Regressão introduzida pela T018**, apontada pela revisão do próprio PR #12.
+
+Ao varrer todas as chaves de abertura, a T018 passou a aceitar o primeiro `dict` — inclusive
+um objeto **ilustrativo** que o modelo escreva antes da revisão. `findings` vinha vazio e o
+job dava verde anunciando que não havia achados. O defeito original era barulhento; este era
+silencioso, num check obrigatório.
+
+Agora o objeto precisa ter `findings` ou `summary`.
+
+**Fica registrado, e vale além deste workflow:** ao afrouxar o reconhecimento de uma entrada,
+conferir separadamente **o que passa a ser aceito** — não basta verificar que o caso que
+falhava agora passa.
+
+**E o conserto de fundo continua não feito.** Duas tarefas seguidas mexeram no Python do
+`ai-pr-review.yml` com roteiro descartável de verificação, porque ele não é exercitado por
+`npm test` nem por `tsc`. Se houver uma terceira, mover a função para `scripts/` com teste de
+verdade deixa de ser preferência e vira o trabalho certo.
+
+#### T020 · Tirar a revisão por IA do heredoc e pô-la em módulo testado — **concluída**
+
+Entregue em [`docs/tasks/T020-revisao-em-modulo-testavel.md`](tasks/T020-revisao-em-modulo-testavel.md).
+**Paga a dívida que a T018 e a T019 registraram.**
+
+Três tarefas seguidas mexeram nas mesmas vinte linhas de Python dentro do `ai-pr-review.yml`,
+cada uma com verificação descartável, e a revisão do PR #13 apontaria uma quarta. O parser, o
+relatório e os prompts viraram `scripts/aiReview/`, com 28 testes no Vitest; o workflow caiu
+de 297 para 143 linhas. O precedente é a T002, que fez o mesmo com o allowlist do proxy.
+
+**Fica registrado:**
+
+- **O sinal de parar de remendar é a repetição, não o defeito.** Estava escrito no doc da
+  T018 antes de a T019 existir, e ainda assim levou mais duas rodadas.
+- **Escrever o teste achou um defeito que ninguém reportou:** o corte em cinco achados era
+  silencioso desde sempre. Nenhuma das três tarefas anteriores o viu, porque nenhuma teve de
+  descrever o comportamento esperado em voz alta.
+- **Ambiguidade reprova, em vez de ser resolvida por heurística.** Duas revisões plausíveis
+  na mesma resposta não são distinguíveis com confiança, e adivinhar errado faz o portão dar
+  verde anunciando zero achado.
+- Se outro workflow ganhar lógica não trivial, o lugar dela é `scripts/`.

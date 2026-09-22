@@ -103,6 +103,18 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Só depois do preflight: PR sem alteração de código relevante não paga instalação.
+      - name: Preparar Node
+        if: steps.preflight.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        if: steps.preflight.outputs.run == 'true'
+        run: npm ci
+
       - name: Executar revisão com DeepSeek
         if: steps.preflight.outputs.run == 'true'
         env:
@@ -111,140 +123,11 @@ jobs:
           TRUNCATED: ${{ steps.contexto.outputs.truncated }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import json
-          import os
-          import sys
-          import urllib.error
-          import urllib.request
-
-          with open("pr.diff", "r", encoding="utf-8", errors="replace") as fh:
-              diff = fh.read()
-
-          with open("contexto.md", "r", encoding="utf-8", errors="replace") as fh:
-              contexto = fh.read().strip()
-
-          with open("arquivos-alterados.txt", "r", encoding="utf-8", errors="replace") as fh:
-              arquivos_alterados = {linha.rstrip("\n") for linha in fh if linha.rstrip("\n")}
-
-          truncated_note = (
-              "\n\n[Atenção: O diff foi truncado por tamanho. Avalie com base no trecho exibido.]"
-              if os.environ.get("TRUNCATED") == "true"
-              else ""
-          )
-          lista_de_arquivos = "".join(f"- {item}\n" for item in sorted(arquivos_alterados))
-
-          system_prompt = (
-              "Você é um revisor de código sênior especialista em TypeScript, React, Three.js "
-              "e física de edifícios (EnergyPlus epJSON).\n"
-              "O projeto 'Energy Input' é uma SPA web para criação, validação e edição paramétrica "
-              "de arquivos epJSON para o motor EnergyPlus, com visualizador 3D e planta 2D.\n\n"
-              "Analise causa e efeito no diff. Só reporte defeitos demonstráveis e objetivos: cada "
-              "achado precisa de cenário de falha claro, evidência no diff e um teste para comprovar.\n\n"
-              "Priorize rigidamente:\n"
-              "1. ISOLAMENTO DE src/core/: Esta pasta DEVE ser 100% pura (framework-free). Não pode "
-              "importar React, hooks, Zustand, Three.js ou objetos do DOM (window/document).\n"
-              "2. CONFORMIDADE COM epJSON: Nomes de campos em snake_case, tipos corretos (números, "
-              "arrays de vértices, extensões, enums válidos do schema), chaves de 'object-list' válidas.\n"
-              "3. GEOMETRIA E SUPERFÍCIES COMPARTILHADAS (sharedSurfaces.ts / floorPlan.ts): Cálculo de polígonos, "
-              "tolerâncias (0.1 mm), pareamento mútuo e inversão de camadas em paredes/lajes entre zonas.\n"
-              "4. INTEGRIDADE DE DADOS E SINCRONIZAÇÃO (planWizardSync): Nunca sobrescrever edições manuais "
-              "silenciosamente sem acionar diálogo de conflito; manter integridade referencial ao renomear objetos.\n"
-              "5. SEGURANÇA E SEGREDO: Credenciais (ex: SIMULATION_API_TOKEN) NUNCA devem entrar no bundle "
-              "(sem prefixo VITE_ para segredos) nem em localStorage. Dados enviados à API de homologação "
-              "devem ser sanitizados.\n"
-              "6. TIPAGEM E CORRETUDE REACT/ZUSTAND: Sem 'any' injustificado, sem loops de re-render, sem "
-              "descarte incorreto de recursos WebGL/Three.js (memory leaks).\n"
-              "7. LACUNAS DE TESTE: Alterações em lógica de domínio (core/, generators/, validation/) "
-              "devem possuir testes unitários no Vitest.\n\n"
-              "Responda SOMENTE com um JSON nesta estrutura exata:\n"
-              "{\"findings\":[{\"severity\":\"critical|high|medium|low\",\"confidence\":0.0,"
-              "\"path\":\"arquivo\",\"line\":1,\"title\":\"título curto\",\"failure_scenario\":\"como falha\","
-              "\"evidence\":\"evidência concreta\",\"suggested_test\":\"teste demonstrativo\"}],"
-              "\"summary\":\"conclusão concisa\"}. Use findings=[] quando não houver defeitos."
-          )
-
-          user_prompt = (
-              f"<contexto_do_projeto>\n{contexto}\n</contexto_do_projeto>\n\n"
-              f"<pr_info>\n"
-              f"Título: {os.environ.get('PR_TITLE', '')}\n"
-              f"Descrição:\n{os.environ.get('PR_BODY', '') or '(sem descrição)'}\n\n"
-              f"Arquivos alterados:\n{lista_de_arquivos}\n"
-              f"Diff:\n{diff}{truncated_note}\n"
-              f"</pr_info>\n\n"
-              "Revise as alterações conforme o contrato estabelecido. Retorne apenas o JSON especificado."
-          )
-
-          payload = {
-              "model": "deepseek-chat",
-              "messages": [
-                  {"role": "system", "content": system_prompt},
-                  {"role": "user", "content": user_prompt},
-              ],
-              "temperature": 0.2,
-              "response_format": {"type": "json_object"},
-              "max_tokens": 3500,
-          }
-
-          req = urllib.request.Request(
-              "https://api.deepseek.com/chat/completions",
-              data=json.dumps(payload).encode("utf-8"),
-              headers={
-                  "Authorization": f"Bearer {os.environ['DEEPSEEK_API_KEY']}",
-                  "Content-Type": "application/json",
-              },
-              method="POST",
-          )
-
-          try:
-              with urllib.request.urlopen(req, timeout=120) as resp:
-                  body = json.loads(resp.read().decode("utf-8"))
-          except Exception as exc:
-              print(f"::error::Falha na comunicação com a API DeepSeek: {exc}", file=sys.stderr)
-              sys.exit(1)
-
-          try:
-              content = body["choices"][0]["message"]["content"].strip()
-              review = json.loads(content)
-              findings = review.get("findings", [])
-              summary = review.get("summary", "")
-          except Exception as exc:
-              print(f"::error::Resposta do modelo em formato inválido: {exc}", file=sys.stderr)
-              sys.exit(1)
-
-          severidades = {
-              "critical": "CRÍTICA",
-              "high": "ALTA",
-              "medium": "MÉDIA",
-              "low": "BAIXA",
-          }
-
-          blocos = []
-          for f in findings[:5]:
-              sev = severidades.get(f.get("severity", "low"), "BAIXA")
-              conf = f.get("confidence", 0.0)
-              path = f.get("path", "")
-              line = f.get("line", 1)
-              title = f.get("title", "")
-              failure = f.get("failure_scenario", "")
-              evidence = f.get("evidence", "")
-              test = f.get("suggested_test", "")
-              blocos.append(
-                  f"### [{sev}] {title}\n\n"
-                  f"`{path}:{line}` · confiança: {conf:.0%}\n\n"
-                  f"**Cenário de falha:** {failure}\n\n"
-                  f"**Evidência:** {evidence}\n\n"
-                  f"**Teste sugerido:** {test}"
-              )
-
-          if blocos:
-              rendered = "\n\n".join(blocos) + f"\n\n### Resumo da Análise\n\n{summary.strip()}"
-          else:
-              rendered = summary.strip() or "Nenhum defeito demonstrável ou risco crítico encontrado nas alterações avaliadas."
-
-          with open("review.md", "w", encoding="utf-8") as fh:
-              fh.write(rendered + "\n")
-          PY
+          # A lógica vive em `scripts/aiReview/`, testada no Vitest como qualquer outro
+          # módulo. Viveu três tarefas aqui dentro (T018, T019 e a revisão da T019), onde
+          # nada a exercitava e só rodava com PR aberto — quando falhar bloqueia em vez de
+          # avisar.
+          npx tsx scripts/aiReview/run.ts
 
       - name: Publicar relatório de revisão no PR
         if: steps.preflight.outputs.run == 'true' && success()
