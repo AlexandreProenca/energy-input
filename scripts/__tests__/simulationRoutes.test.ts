@@ -46,6 +46,10 @@ describe('rotas recusadas pelo proxy de desenvolvimento', () => {
     // `DENIED_BY_DESIGN` é documentação executável: ampliar `ROUTES` sem pensar quebra aqui.
     expect(permite(url)).toBe(false);
     expect(permite(url, 'POST')).toBe(false);
+    // Com query string também. Sem isto, acrescentar `/v1/usage${Q}` a `ROUTES` passaria
+    // despercebido: `/v1/usage` sem query continuaria recusado e o teste seguiria verde.
+    expect(permite(`${url}?foo=bar`)).toBe(false);
+    expect(permite(`${url}?foo=bar`, 'POST')).toBe(false);
   });
 
   it('recusa método fora de GET e POST', () => {
@@ -94,8 +98,16 @@ describe('rotas recusadas pelo proxy de desenvolvimento', () => {
     // Contraponto deliberado: `%23` NÃO deve ser recusado. É como se envia um `#` como
     // dado — um nome de variável pode contê-lo —, e o allowlist controla rota, não
     // semântica de parâmetro, que é do serviço. Recusar aqui quebraria consulta legítima.
-    expect(permite('/v1/studies?tag=cenario%23 3')).toBe(true);
+    expect(permite('/v1/studies?tag=cenario%23%203')).toBe(true);
     expect(permite(`/v1/simulations/${SIM}/results/timeseries?variable=X%23Y`)).toBe(true);
+  });
+
+  it('repassa o conteúdo da query sem validar, porque isso é do serviço', () => {
+    // Decisão registrada em `Q`: o allowlist controla rota, não semântica de parâmetro.
+    // `../../etc/passwd` num VALOR não é travessia — não toca o caminho da URL.
+    expect(permite(`/v1/simulations/${SIM}/results/timeseries?path=../../etc/passwd`)).toBe(true);
+    // Mas no CAMINHO continua recusado, que é o que este allowlist existe para impedir.
+    expect(permite(`/v1/simulations/${SIM}/../../etc/passwd`)).toBe(false);
   });
 
   it('continua aceitando todo nome de artefato que o motor realmente produz', () => {

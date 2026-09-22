@@ -18,7 +18,18 @@ import { ULID } from '../src/core/ids';
 
 const SIM = `sim_${ULID}`;
 const STD = `std_${ULID}`;
-/** Query string opcional; o fragmento `#` nunca é enviado ao servidor e não é aceito. */
+/**
+ * Query string opcional. O `#` literal é recusado porque um pedido legítimo nunca o envia:
+ * o fragmento fica no navegador. Já `%23` é aceito, porque é como se manda um `#` como
+ * dado — nome de variável pode contê-lo.
+ *
+ * O **conteúdo** da query não é validado aqui, e isso é decisão, não esquecimento: este
+ * allowlist controla QUAIS ROTAS o proxy repassa, não a semântica dos parâmetros, que
+ * pertence ao serviço. Um `?path=../../etc/passwd` passa e é repassado — não é travessia,
+ * porque não toca o caminho da URL, e o serviço valida os próprios parâmetros. Endurecer
+ * aqui significaria duplicar o contrato do upstream e quebrar a cada campo novo que ele
+ * aceitar.
+ */
 const Q = '(?:\\?[^#]*)?';
 
 /**
@@ -37,14 +48,17 @@ const ROUTES = [
   `/v1/simulations/${SIM}/cancel`,
   `/v1/simulations/${SIM}/logs`,
   `/v1/simulations/${SIM}/artifacts`,
-  // O nome do artefato é restrito ao alfabeto que o motor realmente produz
-  // (`eplusout.err`, `eplustbl.csv`, `sqlite.err` — conferidos nas fixtures da T001).
-  // O padrão anterior, `[^/?#]+`, barrava a barra literal mas deixava passar `..%2f`:
-  // o `%` não pertence a esta classe, e exigir inicial alfanumérica também recusa `..`.
-  // O lookahead recusa `..` em qualquer posição. Não é correção de falha — `a..b` é nome
-  // de arquivo comum e não é travessia, que só existe quando `..` é o segmento inteiro.
-  // É defesa em profundidade: nenhum artefato do motor tem `..`, então proibir remove a
-  // discussão em vez de depender de como o upstream normaliza o caminho.
+  // Nome de artefato, restrito ao que o motor realmente produz (`eplusout.err`,
+  // `eplustbl.csv`, `sqlite.err` — os 19 nomes conferidos nas fixtures da T001).
+  // Três restrições, cada uma cobrindo um caso:
+  //   1. A classe exclui `%`, e com isso a barra codificada. O padrão anterior,
+  //      `[^/?#]+`, barrava `/` literal mas deixava passar `..%2f`, e o proxy repassa a
+  //      URL crua, sem decodificar.
+  //   2. A inicial alfanumérica recusa nome começando por ponto — `..` e `.oculto`.
+  //   3. O lookahead recusa `..` em qualquer outra posição, como `a..b`. Este terceiro
+  //      NÃO corrige falha: `a..b` é nome de arquivo comum, e travessia só existe quando
+  //      `..` é o segmento inteiro, já coberto por (2). É defesa em profundidade, de
+  //      graça, que dispensa raciocinar sobre como o upstream normaliza o caminho.
   `/v1/simulations/${SIM}/artifacts/(?!.*\\.\\.)[A-Za-z0-9][A-Za-z0-9._-]*`,
 
   // Resultados. `summary` e `errors` já existiam; `variables` e `timeseries` são o que o

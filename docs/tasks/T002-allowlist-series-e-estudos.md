@@ -91,7 +91,7 @@ O regex também não tinha teste nenhum — um controle de segurança sem teste 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 120 testes (eram 79; +41 nesta tarefa, 11 deles vindos da revisão do PR)
+- [x] `npm test` — 121 testes (eram 79; +42 nesta tarefa, 12 deles vindos das duas rodadas de revisão do PR)
 - [x] `npm run build`
 - [x] `nginx -t` dentro de `nginx:1.27-alpine`
 - [x] **Ponta a ponta no `npm run dev`**, contra o serviço real: `results/variables`,
@@ -133,6 +133,18 @@ alfanumérica também recusa `..` e `.oculto`. O teste cobre os dois lados — r
 travessia e confirma que `eplusout.err`, `eplusout.sql`, `eplustbl.csv`, `eplustbl.htm` e
 `sqlite.err` continuam passando. **Esse buraco é anterior a esta tarefa**; foi encontrado ao
 escrever o teste que faltava.
+
+**`proxy_ssl_verify_depth` tem folga de propósito.** O valor é 5, não 3, embora a cadeia de
+hoje tenha três níveis. Com 3 — exatamente o tamanho atual — um intermediário a mais do
+emissor derrubaria tudo de novo, em silêncio e só em produção. O limite é guarda contra
+cadeia absurda, não fronteira de confiança: esta continua sendo a raiz precisar estar no
+bundle. A detecção da quebra é a T017.
+
+**O conteúdo da query não é validado, e isso é decisão.** O allowlist controla quais rotas
+o proxy repassa, não a semântica dos parâmetros. `?path=../../etc/passwd` passa e é
+repassado — não é travessia, porque não toca o caminho da URL, e o serviço valida os
+próprios parâmetros. Endurecer aqui duplicaria o contrato do upstream e quebraria a cada
+campo novo que ele aceitasse. Há teste fixando os dois lados: o valor passa, o caminho não.
 
 **O download de artefato esbarra num defeito do serviço, não do proxy.** Ao conferir que o
 padrão novo do nome de artefato não quebrava nada, `…/artifacts/eplusout.err` passou pelo
