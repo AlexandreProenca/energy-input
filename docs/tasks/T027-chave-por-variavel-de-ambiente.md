@@ -170,6 +170,11 @@ o parâmetro `token` de `SimulationApi` que o teste ainda usa. Esse continua de 
 scripts em Node que falam direto com o serviço. Ganhou um comentário dizendo isso, porque o achado
 mostra que a leitura do código sugeria o contrário.
 
+Da sexta rodada em diante a revisão só repetiu achados já tratados. O único ângulo novo — "as rotas
+do nginx não cobrem sub-recursos que o app usa, como `/models/{id}`" — foi conferido contra
+`api.ts`: todo caminho que o cliente chama está na lista, e `/models/{id}` não é chamado. O PR foi
+integrado com as checagens verdes e sem achado procedente em aberto.
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
