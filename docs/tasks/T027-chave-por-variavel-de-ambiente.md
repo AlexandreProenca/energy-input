@@ -158,6 +158,11 @@ mensagem do 401 que cita `SIMULATION_API_TOKEN`: o nome está no README deste re
 e "não configurada" e "recusada" se corrigem no mesmo lugar — o serviço não distingue as duas, e o
 proxy de propósito não sabe qual é.
 
+Uma quarta rodada repetiu os achados declinados, com dois ângulos novos, também declinados: a
+mensagem de recusa da chave cita o mesmo conjunto da regex (`[A-Za-z0-9._~+/-]`, `=` só no fim),
+e a comparação de origem sensível a maiúsculas não afeta navegador — o analisador de URL põe o host
+em minúsculas tanto no `Origin` quanto no `Host`.
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
