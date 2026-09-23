@@ -11,7 +11,7 @@ paramos, no que já esbarramos, e o que não deve ser redescoberto do zero.
 
 ## Onde paramos
 
-**Versão 0.1.0, 331 testes.** Quatro modos: Assistente (10 etapas), Editor 3D e
+**Versão 0.1.0, 345 testes.** Quatro modos: Assistente (10 etapas), Editor 3D e
 Especialista **escrevem** no documento; **Resultados** lê execuções concluídas e não
 escreve.
 
@@ -25,7 +25,7 @@ escreve.
 | 3 — Estudos | T012–T015 | **próxima**. A T012 escreve o ADR do estudo paramétrico |
 
 Fora das fases: **T016** (execução no serviço), **T017–T020** (CI e revisão por IA) e **T023**
-(referência órfã no sync) e **T024** (janelas acompanham o vidro) concluídas; **T021** e **T022** são do serviço, não deste
+(referência órfã no sync), **T024** (janelas acompanham o vidro) e **T025** (várias zonas) concluídas; **T021** e **T022** são do serviço, não deste
 repositório, e ficam no backlog para não se perderem.
 
 **A execução no serviço voltou a funcionar em 23/09** (T016), e a primeira simulação chegou ao
@@ -60,8 +60,28 @@ Confirmado com dado real e travado em `src/core/results/__tests__/fixtures.test.
 
 `/results/variables` é RDD/MDD — o que o modelo *poderia* relatar — e vem paginado em 200.
 Não existe rota que responda "o que esta execução registrou": a descoberta é por
-tentativa, e variável ausente devolve **422**. O mesmo 422 cobre ambiguidade de chave, e só
-o corpo distingue os dois casos. **A zona é descoberta pelo 422, não pelo catálogo** (T010).
+tentativa. **A zona é descoberta pelo 422, não pelo catálogo.** Há três 422, capturados na T025
+(`src/core/results/__fixtures__/erro-422-*`):
+
+- sem chave, várias zonas: `candidata: key='…', frequency=hourly`;
+- chave inexistente: `existe: key='…', frequency=hourly`;
+- variável não registrada: `a simulação não registrou '…'` — **sem** candidata.
+
+A candidata é o que está **entre as aspas**, e o pedido leva chave **e** frequência. As chaves
+vêm em maiúsculas, como o EnergyPlus as grava no `.sql`.
+
+### Teste contra contrato inventado trava o defeito
+
+O seletor de zonas quebrou na primeira execução real com duas zonas (T025) porque o teste usava
+um corpo de 422 **inventado** — a mensagem igual à chave — e outro teste travava a mensagem de
+"variável não registrada" como candidata. Os dois defendiam exatamente o que estava errado.
+**Quando um formato do serviço não pôde ser observado, o teste diz isso ou espera a fixture;
+não preenche a lacuna com palpite.**
+
+### `limpar()` do `resultsStore` nunca é chamado pelo app
+
+Trocar de execução não passa por ele. Toda carga "de abertura" precisa zerar o próprio estado
+— a T025 achou as zonas da execução anterior sobrevivendo no seletor da seguinte.
 
 ### Os indicadores de conforto do resumo não medem a mesma coisa
 
@@ -205,6 +225,7 @@ fazia isso e foi reescrita antes do commit.
 | Trocar o vidro deixava janelas do Editor 3D sem construção (`invalid construction_name`) | T023 |
 | O diálogo de simulação deixava passar referência inexistente (era só aviso) | T023 |
 | Trocar o vidro no assistente deixava as janelas desenhadas com o vidro antigo | T024 |
+| Seletor de zonas oferecia a mensagem do 422 como zona; abrir outra execução herdava as zonas | T025 |
 
 ---
 
@@ -219,9 +240,8 @@ modelos **gerados por este aplicativo**:
   sobreviveu. A primeira limpeza que a pega é a de 24/09.
 - **Retenção do `.sql`.** O contrato diz que `/results/timeseries` responde 410 depois de um
   prazo que não numera.
-- **Se `key_value: "*"` gera uma série por zona**, e como é o 422 de ambiguidade de chave.
-  Exige um modelo com mais de uma zona; o seletor de zona do painel de temperatura nunca foi
-  exercitado com dado real.
+- **Horas de desconforto do edifício inteiro.** Hoje o painel mostra uma zona por vez e diz
+  qual. Agregar exige escolher critério (área? ocupação?) — decisão de produto (T025).
 - **Cota de estudo.** Existe `402` no contrato e um `/v1/usage`, que exige escopo
   `admin:billing`. Um estudo de 20 variações pode ser recusado. Afeta a T014.
 - **Estabilidade de `TabelaDeResultados.columns[].key`** (ex.: `end_use::Heating::Electricity`)
