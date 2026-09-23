@@ -8,6 +8,13 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Alterado
 
+- **Simular ficou em um clique:** o diálogo conecta sozinho e já traz o motor compatível e o
+  arquivo climático do catálogo mais próximo do local do modelo. Ao simular, uma linha do tempo
+  acompanha a execução (envio, fila, EnergyPlus, resultados), e ao concluir o botão **Analisar
+  resultados** leva ao modo Resultados. Em falha, o diagnóstico do EnergyPlus e **Voltar e
+  ajustar**. A tabela de resultados saiu do diálogo: o modo Resultados mostra o mesmo resumo em
+  painéis. (`Refs: T028`)
+
 - **A chave da API de simulação vem da variável de ambiente `SIMULATION_API_TOKEN`**, também no
   contêiner (`docker compose up` lê o mesmo `.env.local` do `npm run dev`). O diálogo de
   simulação não pede mais credencial. O proxy do contêiner passou a recusar rota fora da lista,

@@ -8,7 +8,7 @@ beforeEach(() => {
   vi.useFakeTimers(); vi.stubGlobal('crypto', { randomUUID });
   const values = new Map<string, string>();
   vi.stubGlobal('sessionStorage', { setItem: (k: string, v: string) => values.set(k, v), getItem: (k: string) => values.get(k) ?? null, removeItem: (k: string) => values.delete(k) });
-  store.setState({ busy: false, attempt: undefined, simulation: undefined, error: undefined, summary: undefined, diagnostics: undefined, artifacts: undefined });
+  store.setState({ busy: false, attempt: undefined, simulation: undefined, error: undefined, summary: undefined, diagnostics: undefined, artifacts: undefined, resultadosDe: undefined });
   document.getState().reset({ Building: { Original: {} } }, 'original.epJSON');
   vi.spyOn(SimulationApi.prototype, 'uploadModel').mockResolvedValue({ id: 'mdl-original', versao: { id: 'mv-original', versao_do_motor: '26.1.0' } });
   vi.spyOn(SimulationApi.prototype, 'logs').mockResolvedValue({ status: 'succeeded', attempts: 1, events: [], err_available: true });
@@ -17,6 +17,25 @@ beforeEach(() => {
   vi.spyOn(SimulationApi.prototype, 'artifacts').mockResolvedValue({ complete: true, itens: [] });
 });
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+describe('acompanhamento (T028)', () => {
+  it('marca de qual execução os resultados já foram consultados', async () => {
+    vi.spyOn(SimulationApi.prototype, 'create').mockResolvedValue(sim('queued'));
+    vi.spyOn(SimulationApi.prototype, 'status').mockResolvedValue(sim('succeeded'));
+    await store.getState().start('26.1.0', 'design_day');
+    expect(store.getState().resultadosDe).toBe('sim-original');
+  });
+
+  it('continua marcando mesmo quando uma das consultas falha', async () => {
+    // Senão a etapa "Resultados" ficaria girando para sempre ao lado da mensagem de erro.
+    vi.spyOn(SimulationApi.prototype, 'create').mockResolvedValue(sim('queued'));
+    vi.spyOn(SimulationApi.prototype, 'status').mockResolvedValue(sim('succeeded'));
+    vi.spyOn(SimulationApi.prototype, 'summary').mockRejectedValue(new SimulationApiError('Fora do ar', 503));
+    await store.getState().start('26.1.0', 'design_day');
+    expect(store.getState().resultadosDe).toBe('sim-original');
+    expect(store.getState().error).toContain('Fora do ar');
+  });
+
+});
 describe('ciclo de vida da simulação', () => {
   it('retoma a mesma versão após perda de resposta, mesmo se o usuário editar o documento', async () => {
     const create = vi.spyOn(SimulationApi.prototype, 'create').mockRejectedValueOnce(new SimulationApiError('Rede', 0)).mockResolvedValueOnce(sim('queued'));

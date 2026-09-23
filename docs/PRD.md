@@ -317,7 +317,7 @@ O produto permite alternar livremente entre o Assistente, o Editor 3D e o Modo E
 
 1. **Acesso e Painel de Controle:**
    - Acionado via ícone no cabeçalho ou na etapa final de revisão.
-   - Interface de diálogo completa com abas de Configuração, Progresso, Diagnósticos e Artefatos.
+   - Diálogo em duas vistas. **Configurar:** conecta sozinho ao abrir e já traz escolhidos o motor compatível e o clima do catálogo mais próximo do `Site:Location` do modelo (até 100 km); o usuário confere e clica em **Simular**. **Acompanhar:** linha do tempo Envio → Fila → EnergyPlus → Resultados; ao concluir, **Analisar resultados** leva ao modo Resultados (§4.6); em falha, o diagnóstico do EnergyPlus e **Ajustar o modelo**. Diagnóstico, eventos e arquivos da execução ficam recolhidos na mesma vista.
 
 2. **Fluxo de Integração RESTful (`https://homolog.ee.dev.br/v1`):**
    - **Autenticação:** Token Bearer vindo da variável de ambiente `SIMULATION_API_TOKEN`, injetado pelo proxy do servidor — o do Vite em desenvolvimento e o do contêiner em produção. A interface não pede credencial.

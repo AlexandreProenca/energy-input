@@ -88,6 +88,11 @@ export class SimulationApi {
     if (cursor) q.set('cursor', cursor);
     return this.request<{ itens: Weather[]; proximo_cursor?: string | null }>(`/weather?${q}`);
   }
+  /** Climas a até `radiusKm` de `near` (`lat,lon`), com `distance_km` preenchido (T028). */
+  weatherNear(near: string, radiusKm = 100) {
+    const q = new URLSearchParams({ near, radius_km: String(radiusKm), limit: '50' });
+    return this.request<{ itens: Weather[]; proximo_cursor?: string | null }>(`/weather?${q}`);
+  }
   uploadWeather(file: File, license: string) {
     const body = new FormData(); body.append('file', file); body.append('license', license);
     return this.request<Weather>('/weather', { method: 'POST', body });

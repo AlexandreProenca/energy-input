@@ -287,8 +287,23 @@ consultado em 22/09/2026. Envia a cópia atual do documento como multipart
 a cada cinco segundos, param nos estados terminais e pausam em erro de rede
 ou autenticação; **Atualizar status** retoma o acompanhamento.
 
-A conexão consulta `/engines`; somente versões compatíveis com o modelo
-podem ser escolhidas. Execução climática (`annual`, inclusive o período
+O diálogo conecta sozinho ao abrir (T028): consulta `/engines` e escolhe o
+padrão do serviço, se compatível, ou a versão compatível mais nova; somente
+versões da mesma série `maior.menor` do modelo podem ser escolhidas. Em seguida
+busca `/weather?near=<lat,lon>&radius_km=100` com as coordenadas do primeiro
+`Site:Location` e pré-seleciona o de menor `distance_km`. A busca por cidade
+continua disponível em "Trocar o clima" — mas **diferencia acentos**
+("Florianópolis" não acha "Florianopolis"), e é por isso que a pré-seleção usa
+coordenadas. As decisões ficam em `src/core/simulation/acompanhamento.ts`,
+testadas sem DOM: motor, clima e as quatro etapas da linha do tempo
+(Envio → Fila → EnergyPlus → Resultados). O serviço informa só o estado atual,
+então falha e tempo esgotado são marcados no EnergyPlus, e a etapa Resultados
+termina quando `resultadosDe` do store aponta para a execução — mesmo que uma
+das consultas tenha falhado. Ao concluir, **Analisar resultados** fecha o
+diálogo e troca para o modo Resultados; **Nova simulação** só troca a vista,
+e a execução anterior continua no modo Resultados até outra começar.
+
+Execução climática (`annual`, inclusive o período
 limitado pelo RunPeriod do modelo) exige seleção de `weather_id` no catálogo
 ou upload EPW com licença declarada. `design_day` dispensa EPW. Os resultados
 incluem summary, errors, logs e artifacts. Um erro em um desses recursos não
