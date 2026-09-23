@@ -107,6 +107,15 @@ Quatro achados. **Um aceito**, um virou teste, dois declinados:
 | `\u1234` que o modelo quis como barra literal decodifica como U+1234 | **declinado** — é um escape válido de JSON, e o JSON diz o que ele significa. Adivinhar outra intenção seria reparar o que não está quebrado; caminhos como `C:\users` já são dobrados, porque `s` não é hexadecimal |
 | A varredura de candidatos usa o texto reparado | **declinado** — é de propósito, e é o teste "lê também quando há prosa em volta": sem isso a revisão com regex citada e prosa em volta continuaria reprovando |
 
+Numa segunda rodada, quatro achados, **todos declinados**:
+
+| Achado | Veredito |
+|---|---|
+| Barra válida, como `"C:\\temp"`, seria dobrada de novo quando o erro está em outro ponto | **declinado** — não acontece: o par `\\` é consumido junto e fica como está. É o teste "mantém os escapes válidos, inclusive barra escapada seguida de dígito" |
+| `\n` fora de string é mantido e "mascara o erro estrutural" | **declinado** — mantido quer dizer inalterado: o texto continua com o mesmo erro, e o diagnóstico só diz "decodifica depois de reparar" quando de fato decodifica |
+| Outros runtimes (Firefox, etc.) têm outras mensagens | **declinado** — o script roda só no Node do CI; mensagem desconhecida cai em "não reconhecido", que é seguro |
+| A posição do erro revela o comprimento de trechos | **declinado** — o tamanho já era publicado desde a T019; posição não reconstrói conteúdo |
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
