@@ -181,6 +181,11 @@ T017 somava um segundo `000` ao que o curl já escreve, e o resultado não casav
 serviço inacessível, que devia só avisar. Antes desta tarefa o passo aceitava qualquer código, e
 o defeito não aparecia; o `case` estrito da segunda rodada o expôs. Agora é `|| true`.
 
+Na rodada seguinte, dois ângulos novos, **refutados por teste**: a regex de origem "não ancora o
+fim" (ancora: termina em `$`), e o lookahead `(?!.*\.\.)` da rota de artefato "não é suportado
+pelo PCRE do nginx". Testado no nginx 1.27 com o mapa gerado: `artifacts/eplusout.sql` → 1,
+`artifacts/a..b` → 0, `artifacts/..%2Fx` → 0.
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
