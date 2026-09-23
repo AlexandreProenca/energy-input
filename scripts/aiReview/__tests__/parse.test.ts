@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ReviewFormatError, describeShape, parseReview } from '../parse';
+import { ReviewFormatError, describeShape, diagnoseResponse, parseReview, repararEscapes, tipoDoErro } from '../parse';
 
 const BOM = '{"summary": "ok", "findings": [{"title": "x", "severity": "high"}]}';
 
@@ -168,5 +168,86 @@ describe('descrição da forma, para o log público', () => {
   it('não repete nenhum trecho da resposta', () => {
     const segredo = 'senha-do-diff-que-nao-pode-vazar';
     expect(describeShape(`prosa com ${segredo}`)).not.toContain(segredo);
+  });
+});
+
+describe('escape inválido de JSON (T030)', () => {
+  /**
+   * A hipótese para as falhas do PR #24, que cita regex do nginx: o modelo copia `\|` e `\1`
+   * para dentro da string da evidência sem dobrar a barra, e o documento inteiro deixa de
+   * decodificar — sobra um objeto que "não parece revisão" só porque não foi lido.
+   */
+  const COM_REGEX = String.raw`{"summary": "ok", "findings": [{"title": "origem", "severity": "medium",
+    "evidence": "\"~^https?://([^|/]+)\|\1$\" 1;"}]}`;
+
+  it('lê a revisão cuja evidência cita regex com barra crua', () => {
+    const r = parseReview(COM_REGEX);
+    expect(r.summary).toBe('ok');
+    expect(r.findings[0].evidence).toBe(String.raw`"~^https?://([^|/]+)\|\1$" 1;`);
+  });
+
+  it('lê também quando há prosa em volta', () => {
+    expect(parseReview(`Segue:\n${COM_REGEX}\nFim.`).findings).toHaveLength(1);
+  });
+
+  it('mantém os escapes válidos, inclusive barra escapada seguida de dígito', () => {
+    // `\\1` é barra literal + `1`: a segunda barra não começa escape e não pode ser dobrada.
+    for (const valido of [String.raw`\\1`, String.raw`\"`, String.raw`\/`, String.raw`\n\t\b\f\r`, String.raw`é`]) {
+      expect(repararEscapes(valido)).toBe(valido);
+    }
+  });
+
+  it('dobra só a barra que não começa escape válido', () => {
+    expect(repararEscapes(String.raw`\|\1`)).toBe(String.raw`\\|\\1`);
+    expect(repararEscapes(String.raw`\\\1`)).toBe(String.raw`\\\\1`);
+    expect(repararEscapes(String.raw`\u12`)).toBe(String.raw`\\u12`);
+    expect(repararEscapes('fim\\')).toBe('fim\\\\');
+  });
+
+  it('não torna decodificável uma barra fora de string', () => {
+    // Fora de string a barra já é erro de sintaxe, e dobrada continua sendo: o reparo não tem
+    // como mudar a estrutura do documento, só o conteúdo das strings.
+    expect(() => parseReview(String.raw`{"summary": \x "ok", "findings": []}`)).toThrow(ReviewFormatError);
+    expect(() => JSON.parse(repararEscapes(String.raw`{"a": 1 \ }`))).toThrow();
+  });
+
+  it('não mexe em resposta que já decodifica', () => {
+    // A barra dobrada em JSON válido é barra literal; repará-la de novo a quadruplicaria.
+    const valido = JSON.stringify({ summary: String.raw`regex \|\1`, findings: [] });
+    expect(parseReview(valido).summary).toBe(String.raw`regex \|\1`);
+  });
+});
+
+describe('diagnóstico da resposta recusada, para o log público (T030)', () => {
+  const segredo = 'senha-do-diff-que-nao-pode-vazar';
+
+  it('diz o tipo e a posição do erro de sintaxe, e se o reparo resolveria', () => {
+    const d = diagnoseResponse(String.raw`{"summary": "\1"}`);
+    expect(d).toMatch(/^forma: objeto, 17 caracteres; JSON inválido: .+ na posição 14; decodifica depois de reparar escapes$/);
+  });
+
+  it('diz as chaves de topo e seus tipos quando o JSON decodifica', () => {
+    expect(diagnoseResponse('{"review": {"x": 1}, "notes": [], "ok": null}'))
+      .toBe('forma: objeto, 45 caracteres; JSON válido; chaves de topo: review(object), notes(lista), ok(nulo)');
+    expect(diagnoseResponse('[1]')).toBe('forma: array, 3 caracteres; JSON válido, mas um array no topo');
+  });
+
+  it('nomeia o erro por uma lista fixa, e não pelo texto da mensagem', () => {
+    // Mensagens simuladas: as de versões do Node que citam o trecho, e formatos que ninguém viu.
+    expect(tipoDoErro(`Unexpected token 's', ..."${segredo}"... is not valid JSON`)).toBe('Unexpected token');
+    expect(tipoDoErro(`Unexpected token ${segredo} in JSON at position 3`)).toBe('Unexpected token');
+    expect(tipoDoErro(`Expected ',' or '}' after property value in JSON at position 9`)).toBe('Expected (pontuação ausente)');
+    expect(tipoDoErro(`Unexpected non-whitespace character after JSON at position 5 (${segredo})`))
+      .toBe('Unexpected non-whitespace character after JSON');
+    expect(tipoDoErro(`Erro novo: ${segredo}`)).toBe('erro de sintaxe não reconhecido');
+  });
+
+  it('não repete trecho do conteúdo, nem em chave nem na mensagem de erro', () => {
+    // A mensagem do V8 para token inesperado cita o texto; nome de chave fora do padrão também
+    // poderia carregar conteúdo.
+    for (const bruto of [`{"${segredo}": 1}`, `{"summary": ${segredo}}`, `${segredo} {`, `{"a": "${segredo}`]) {
+      expect(diagnoseResponse(bruto)).not.toContain(segredo);
+      expect(diagnoseResponse(bruto)).not.toContain('senha');
+    }
   });
 });
