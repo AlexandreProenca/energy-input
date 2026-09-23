@@ -24,6 +24,12 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
   pelo limite de tokens. Agora o corte é identificado e diagnosticado, o limite subiu de 3 500
   para 8 000 e o prompt pede concisão. (`Refs: T029`)
 
+- A revisão por IA recusava a resposta quando o modelo citava código com barra invertida crua,
+  como uma regex do nginx: o JSON deixava de decodificar. A barra que não forma escape válido
+  passa a ser lida como literal, e o log de formato inválido diz se o JSON decodifica, onde está
+  o erro e as chaves de topo, sem repetir conteúdo. A T029 atribuíra essa falha ao limite de
+  tokens, o que a execução seguinte desmentiu. (`Refs: T030`)
+
 - **Com mais de uma zona, o painel de temperatura abria com erro.** O seletor oferecia a mensagem
   inteira do serviço (`candidata: key='…'`) como nome de zona, e escolhê-la pedia uma série que não
   existe. Agora o painel abre a primeira zona sozinho, oferece as outras, e o de desconforto diz de

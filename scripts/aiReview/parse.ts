@@ -146,17 +146,50 @@ function fimDoObjeto(t: string, inicio: number): number {
  * e escolher um seria adivinhar. Adivinhar errado faz o portão obrigatório dar verde
  * anunciando zero achado, que foi exatamente a regressão da T019.
  */
+/**
+ * Dobra a barra invertida que não começa um escape válido de JSON.
+ *
+ * Em JSON, `\\` só pode vir antes de `"\\/bfnrt` ou de `u` com quatro dígitos hexadecimais. O
+ * modelo, ao citar código como evidência, às vezes escreve a barra crua: uma regex do nginx
+ * como `\\|\\1` vira `"…\\|\\1…"` dentro da string, e o documento inteiro deixa de decodificar
+ * (T030). Dobrar a barra dá o que o modelo quis dizer — a barra literal.
+ *
+ * Varre caractere a caractere, e não com uma regex, por causa dos pares: em `\\\\1` (barra
+ * escapada seguida de `1`) a primeira barra escapa a segunda, e a segunda NÃO pode ser tratada
+ * como início de escape. Só é usada quando a resposta não decodifica como veio.
+ */
+export function repararEscapes(texto: string): string {
+  let saida = '';
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (c !== '\\') { saida += c; continue; }
+    const proximo = texto[i + 1];
+    if (proximo !== undefined && '"\\/bfnrt'.includes(proximo)) { saida += c + proximo; i++; continue; }
+    if (proximo === 'u' && /^[0-9a-fA-F]{4}$/.test(texto.slice(i + 2, i + 6))) { saida += texto.slice(i, i + 6); i += 5; continue; }
+    saida += '\\\\';
+  }
+  return saida;
+}
+
+function decodifica(texto: string): unknown {
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return undefined;
+  }
+}
+
 export function parseReview(bruto: string): Review {
-  const t = semCerca(bruto);
-  if (!t) throw new ReviewFormatError('resposta vazia');
+  const original = semCerca(bruto);
+  if (!original) throw new ReviewFormatError('resposta vazia');
+
+  // Escape inválido só é reparado se o texto não decodifica como veio: resposta válida passa
+  // intacta, sem depender de o reparo estar certo.
+  const t = decodifica(original) === undefined ? repararEscapes(original) : original;
 
   // Caminho normal: a resposta inteira é o objeto.
-  try {
-    const obj: unknown = JSON.parse(t);
-    if (pareceRevisao(obj)) return normalizar(obj);
-  } catch {
-    // Não é documento único; a varredura abaixo cobre os desvios conhecidos.
-  }
+  const inteiro = decodifica(t);
+  if (pareceRevisao(inteiro)) return normalizar(inteiro);
 
   const encontrados = candidatos(t);
   if (encontrados.length === 1) return normalizar(encontrados[0]);
@@ -187,4 +220,37 @@ export function describeShape(bruto: string): string {
     : inicio === '' ? 'vazia'
     : 'prosa';
   return `forma: ${forma}, ${bruto.length} caracteres`;
+}
+
+/**
+ * Por que a resposta não foi lida — sem repetir nada do conteúdo (T030).
+ *
+ * `describeShape` dizia só a forma e o tamanho, e isso não bastou: duas falhas seguidas no PR #24
+ * foram atribuídas a um corte por limite de tokens (T029) que os dados depois desmentiram. Aqui
+ * vai o que distingue as causas: se o texto decodifica como JSON, o **tipo** e a **posição** do
+ * erro de sintaxe e, se decodifica, os **nomes** das chaves de topo e seus tipos. Nomes de chave
+ * são esquema, não conteúdo; ainda assim, nome fora de `[A-Za-z_]` é omitido.
+ */
+export function diagnoseResponse(bruto: string): string {
+  const texto = semCerca(bruto);
+  const partes = [describeShape(bruto)];
+  try {
+    const obj: unknown = JSON.parse(texto);
+    if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
+      partes.push(`JSON válido, mas ${Array.isArray(obj) ? 'um array' : typeof obj} no topo`);
+    } else {
+      const chaves = Object.entries(obj as Record<string, unknown>).map(([k, v]) =>
+        `${/^[A-Za-z_]{1,40}$/.test(k) ? k : '<chave>'}(${Array.isArray(v) ? 'lista' : v === null ? 'nulo' : typeof v})`);
+      partes.push(`JSON válido; chaves de topo: ${chaves.join(', ') || 'nenhuma'}`);
+    }
+  } catch (e) {
+    // A mensagem do V8 às vezes cita um trecho do texto (`Unexpected token 'x', "…" is not valid
+    // JSON`); o trecho depois de `, "` sai, e fica só o tipo do erro e a posição.
+    const mensagem = e instanceof Error ? e.message : String(e);
+    const posicao = /at position (\d+)/.exec(mensagem)?.[1];
+    const tipo = mensagem.split(', "')[0].replace(/ in JSON at position \d+.*$/s, '').slice(0, 80);
+    partes.push(`JSON inválido: ${tipo}${posicao ? ` na posição ${posicao}` : ''}`);
+    if (decodifica(repararEscapes(texto)) !== undefined) partes.push('decodifica depois de reparar escapes');
+  }
+  return partes.join('; ');
 }
