@@ -110,7 +110,9 @@ Alias `@/` → `src/`.
   Qualquer mudança em geradores mexe indiretamente aqui — rode `wizardSync.test.ts`.
   **Remoção nunca deixa referência órfã:** objeto do assistente que deixou de ser gerado
   fica (em `retained`) enquanto algo que permanece apontar para ele, seguindo a cadeia
-  (T023, `referencias.test.ts`).
+  (T023, `referencias.test.ts`). **Exceção anunciada:** as janelas do usuário que seguem o vidro
+  do assistente acompanham a troca (`acompanharVidro`, ADR-0002) — a única vez em que o
+  assistente altera objeto do usuário, e sempre com aviso.
 - **`core/geometry/sharedSurfaces.ts`** pareia faces por contorno em coordenadas globais
   (origem + rotação da zona, tolerância 0,1 mm, normais opostas). O epJSON mantém **duas**
   `BuildingSurface:Detailed` recíprocas; o 3D mostra **um** elemento físico. Editar construção,

@@ -165,7 +165,10 @@ Documentação e mensagens em **pt-BR**.
 - **Proteção contra perda de dados do usuário (`planWizardSync`).** Nunca sobrescrever
   silenciosamente objetos epJSON editados ou criados manualmente no Modo Especialista
   ou Editor 3D quando o Assistente for executado. Se houver divergência, acione o
-  diálogo de resolução de conflitos.
+  diálogo de resolução de conflitos. **Exceção única e anunciada:** as janelas desenhadas pelo
+  usuário que seguem o vidro do assistente acompanham a troca de vidro, com aviso na tela
+  ([ADR-0002](docs/adr/0002-janelas-acompanham-o-vidro-do-assistente.md)). Estender a exceção
+  a outra escolha do assistente exige decisão própria.
 - **Conformidade de Marca (Licença EnergyPlus).** O produto não pode se chamar
   "EnergyPlus API" nem usar a marca registrada do EnergyPlus como nome próprio.
   O nome oficial é **Energy Input** ("Arquivos epJSON para EnergyPlus").

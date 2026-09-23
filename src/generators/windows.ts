@@ -51,6 +51,11 @@ export function glazingConstructionName(g: GlazingTemplate) {
   return `Janela - ${g.label}`;
 }
 
+/** Esquadria que acompanha o vidro, quando ele tem uma. */
+export function glazingFrameName(g: GlazingTemplate): string | undefined {
+  return g.frame === 'PVC' ? `${glazingConstructionName(g)} - Esquadria PVC` : undefined;
+}
+
 /** Indicative single clear pane and PVC frame; replace with product data when available. */
 export function glazingFragment(g: GlazingTemplate): EpJsonFragment {
   const name = glazingConstructionName(g);
@@ -68,7 +73,8 @@ export function glazingFragment(g: GlazingTemplate): EpJsonFragment {
   } else fragment['WindowMaterial:SimpleGlazingSystem'] = { [g.label]: {
     u_factor: g.uFactor, solar_heat_gain_coefficient: g.shgc, visible_transmittance: g.visibleTransmittance,
   } };
-  if (g.frame === 'PVC') fragment['WindowProperty:FrameAndDivider'] = { [`${name} - Esquadria PVC`]: {
+  const frame = glazingFrameName(g);
+  if (frame) fragment['WindowProperty:FrameAndDivider'] = { [frame]: {
     frame_width: 0.06, frame_conductance: 2.2, frame_solar_absorptance: 0.3,
     frame_visible_absorptance: 0.3, frame_thermal_hemispherical_emissivity: 0.9,
   } };
@@ -111,7 +117,7 @@ export function generateWindows(
       fenestration[name] = {
         surface_type: 'Window',
         construction_name: constructionName,
-        ...(glazing.frame ? { frame_and_divider_name: `${constructionName} - Esquadria PVC` } : {}),
+        ...(glazingFrameName(glazing) ? { frame_and_divider_name: glazingFrameName(glazing) } : {}),
         building_surface_name: wall.name,
         view_factor_to_ground: 'Autocalculate',
         multiplier: 1,
