@@ -118,7 +118,7 @@ janela → construção → material → esquadria. As outras seguem como aviso.
 
 - `src/core/sync/wizardSync.ts`: remoção com retenção por referência; `SyncPlan.retained`.
 - `src/core/validation/crossRefs.ts`: `LISTAS_SEM_SINTESE` e a severidade por lista.
-- `src/core/sync/__tests__/referencias.test.ts`: novo, 8 testes. Inclui a sequência real do
+- `src/core/sync/__tests__/referencias.test.ts`: novo, 9 testes. Inclui a sequência real do
   incidente.
 - `src/core/validation/__tests__/crossRefs.test.ts`: novo, 5 testes.
 - `docs/DEVELOPMENT.md` (Wizard ⇄ Expert) e `CLAUDE.md`: a regra nova.
@@ -128,7 +128,7 @@ janela → construção → material → esquadria. As outras seguem como aviso.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 310 testes (eram 297; +13 nesta tarefa, 1 vindo da revisão do PR)
+- [x] `npm test` — 311 testes (eram 297; +14 nesta tarefa, 2 vindos das rodadas de revisão do PR)
 - [x] `npm run build`
 - [x] **O defeito foi reproduzido antes do conserto.** Com a sequência real, o teste central
       reprovou com a construção apagada. A contraprova, de que o documento está íntegro
@@ -164,6 +164,14 @@ Cinco achados. **Um aceito, quatro declinados, cada um com o motivo.**
 | O ponto fixo é O(N²) | **declinado** — o número de voltas é limitado pela profundidade da cadeia (janela → construção → material → esquadria), não pelo número de objetos |
 | A varredura sem schema pode reter objeto por coincidência de texto | **declinado com medição** — veja abaixo |
 | Assimetria entre referências de objetos que saem e objetos que ficam | **declinado** — a própria revisão concluiu que é intencional e correta |
+
+Numa segunda rodada, um achado novo, com o **título errado**: "objeto retido pode ser removido
+com referência viva, se o hash mudar". Não pode: o retido que o usuário edita vai para
+`orphaned`, e `orphaned` é mantido. O que o resumo apontava de fato é que esse objeto deixa de
+ser do assistente e fica permanente. **É deliberado, e era o comportamento anterior** para todo
+objeto editado: apagar conteúdo que o usuário editou violaria a proteção de dados do
+`planWizardSync` (AGENTS.md §7). **Comportamento mantido; teste acrescentado**, porque o título
+errado mostrou que isso não estava travado.
 
 **A coincidência de texto foi medida, não suposta.** Em 7 variantes do documento gerado (o
 padrão, os cinco vidros com janelas automáticas e o recuo noturno), **nenhum** nome de objeto

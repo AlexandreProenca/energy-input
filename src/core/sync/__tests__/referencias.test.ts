@@ -124,6 +124,26 @@ describe('objeto do assistente ainda referenciado', () => {
     expect(depois.next.Material).toBeUndefined();
   });
 
+  it('se o usuário editar o objeto retido, ele passa a ser do usuário e nunca é apagado', () => {
+    // A revisão do PR sugeriu que o retido editado "pode ser removido com referência viva".
+    // Não pode: editado vai para `orphaned`, que é mantido. E deixa de ser do assistente de
+    // propósito — é o comportamento anterior a esta tarefa para todo objeto editado, e apagar
+    // conteúdo que o usuário editou violaria a proteção de dados do planWizardSync (AGENTS.md §7).
+    const primeira = planWizardSync({}, gen1, {}, 'overwrite');
+    const doc = { ...primeira.next, 'FenestrationSurface:Detailed': { W: { construction_name: 'C' } } };
+    const retido = planWizardSync(doc, gen2, primeira.owned, 'overwrite');
+
+    const editado = { ...retido.next, Construction: { C: { outside_layer: 'M', layer_2: 'M' } } };
+    const depois = planWizardSync(editado, gen2, retido.owned, 'overwrite');
+    expect(depois.next.Construction?.C).toEqual({ outside_layer: 'M', layer_2: 'M' });
+    expect(depois.orphaned).toContainEqual({ type: 'Construction', name: 'C' });
+
+    // Sem a janela, continua lá: é do usuário agora.
+    const semJanela = { ...depois.next };
+    delete semJanela['FenestrationSurface:Detailed'];
+    expect(planWizardSync(semJanela, gen2, depois.owned, 'overwrite').next.Construction?.C).toBeDefined();
+  });
+
   it('não é mantido por referência vinda de outro objeto que também está saindo', () => {
     // Contraprova: a construção aponta para o material, mas as duas estão sendo removidas.
     // Contar essa referência manteria tudo para sempre.
