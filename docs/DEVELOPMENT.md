@@ -296,27 +296,32 @@ Validação automática: testes de transporte e ciclo de vida; smoke test real
 local com credencial configurada. Esse script cria um modelo sintético,
 verifica idempotência e acompanha a execução.
 
-**Estado da execução no serviço (22/09/2026).** Autenticação, catálogo, upload,
-criação, repetição idempotente e validação de modelo funcionam. A **execução**
-não: nenhuma simulação concluiu desde 16/09/2026.
+**Estado da execução no serviço (23/09/2026).** Autenticação, catálogo, upload,
+criação, repetição idempotente, validação de modelo **e execução** funcionam. De 19/09 a
+23/09 nenhuma simulação concluiu:
 
 | Data | Tipo | Resultado |
 | --- | --- | --- |
 | 16/09 | design_day e annual | 3 execuções `succeeded` (2,0 s a 24,9 s) |
-| 19/09 a 22/09 | annual e design_day | 8 execuções `failed`, em 6 modelos diferentes |
+| 19/09 a 23/09 | annual e design_day | todas `failed`, em modelos de origens diferentes |
 
-As falhas têm sempre a mesma assinatura: `attempts: 3`, ~30 s a 90 s,
+A assinatura era sempre a mesma: `attempts: 3`,
 `failure_reason: "tentativas esgotadas: a execução falhou repetidamente"`,
-`err_available: false`, `entries: []`, `fatal: null` e **zero artefatos**
-(`expected_total: 0`, `complete: true`). Sem `.err` e sem artefato, o EnergyPlus
-não chegou a escrever nada — a falha está antes do motor.
+`err_available: false`, `entries: []`, `fatal: null` e **zero artefatos**.
 
-O modelo gerado por este aplicativo **passa** em `POST /v1/models/{id}/validate`
-(`{"valido": true, "erros": []}`), e o mesmo modelo falha tanto em `annual`
-quanto em `design_day`. Como modelos de origens diferentes também falham desde
-19/09, o indício é de regressão no serviço, não no epJSON gerado aqui. Enquanto
-nada executa, não é possível descartar um problema latente no modelo.
-Investigação registrada na T001; acompanhamento na T016 do backlog.
+**A causa estava no serviço, antes do motor** (T016): a imagem de contêiner do EnergyPlus era
+removida toda madrugada por uma rotina de limpeza do servidor, e o processo de simulação não
+tinha permissão para baixá-la de volta. A criação do contêiner falhava em menos de um
+segundo, e o serviço reportava `motor_indisponivel`. **O EnergyPlus nunca chegou a rodar**,
+e é por isso que não havia `.err`. O epJSON gerado aqui passava — e continua passando — em
+`POST /v1/models/{id}/validate`.
+
+**Como reconhecer se voltar:** falha em menos de um segundo por tentativa,
+`duracao_segundos: 0.0` e nenhum artefato, **em qualquer modelo**. Isso é o serviço, não o
+epJSON. Um epJSON inválido chega ao motor e deixa `.err` com `Severe`/`Fatal`.
+
+O conserto foi aplicado na instância e ainda precisa ir para o repositório do serviço (T022).
+O download de artefato é um defeito separado, de assinatura de URL (T021).
 
 ### Dashboards de resultados
 
