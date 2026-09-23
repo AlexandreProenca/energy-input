@@ -81,7 +81,8 @@ export const rotuloDoMedidor = (nome: string) =>
 export const corDoMedidor = (nome: string) =>
   MEDIDORES.find((m) => m.nome === nome)?.cor ?? '#94a3b8';
 
-const api = () => new SimulationApi(useSimulationStore.getState().token);
+// Sem chave: o proxy (Vite em desenvolvimento, nginx no contêiner) a injeta do ambiente — T027.
+const api = () => new SimulationApi();
 
 /**
  * Carga em curso, para que a mais nova assuma o lugar da anterior.

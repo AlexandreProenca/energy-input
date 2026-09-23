@@ -49,6 +49,11 @@ export const isSeriesExpired = (e: unknown): boolean => e instanceof SimulationA
 export const seriesCandidates = (e: unknown): SeriesCandidate[] =>
   e instanceof SimulationApiError && e.status === 422 ? parseSeriesCandidates(e.problem) : [];
 export class SimulationApi {
+  /**
+   * `token` existe só para scripts em Node que falam direto com o serviço
+   * (`scripts/capture-results-fixtures.ts`). O app no navegador nunca o passa: a chave fica no
+   * ambiente do servidor, e o proxy a injeta (T027, ADR-0003).
+   */
   constructor(private token = '', private base = '/simulation-api/v1') {}
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     let response: Response;
@@ -66,7 +71,9 @@ export class SimulationApi {
     if (!response.ok) {
       const body = (await response.json().catch(() => ({}))) as ApiProblem;
       const fields = Array.isArray(body.errors) ? body.errors.map((e: { field?: string; message?: string }) => `${e.field ?? ''}: ${e.message ?? ''}`).join('; ') : '';
-      const message = response.status === 401 ? 'Credencial ausente, inválida ou expirada. Configure a conexão novamente.'
+      // A chave vem do ambiente do servidor desde a T027: 401 quer dizer que ela não foi
+      // configurada, está errada ou expirou — e a correção é lá, não na interface.
+      const message = response.status === 401 ? 'A chave da API de simulação não está configurada no servidor, ou foi recusada. Defina SIMULATION_API_TOKEN no ambiente do servidor — no .env.local, para npm run dev e docker compose — e reinicie.'
         : response.status === 410 ? 'A série horária desta simulação expirou. O resumo permanente continua disponível.'
         : typeof body.detail === 'string' ? body.detail : `A API recusou a solicitação (HTTP ${response.status}).`;
       // O corpo inteiro viaja junto: achatá-lo na mensagem perderia as candidatas do 422,

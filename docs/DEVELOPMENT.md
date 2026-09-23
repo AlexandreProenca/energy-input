@@ -90,13 +90,24 @@ All variants (1–3 floors, all presets, per-facade windows, setbacks, year-wrap
 Build multi-stage: `node:20-alpine` gera o `dist/` (schema + typecheck + build do Vite), servido depois por `nginx:1.27-alpine`. A imagem final não carrega Node nem `node_modules` — só os arquivos estáticos e o nginx (~56 MB).
 
 ```bash
-docker compose up --build       # http://localhost:8080
+docker compose up --build       # http://localhost:8080, com a chave do .env.local
 # ou, sem compose:
 docker build -t energy-input .
-docker run -p 8080:80 energy-input
+docker run -p 127.0.0.1:8080:80 -e SIMULATION_API_TOKEN=… energy-input
 ```
 
-Não há variáveis de ambiente nem backend: é um SPA 100% estático, e o schema do EnergyPlus é gerado dentro da imagem a partir de `schema/26.1/Energy+.schema.epJSON` (por isso esse arquivo vendorizado precisa estar no contexto de build). `docker/nginx.conf` cuida de gzip, cache longo e imutável para `/assets/*` (nomes com hash do Vite), cache curto com revalidação para `/schema/*` e `no-cache` para `index.html`, além de um fallback de SPA (`try_files … /index.html`) — hoje sem uso real, já que não há roteamento client-side, mas inofensivo e já pronto caso isso mude.
+**Variáveis de ambiente** (T027, ADR-0003) — lidas na inicialização por
+`docker/entrypoint.d/15-chave-da-simulacao.sh`, nunca embutidas na imagem:
+
+| Variável | Para quê |
+| --- | --- |
+| `SIMULATION_API_TOKEN` | chave da API de simulação; sem ela o serviço responde 401 |
+| `SIMULATION_TOKEN_HOSTS` | hosts, além de localhost, que recebem a chave. **Todo visitante desses hosts simula na conta do dono da chave** |
+
+A porta é publicada só em `127.0.0.1`. Chave com caracteres fora de `[A-Za-z0-9._~+/=-]` impede o
+contêiner de subir, porque quebraria a configuração do nginx.
+
+Não há backend: é um SPA estático atrás de um nginx que também faz o proxy da API, e o schema do EnergyPlus é gerado dentro da imagem a partir de `schema/26.1/Energy+.schema.epJSON` (por isso esse arquivo vendorizado precisa estar no contexto de build). `docker/nginx.conf` cuida de gzip, cache longo e imutável para `/assets/*` (nomes com hash do Vite), cache curto com revalidação para `/schema/*` e `no-cache` para `index.html`, além de um fallback de SPA (`try_files … /index.html`) — hoje sem uso real, já que não há roteamento client-side, mas inofensivo e já pronto caso isso mude.
 
 Para atualizar a versão do EnergyPlus na imagem, rode `npm run fetch-schema -- vXX.Y.0` localmente (grava em `schema/<versão>/`) antes do build — o Dockerfile não busca nada da rede.
 
@@ -283,13 +294,20 @@ ou upload EPW com licença declarada. `design_day` dispensa EPW. Os resultados
 incluem summary, errors, logs e artifacts. Um erro em um desses recursos não
 esconde os demais. Também é possível consultar uma execução pelo ID.
 
-Desenvolvimento: copie `.env.example` para `.env.local` e configure
-`SIMULATION_API_TOKEN`. O middleware Vite usa essa credencial apenas em
-requisições locais (loopback e Host localhost/127.0.0.1), recusa origens
-cruzadas e nunca a inclui no bundle. Não use `VITE_` para segredos. Na versão
-Docker/nginx, o usuário informa Bearer no painel (somente memória); o proxy
-não tem credencial compartilhada. Um futuro login de aplicação poderá
-substituir esse campo. O segredo não entra no autosave nem em sessionStorage.
+**A chave da API vem do ambiente do servidor** (T027,
+[ADR-0003](adr/0003-chave-da-api-no-ambiente-do-servidor.md)). Copie `.env.example` para
+`.env.local` e configure `SIMULATION_API_TOKEN`: o `npm run dev` e o `docker compose up` leem o
+mesmo arquivo. A interface não pede credencial. Os dois proxies — o middleware do Vite e o nginx
+do contêiner — fazem as mesmas coisas:
+
+- injetam a chave só em pedido para `localhost`/`127.0.0.1` (no contêiner, também para os hosts
+  de `SIMULATION_TOKEN_HOSTS`), o que barra *DNS rebinding*;
+- recusam rota fora da lista de `scripts/simulationRoutes.ts` (404), método fora de GET/POST
+  (405) e pedido de outra origem (403). O mapa do nginx é **gerado** dessa lista
+  (`npm run nginx-routes`) e um teste reprova se divergir.
+
+Nunca use `VITE_` para segredos: o Vite embute essas variáveis no bundle. O CI roda o build com
+uma chave falsa no ambiente e reprova se ela aparecer no `dist/`.
 
 O proxy `/simulation-api/v1` elimina a dependência de CORS no serviço. Em
 downloads, transforma o 302 em `{download_url}`; o navegador abre o link

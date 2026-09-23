@@ -8,7 +8,7 @@ beforeEach(() => {
   vi.useFakeTimers(); vi.stubGlobal('crypto', { randomUUID });
   const values = new Map<string, string>();
   vi.stubGlobal('sessionStorage', { setItem: (k: string, v: string) => values.set(k, v), getItem: (k: string) => values.get(k) ?? null, removeItem: (k: string) => values.delete(k) });
-  store.setState({ token: 'private-token', busy: false, attempt: undefined, simulation: undefined, error: undefined, summary: undefined, diagnostics: undefined, artifacts: undefined });
+  store.setState({ busy: false, attempt: undefined, simulation: undefined, error: undefined, summary: undefined, diagnostics: undefined, artifacts: undefined });
   document.getState().reset({ Building: { Original: {} } }, 'original.epJSON');
   vi.spyOn(SimulationApi.prototype, 'uploadModel').mockResolvedValue({ id: 'mdl-original', versao: { id: 'mv-original', versao_do_motor: '26.1.0' } });
   vi.spyOn(SimulationApi.prototype, 'logs').mockResolvedValue({ status: 'succeeded', attempts: 1, events: [], err_available: true });
@@ -30,7 +30,10 @@ describe('ciclo de vida da simulação', () => {
     expect(create.mock.calls[1][1]).toBe(original.key);
     expect(store.getState().simulation?.status).toBe('succeeded');
     expect(document.getState().doc.Building.Editado).toEqual({});
-    expect(sessionStorage.getItem('energy-input:simulation:v1')).not.toContain('private-token');
+    // A interface não guarda credencial nenhuma desde a T027: a chave vem do ambiente do
+    // servidor. Nem no estado, nem no que vai para o sessionStorage.
+    expect('token' in store.getState()).toBe(false);
+    expect(sessionStorage.getItem('energy-input:simulation:v1') ?? '').not.toMatch(/token|authorization|bearer/i);
   });
   it('consulta sequencialmente e para ao chegar a um estado terminal', async () => {
     vi.spyOn(SimulationApi.prototype, 'create').mockResolvedValue(sim('queued'));

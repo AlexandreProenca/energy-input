@@ -12,6 +12,22 @@ describe('cliente da API de simulação', () => {
     const file = (init.body as FormData).get('file') as File;
     expect(file.name.toLowerCase()).toBe('modelo.epjson'); expect(await file.text()).toBe('{"Building":{}}');
   });
+  it('sem chave, o navegador não manda autorização — o proxy a injeta do ambiente (T027)', async () => {
+    // É o caminho do app desde a T027: a chave mora em SIMULATION_API_TOKEN, no servidor, e o
+    // cliente é construído sem ela. Um cabeçalho vindo do navegador seria sinal de que alguma
+    // credencial voltou a passar pela interface.
+    const fetch = vi.fn(async () => Response.json({ engines: [] })); vi.stubGlobal('fetch', fetch);
+    await new SimulationApi().engines();
+    const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(new Headers(init.headers).has('Authorization')).toBe(false);
+  });
+
+  it('o 401 diz onde configurar a chave, e não pede para digitá-la', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ detail: 'x' }, { status: 401 })));
+    const erro = await new SimulationApi().engines().catch((e) => e);
+    expect(erro.message).toContain('SIMULATION_API_TOKEN');
+    expect(erro.message).not.toMatch(/digite|informe a chave|configure a conexão/i);
+  });
   it('preserva chave idempotente e versão imutável ao retomar a mesma requisição', async () => {
     const fetch = vi.fn(async () => Response.json({ id: 'sim-test', status: 'queued' })); vi.stubGlobal('fetch', fetch);
     const api = new SimulationApi();
@@ -29,7 +45,10 @@ describe('cliente da API de simulação', () => {
   });
   it('explica 401 e falha de rede sem expor credenciais', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })));
-    await expect(new SimulationApi('segredo').engines()).rejects.toThrow('Credencial ausente');
+    // A mensagem mudou na T027 (a chave vem do ambiente do servidor); o que este teste
+    // protege continua: a credencial nunca aparece na mensagem.
+    await expect(new SimulationApi('segredo').engines()).rejects.toThrow('SIMULATION_API_TOKEN');
+    await expect(new SimulationApi('segredo').engines()).rejects.not.toThrow('segredo');
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('segredo'); }));
     await expect(new SimulationApi('segredo').engines()).rejects.toBeInstanceOf(SimulationApiError);
     await expect(new SimulationApi('segredo').engines()).rejects.not.toThrow('segredo');

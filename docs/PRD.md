@@ -320,7 +320,7 @@ O produto permite alternar livremente entre o Assistente, o Editor 3D e o Modo E
    - Interface de diálogo completa com abas de Configuração, Progresso, Diagnósticos e Artefatos.
 
 2. **Fluxo de Integração RESTful (`https://homolog.ee.dev.br/v1`):**
-   - **Autenticação:** Suporte a token Bearer (configurado via `.env.local` em desenvolvimento local ou informado pelo usuário no modal em produção — armazenado apenas em memória de sessão).
+   - **Autenticação:** Token Bearer vindo da variável de ambiente `SIMULATION_API_TOKEN`, injetado pelo proxy do servidor — o do Vite em desenvolvimento e o do contêiner em produção. A interface não pede credencial.
    - **Catálogo de Motores:** Consulta a `/engines` para selecionar versões compatíveis do EnergyPlus (ex.: 26.1.0).
    - **Upload de Modelo:** Envio multipart (`file`) para `/models`, obtendo o identificador do modelo e versão.
    - **Despacho de Simulação:** Requisição `POST /simulations` com o `versao.id`, `engine_id`, `weather_id` (ou upload de EPW) e cabeçalho de proteção `Idempotency-Key`.
@@ -363,7 +363,7 @@ Quarto item do cabeçalho, carregado sob demanda. **Lê** resultados de uma exec
 ### 5.3 Segurança e Privacidade
 
 - **Privacidade por Padrão:** Nenhum arquivo epJSON criado ou aberto pelo usuário é transmitido para servidores de terceiros a menos que o usuário clique explicitamente em "Simular modelo".
-- **Isolamento de Credenciais:** Tokens de API informados no navegador residem estritamente em memória volátil e nunca são salvos em `localStorage` nem transmitidos em logs analíticos.
+- **Isolamento de Credenciais:** A chave da API de simulação existe só no ambiente do servidor (`SIMULATION_API_TOKEN`, no proxy de desenvolvimento e no contêiner). O navegador nunca a recebe nem a digita, e ela nunca vai para o bundle nem para logs ([ADR-0003](adr/0003-chave-da-api-no-ambiente-do-servidor.md)).
 - **Proxy Seguro:** Proxy reverso local no Vite e no Nginx elimina necessidades de CORS e oculta URLs sensíveis.
 
 ### 5.4 Confiabilidade e Tolerância a Falhas

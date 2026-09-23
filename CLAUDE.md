@@ -54,8 +54,10 @@ SIMULATION_ID=sim_… npx tsx scripts/capture-results-fixtures.ts  # recaptura a
 ## Arquitetura
 
 SPA 100% client-side (React 18 + TS + Vite 6 + Zustand + Tailwind). Não há backend: o único
-componente de servidor é o proxy de desenvolvimento em `scripts/simulationProxy.ts`, plugin
-Vite que encaminha `/simulation-api/v1/*` para `https://homolog.ee.dev.br`.
+componente de servidor é o proxy `/simulation-api/v1/*` → `https://homolog.ee.dev.br` —
+`scripts/simulationProxy.ts` (plugin Vite) em desenvolvimento e `docker/nginx.conf` no contêiner.
+Os dois injetam a chave do ambiente e usam a mesma lista de rotas
+(`scripts/simulationRoutes.ts`; o mapa do nginx é gerado por `npm run nginx-routes`).
 
 **Uma única fonte da verdade reativa:** o documento epJSON em `store/documentStore.ts`
 (com undo/redo e coalescência de 800 ms). Três modos de edição escrevem no mesmo documento —
@@ -139,9 +141,11 @@ Alias `@/` → `src/`.
 - **`schema/<versão>/Energy+.schema.epJSON` é vendorizado do release oficial do EnergyPlus e
   nunca é editado à mão.** Use `npm run fetch-schema`; o derivado servido é gerado por
   `npm run schema`.
-- **Nenhum segredo no bundle.** `SIMULATION_API_TOKEN` existe apenas em `.env.local` para o
-  proxy Vite em loopback — nunca com prefixo `VITE_`. Credenciais digitadas pelo usuário ficam
-  só em memória volátil, jamais em `localStorage`/`sessionStorage`.
+- **Nenhum segredo no bundle.** `SIMULATION_API_TOKEN` existe só no ambiente do servidor — o do
+  proxy Vite (`.env.local`) e o do contêiner —, nunca com prefixo `VITE_`, nunca no bundle nem no
+  contexto de build. A interface não pede credencial. Proxy que injeta a chave recusa rota fora
+  da lista, método fora de GET/POST e outra origem, e só a entrega a localhost ou a hosts
+  declarados (ADR-0003).
 - **Marca:** o produto é **Energy Input** ("Arquivos epJSON para EnergyPlus"). Nunca
   "EnergyPlus API" nem a marca do EnergyPlus como nome próprio.
 - **Doc de tarefa concluída em `docs/tasks/` é histórico** — não reescreva para refletir o presente.

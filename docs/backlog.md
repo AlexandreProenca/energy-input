@@ -95,7 +95,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T024 | As janelas desenhadas pelo usuário acompanham o vidro do assistente — **ADR** | T023 |
 | [x] | T025 | Painéis de temperatura e desconforto com mais de uma zona | T010 |
 | [x] | T026 | O assistente em sete páginas | — |
-| [ ] | T027 | Chave da API por variável de ambiente, também no contêiner — **ADR** | — |
+| [x] | T027 | Chave da API por variável de ambiente, também no contêiner — **ADR** | — |
 | [ ] | T028 | Acompanhamento da simulação e "Analisar resultados" | T027 |
 | [x] | T029 | Revisão por IA reprovava com a resposta cortada pelo limite de tokens | T020 |
 | [x] | T030 | Revisão por IA: escape inválido e diagnóstico que distingue as causas | T029 |
@@ -637,13 +637,16 @@ Pedido do dono do produto por um fluxo com menos etapas: projeto e clima, materi
 climatização passam a dividir página. As **respostas** continuam por etapa — só a navegação foi
 agrupada —, e a sessão salva numa etapa que deixou de ser página volta na página que a mostra.
 
-#### T027 · Chave da API por variável de ambiente, também no contêiner
+#### T027 · Chave da API por variável de ambiente, também no contêiner — **concluída**
 
-A chave da API de simulação deixa de ser digitada na interface: vem de `SIMULATION_API_TOKEN`, no
-servidor de desenvolvimento **e no contêiner de produção**. Nunca no bundle. Como o proxy de
-produção repassa qualquer rota, a injeção no servidor exige levar para o nginx a lista de rotas
-permitidas que o proxy de desenvolvimento já tem, e ligar o deploy local só em `127.0.0.1`. Muda a
-regra do AGENTS.md §7 sobre onde o token pode existir — **ADR**.
+Entregue em [`docs/tasks/T027-chave-por-variavel-de-ambiente.md`](tasks/T027-chave-por-variavel-de-ambiente.md),
+com o [ADR-0003](adr/0003-chave-da-api-no-ambiente-do-servidor.md).
+
+A chave vem de `SIMULATION_API_TOKEN`, no ambiente do servidor — do Vite e do contêiner —, e a
+interface não a pede mais. Com a chave no servidor, **a assimetria da T002 deixou de ser segura**:
+o nginx passou a ter as defesas do proxy de desenvolvimento (lista de rotas gerada da mesma fonte,
+GET/POST, recusa de outra origem, chave só para localhost). O `.env.local` entrava no cache de
+build do Docker, e deixou de entrar.
 
 #### T028 · Acompanhamento da simulação e "Analisar resultados"
 

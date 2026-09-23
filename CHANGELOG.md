@@ -8,6 +8,13 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Alterado
 
+- **A chave da API de simulação vem da variável de ambiente `SIMULATION_API_TOKEN`**, também no
+  contêiner (`docker compose up` lê o mesmo `.env.local` do `npm run dev`). O diálogo de
+  simulação não pede mais credencial. O proxy do contêiner passou a recusar rota fora da lista,
+  método fora de GET/POST e pedido de outra origem, e só entrega a chave a `localhost`; o deploy
+  local escuta só em `127.0.0.1`. [ADR-0003](docs/adr/0003-chave-da-api-no-ambiente-do-servidor.md).
+  (`Refs: T027`)
+
 - **O assistente tem 7 páginas em vez de 10**: projeto e clima, materiais e janelas, uso e
   climatização passam a dividir página. As respostas não mudam, e uma sessão salva numa etapa que
   deixou de ser página volta na página que a mostra. (`Refs: T026`)
@@ -20,6 +27,8 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- O `.env.local`, com a chave da API, entrava no cache de build do Docker: o `.dockerignore` não
+  o excluía. A imagem final e o bundle nunca o levaram. (`Refs: T027`)
 - A revisão por IA do PR reprovava com "formato inválido" quando a resposta do modelo era cortada
   pelo limite de tokens. Agora o corte é identificado e diagnosticado, o limite subiu de 3 500
   para 8 000 e o prompt pede concisão. (`Refs: T029`)
