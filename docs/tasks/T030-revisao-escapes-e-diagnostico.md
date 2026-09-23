@@ -63,25 +63,25 @@ e trata a causa mais provável que sobrou.
   dependeria de ele estar certo em todo texto válido, e não há ganho nisso.
 
 - **O diagnóstico não repete conteúdo.** A mensagem do V8 para token inesperado cita um trecho do
-  texto (`Unexpected token 'x', "…" is not valid JSON`); o trecho depois de `, "` sai. Nome de
-  chave é esquema, não conteúdo, mas ainda assim um nome fora de `[A-Za-z_]{1,40}` aparece como
-  `<chave>`.
+  texto, e o tipo do erro é **escolhido de uma lista fixa** (`tipoDoErro`), nunca copiado da
+  mensagem; o que a lista não conhece sai como "erro de sintaxe não reconhecido". Nome de chave é
+  esquema, não conteúdo, mas ainda assim um nome fora de `[A-Za-z_]{1,40}` aparece como `<chave>`.
 
 ---
 
 ## 4. Alterações realizadas
 
-- `scripts/aiReview/parse.ts`: `repararEscapes`, `diagnoseResponse`; `parseReview` repara quando
+- `scripts/aiReview/parse.ts`: `repararEscapes`, `diagnoseResponse`, `tipoDoErro`; `parseReview` repara quando
   a resposta não decodifica.
 - `scripts/aiReview/run.ts`: o diagnóstico novo no caminho de formato inválido.
-- `scripts/aiReview/__tests__/parse.test.ts`: +8 testes.
+- `scripts/aiReview/__tests__/parse.test.ts`: +10 testes.
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 370 testes (eram 362; +8 nesta tarefa)
+- [x] `npm test` — 372 testes (eram 362; +10 nesta tarefa, 2 da revisão do PR)
 - [x] `npm run build`
 - [x] **A resposta com a regex citada é lida**, com a evidência igual ao texto que o modelo quis
       escrever, também com prosa em volta.
@@ -96,6 +96,19 @@ e trata a causa mais provável que sobrou.
 
 ---
 
+## 5.1 Revisão do PR
+
+Quatro achados. **Um aceito**, um virou teste, dois declinados:
+
+| Achado | Veredito |
+|---|---|
+| O corte da mensagem do `JSON.parse` na primeira aspa ainda pode vazar em versão do Node que cite o trecho sem aspas | **aceito** — o tipo do erro passou a sair de uma lista fixa (`tipoDoErro`), e não da mensagem. Nenhum formato, presente ou futuro, leva conteúdo ao log. Teste com mensagens simuladas, inclusive uma sem aspas e uma desconhecida |
+| `repararEscapes` não rastreia se está dentro de string e poderia mudar a estrutura | **teste acrescentado, sem mudança** — fora de string a barra já é erro de sintaxe, e dobrada continua sendo; o reparo não tem como tornar decodificável um documento de estrutura diferente. O teste prova isso |
+| `\u1234` que o modelo quis como barra literal decodifica como U+1234 | **declinado** — é um escape válido de JSON, e o JSON diz o que ele significa. Adivinhar outra intenção seria reparar o que não está quebrado; caminhos como `C:\users` já são dobrados, porque `s` não é hexadecimal |
+| A varredura de candidatos usa o texto reparado | **declinado** — é de propósito, e é o teste "lê também quando há prosa em volta": sem isso a revisão com regex citada e prosa em volta continuaria reprovando |
+
+---
+
 ## 6. Observações / armadilhas para tarefas futuras
 
 **Um diagnóstico que não distingue as causas convida a adivinhar.** "forma: objeto, 8714
@@ -106,5 +119,6 @@ separa decodifica/não decodifica, onde o erro ocorre e se o reparo resolveria.
 **A mensagem de erro do `JSON.parse` muda com a versão do Node, e o teste de vazamento pegou
 isso.** O primeiro corte procurava `, "` — a forma do Node 18 que rodou localmente. O CI roda Node
 20, que cita o trecho como `, ..."…"`, e o marcador vazou no log do teste. O corte passou a ser no
-primeiro apóstrofo ou aspa, conferido nas três versões. No Node 20, "Unexpected token" nem traz a
+primeiro apóstrofo ou aspa, conferido nas três versões — e, na revisão do PR, trocado por uma
+lista fixa de tipos, que não depende de formato nenhum. No Node 20, "Unexpected token" nem traz a
 posição; "Bad escaped character", o caso desta tarefa, traz.

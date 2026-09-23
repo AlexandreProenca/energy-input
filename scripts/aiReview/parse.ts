@@ -223,6 +223,37 @@ export function describeShape(bruto: string): string {
 }
 
 /**
+ * Tipos de erro do `JSON.parse` que o diagnóstico sabe nomear, do V8 do Node 18 ao 22.
+ * A família "Expected …" (Node 20+) cita pontuação, por isso vira um nome só.
+ */
+const TIPOS_DE_ERRO: ReadonlyArray<[RegExp, string]> = [
+  [/^Bad escaped character/, 'Bad escaped character'],
+  [/^Bad control character/, 'Bad control character'],
+  [/^Bad Unicode escape/, 'Bad Unicode escape'],
+  [/^Unterminated string/, 'Unterminated string'],
+  [/^Unexpected end of JSON input/, 'Unexpected end of JSON input'],
+  [/^Unexpected non-whitespace character after JSON/, 'Unexpected non-whitespace character after JSON'],
+  [/^Unexpected token/, 'Unexpected token'],
+  [/^Unexpected number/, 'Unexpected number'],
+  [/^Unexpected string/, 'Unexpected string'],
+  [/^Expected /, 'Expected (pontuação ausente)'],
+];
+
+/**
+ * O tipo do erro de sintaxe, **escolhido de uma lista fixa**, nunca copiado da mensagem.
+ *
+ * A mensagem do V8 às vezes cita um trecho do texto, e a forma muda entre versões do Node: o
+ * Node 18 escreve `Unexpected token s in JSON…`, o 20 `Unexpected token 's', ..."trecho"... is
+ * not valid JSON`. Um corte na primeira aspa já vazou uma vez (T030, §6). Com a lista, nenhum
+ * formato de mensagem — presente ou futuro — leva conteúdo ao log; o que ela não conhece sai
+ * como "erro de sintaxe não reconhecido".
+ */
+export function tipoDoErro(mensagem: string): string {
+  for (const [padrao, nome] of TIPOS_DE_ERRO) if (padrao.test(mensagem)) return nome;
+  return 'erro de sintaxe não reconhecido';
+}
+
+/**
  * Por que a resposta não foi lida — sem repetir nada do conteúdo (T030).
  *
  * `describeShape` dizia só a forma e o tamanho, e isso não bastou: duas falhas seguidas no PR #24
@@ -244,13 +275,9 @@ export function diagnoseResponse(bruto: string): string {
       partes.push(`JSON válido; chaves de topo: ${chaves.join(', ') || 'nenhuma'}`);
     }
   } catch (e) {
-    // A mensagem do V8 às vezes cita um trecho do texto, e a forma muda entre versões do Node
-    // (`Unexpected token 's', ..."summary": se"... is not valid JSON` no 20). Corta-se no
-    // primeiro apóstrofo ou aspa: fica só o tipo do erro, e a posição vem à parte.
     const mensagem = e instanceof Error ? e.message : String(e);
     const posicao = /at position (\d+)/.exec(mensagem)?.[1];
-    const tipo = mensagem.split(/['"]/)[0].replace(/ in JSON at position \d+.*$/s, '').replace(/[\s,.]+$/, '').slice(0, 80);
-    partes.push(`JSON inválido: ${tipo}${posicao ? ` na posição ${posicao}` : ''}`);
+    partes.push(`JSON inválido: ${tipoDoErro(mensagem)}${posicao ? ` na posição ${posicao}` : ''}`);
     if (decodifica(repararEscapes(texto)) !== undefined) partes.push('decodifica depois de reparar escapes');
   }
   return partes.join('; ');
