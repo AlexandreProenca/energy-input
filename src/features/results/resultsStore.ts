@@ -180,7 +180,12 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
         // Abre a primeira zona em vez de esperar a escolha. Parado no seletor, os dois
         // painéis diriam "esta execução não registrou a temperatura operativa" — falso, e
         // o mesmo tipo de defeito da T008. A troca continua no seletor.
-        return get().carregarTemperaturas(zonas[0]);
+        //
+        // A guarda não depende de `parseSeriesCandidates` descartar chave vazia: chamar com
+        // `''` cairia de novo no ramo sem zona, e a garantia de outra função é tudo que
+        // separaria isto de um laço infinito.
+        const primeira = zonas[0];
+        if (primeira) return get().carregarTemperaturas(primeira);
       }
       // 422 sem candidatas, na consulta sem zona, é "a execução não registrou a variável":
       // ausência esperada, como nos medidores, e o painel explica em vez de acusar erro.

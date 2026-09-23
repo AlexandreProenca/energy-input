@@ -142,6 +142,10 @@ Verificado no navegador, alternando entre a execução de duas zonas e uma de zo
 T010): em cada troca, seletor, zona, extremos e aviso corretos, e os valores da zona única
 (12,7 °C / 32 °C) iguais aos registrados na T010.
 
+Numa segunda rodada, **aceita** uma guarda de uma linha: a abertura automática só chama a si
+mesma com uma zona não vazia. Hoje o parser já garante isso, mas o custo de a garantia de outra
+função falhar seria um laço infinito. Os outros dois achados repetiam os já declinados.
+
 **Uma armadilha minha no teste:** dentro do `describe`, a zona B se chamava `B` e sombreava a
 execução `B` do arquivo; o teste pôs uma *string* no lugar da simulação e falhou pelo motivo
 errado. Só o isolamento do caso mostrou.
