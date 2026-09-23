@@ -8,6 +8,13 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- **Nenhuma simulação concluía no serviço de homologação desde 19/09.** A causa estava no
+  serviço, antes do motor: a imagem do EnergyPlus era removida toda madrugada por uma rotina
+  de limpeza, e o processo de simulação não tinha permissão para baixá-la de volta. O motor
+  nunca chegou a rodar — daí a ausência de `.err`. **O epJSON deste aplicativo nunca foi o
+  problema.** Corrigido no serviço; nenhum código deste repositório mudou. O conserto ainda
+  precisa ir para o repositório do serviço (T022). (`Refs: T016`)
+
 - O painel de desconforto classificava as horas contra os setpoints do **assistente**, e não
   os do modelo aberto. Como o painel abre execução de outra sessão pelo identificador e o
   Modo Especialista desliga o vínculo com o assistente, as horas podiam ser contadas contra

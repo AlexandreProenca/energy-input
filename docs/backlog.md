@@ -85,10 +85,12 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T013 | `studyStore.ts` — acompanhamento do estudo | T012 |
 | [ ] | T014 | Montar cenários e criar o estudo | T013 |
 | [ ] | T015 | Tabela comparativa e gráfico do estudo | T014, T007 |
-| [ ] | T016 | Destravar a execução de simulações no serviço | — |
+| [x] | T016 | Destravar a execução de simulações no serviço | — |
 | [x] | T018 | Revisão por IA no PR cai quando o modelo devolve JSON com sobra | — |
 | [x] | T019 | Revisão por IA podia passar em silêncio sem ter lido a revisão | T018 |
 | [x] | T020 | Tirar a revisão por IA do heredoc e pô-la em módulo testado | T019 |
+| [ ] | T021 | Download de artefato devolve URL interna em HTTP (serviço) | — |
+| [ ] | T022 | Tornar durável o conserto do motor, no repositório do serviço | T016 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -399,36 +401,25 @@ comparativas por coluna escolhida, reutilizando a T007.
 
 ### Fora do épico, aberta pela T001
 
-#### T016 · Destravar a execução de simulações no serviço
+#### T016 · Destravar a execução de simulações no serviço — **concluída**
 
-**Sintoma.** Nenhuma simulação conclui desde 19/09/2026: 8 falhas em 6 modelos diferentes,
-todas com `attempts: 3`, ~30 s a 90 s,
-`failure_reason: "tentativas esgotadas: a execução falhou repetidamente"`,
-`err_available: false`, `entries: []`, `fatal: null` e **zero artefatos**
-(`expected_total: 0`, `complete: true`). As três execuções de 16/09 concluíram normalmente
-(2,0 s a 24,9 s).
+Entregue em [`docs/tasks/T016-motor-indisponivel.md`](tasks/T016-motor-indisponivel.md).
 
-**O que já foi descartado (T001):** o modelo gerado por este aplicativo passa em
-`POST /v1/models/{id}/validate` (`{"valido": true, "erros": []}`); falha igual em `annual`
-e em `design_day`; e modelos de outras origens também falham no mesmo período. Sem `.err`
-e sem artefato nenhum, o EnergyPlus não chegou a escrever — a falha está **antes do motor**.
+**A imagem do motor era apagada toda madrugada por uma rotina de limpeza do servidor, e o
+processo de simulação não tinha permissão para baixá-la de volta.** A criação do contêiner
+falhava em menos de um segundo, o serviço reportava `motor_indisponivel` e desistia depois de
+três tentativas. **O EnergyPlus nunca chegou a rodar** — daí a ausência de `.err` e de
+artefato. **O epJSON deste aplicativo nunca foi o problema.**
 
-**Segundo sintoma, mesma origem: o download de artefato também nunca funcionou.**
-`GET /v1/simulations/{id}/artifacts/{nome}` responde 302 com
-`location: http://minio:9000/simulation-homolog/...` — **HTTP simples e hostname interno do
-Docker**, inalcançável de fora. O proxy recusa corretamente
-(`{"detail":"Link de download inválido."}`), porque entregar ao navegador um link não-TLS
-vazaria o conteúdo do modelo em texto claro. O serviço precisa assinar a URL com o host
-público e `https`.
+O processo de simulação passou a ter acesso de leitura ao registro de imagens. **Falta
+observar a primeira simulação depois de uma limpeza real.**
 
-**Próximo passo:** é uma questão para quem opera o serviço, não para este repositório.
-Levar a tabela de execuções e a assinatura da falha. `GET /v1/usage` exigiria escopo
-`admin:billing`, então cota não pôde ser descartada daqui.
+**O "segundo sintoma" não tinha a mesma origem.** O download de artefato é assinatura de URL,
+sem relação com o motor. Virou a T021.
 
-**Por que não bloqueia o épico E1:** os resultados de 16/09 continuam disponíveis e não
-expirados, e deles saíram as fixtures. As tarefas T002–T015 trabalham sobre fixture. O que
-fica pendente é a verificação de ponta a ponta com execução nova — e a confirmação de se os
-modelos deste app produzem `simple_ashrae_55_not_comfortable` (T005).
+**Destrava o que dependia de execução nova:** a verificação de ponta a ponta dos painéis com
+um modelo gerado por este aplicativo, o 422 de ambiguidade de chave (exige execução
+multizona) e a política de retenção do `.sql`.
 
 #### T017 · CI: o teste de contêiner não exercita o proxy — **concluída junto da T002**
 
@@ -556,3 +547,28 @@ de 297 para 143 linhas. O precedente é a T002, que fez o mesmo com o allowlist 
   na mesma resposta não são distinguíveis com confiança, e adivinhar errado faz o portão dar
   verde anunciando zero achado.
 - Se outro workflow ganhar lógica não trivial, o lugar dela é `scripts/`.
+
+#### T021 · Download de artefato devolve URL interna em HTTP (serviço)
+
+Separada da T016, onde estava registrada como "segundo sintoma, mesma origem". O
+diagnóstico da T016 mostrou que a origem é outra.
+
+`GET /v1/simulations/{id}/artifacts/{nome}` responde `302` para uma URL com **HTTP simples
+e hostname interno**, inalcançável de fora. O proxy deste aplicativo recusa corretamente
+(`{"detail":"Link de download inválido."}`), porque entregar ao navegador um link não-TLS
+exporia o conteúdo do modelo. **O proxy está certo; quem precisa mudar é o serviço**,
+assinando a URL com o host público e `https`.
+
+**Não é deste repositório.** Fica aqui para não se perder, como a T016 ficou.
+
+#### T022 · Tornar durável o conserto do motor, no repositório do serviço
+
+Desdobramento da T016. **O conserto foi aplicado na instância, e o próximo deploy do serviço
+o desfaz.** Precisa ir para o repositório do serviço, junto com três pendências que o
+diagnóstico levantou: manter a credencial em dia quando o token do registro for trocado,
+estender o mesmo acesso à API, que usa a mesma imagem, e impedir que a limpeza noturna apague
+a imagem do motor.
+
+**O detalhe está no repositório do serviço, que é privado.** Este repositório é público e não
+deve descrever a infraestrutura dele.
+
