@@ -11,7 +11,7 @@ paramos, no que já esbarramos, e o que não deve ser redescoberto do zero.
 
 ## Onde paramos
 
-**Versão 0.1.0, 311 testes.** Quatro modos: Assistente (10 etapas), Editor 3D e
+**Versão 0.1.0, 331 testes.** Quatro modos: Assistente (10 etapas), Editor 3D e
 Especialista **escrevem** no documento; **Resultados** lê execuções concluídas e não
 escreve.
 
@@ -25,7 +25,7 @@ escreve.
 | 3 — Estudos | T012–T015 | **próxima**. A T012 escreve o ADR do estudo paramétrico |
 
 Fora das fases: **T016** (execução no serviço), **T017–T020** (CI e revisão por IA) e **T023**
-(referência órfã no sync) concluídas; **T021** e **T022** são do serviço, não deste
+(referência órfã no sync) e **T024** (janelas acompanham o vidro) concluídas; **T021** e **T022** são do serviço, não deste
 repositório, e ficam no backlog para não se perderem.
 
 **A execução no serviço voltou a funcionar em 23/09** (T016), e a primeira simulação chegou ao
@@ -119,8 +119,17 @@ com `invalid construction_name` (T023). Agora o sync **retém** o que ainda é r
 seguindo a cadeia até o material. Qualquer mudança nessa remoção precisa passar em
 `referencias.test.ts`, que reproduz a sequência real.
 
-**As janelas do usuário não acompanham o vidro escolhido no assistente**, de propósito: objeto
-do usuário não é tocado. Veja "Perguntas em aberto".
+### As janelas desenhadas pelo usuário acompanham o vidro do assistente
+
+Decisão do dono do produto (T024, [ADR-0002](docs/adr/0002-janelas-acompanham-o-vidro-do-assistente.md)):
+trocar o vidro no assistente troca o de **todas** as janelas; ajuste pontual é no Modo
+Especialista. É a **única** exceção à regra de que o assistente não altera objeto do usuário, e é
+estreita: só janelas cuja construção é o vidro que o assistente oferecia, e **sempre com aviso**.
+Uma janela com outro vidro é escolha específica e fica.
+
+**Não generalize** para parede, laje ou material sem decisão própria — o ADR e o AGENTS.md §7
+limitam a exceção ao vidro. E lembre que **o preset Apartamento troca o vidro sozinho**: escolha
+do assistente com efeito colateral em outra resposta é o que surpreende quem desenhou à mão.
 
 ### Endurecer validação exige medir antes
 
@@ -195,6 +204,7 @@ fazia isso e foi reescrita antes do commit.
 | Nenhuma simulação concluía no serviço (19/09 a 23/09) | T016 |
 | Trocar o vidro deixava janelas do Editor 3D sem construção (`invalid construction_name`) | T023 |
 | O diálogo de simulação deixava passar referência inexistente (era só aviso) | T023 |
+| Trocar o vidro no assistente deixava as janelas desenhadas com o vidro antigo | T024 |
 
 ---
 
@@ -207,9 +217,6 @@ modelos **gerados por este aplicativo**:
   motor funciona?** É o que falta para fechar a verificação da T016. A data prevista no doc da
   tarefa (23/09) estava errada: a imagem tinha sido rebaixada durante o diagnóstico e
   sobreviveu. A primeira limpeza que a pega é a de 24/09.
-- **Trocar o vidro no assistente deveria trocar também as janelas desenhadas pelo usuário?**
-  Hoje não troca, de propósito. É decisão de produto: perguntar na hora, ou oferecer "aplicar
-  também às janelas que você desenhou". Não é um ajuste silencioso no sync (T023).
 - **Retenção do `.sql`.** O contrato diz que `/results/timeseries` responde 410 depois de um
   prazo que não numera.
 - **Se `key_value: "*"` gera uma série por zona**, e como é o 422 de ambiguidade de chave.
