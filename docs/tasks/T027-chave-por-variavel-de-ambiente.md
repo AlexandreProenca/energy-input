@@ -175,6 +175,12 @@ do nginx não cobrem sub-recursos que o app usa, como `/models/{id}`" — foi co
 `api.ts`: todo caminho que o cliente chama está na lista, e `/models/{id}` não é chamado. O PR foi
 integrado com as checagens verdes e sem achado procedente em aberto.
 
+**Um defeito do CI apareceu nesse meio-tempo**, sem relação com a revisão: numa execução o serviço
+não respondeu ao runner em 30 s, e o passo reprovou com "respondeu 000000". O `|| echo 000` da
+T017 somava um segundo `000` ao que o curl já escreve, e o resultado não casava com o caso de
+serviço inacessível, que devia só avisar. Antes desta tarefa o passo aceitava qualquer código, e
+o defeito não aparecia; o `case` estrito da segunda rodada o expôs. Agora é `|| true`.
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras

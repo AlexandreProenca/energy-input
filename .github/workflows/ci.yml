@@ -122,8 +122,11 @@ jobs:
           # handshake TLS com o upstream aconteceu. O portão NÃO é o código de status, e sim
           # a ausência do erro de verificação no log: um 502 por serviço fora do ar
           # reprovaria o CI por motivo alheio a este repositório.
+          # Sem resposta, o próprio curl escreve 000; o `|| true` só impede que a falha dele
+          # encerre o passo. Um `|| echo 000` aqui somava outro 000 ("000000"), que não casava
+          # com o caso de serviço inacessível e reprovava o CI por instabilidade da rede.
           codigo="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
-            http://127.0.0.1:8080/simulation-api/v1/engines || echo 000)"
+            http://127.0.0.1:8080/simulation-api/v1/engines || true)"
           echo "GET /simulation-api/v1/engines -> HTTP $codigo"
 
           if docker logs energy-input-ci 2>&1 | grep -q "SSL certificate verify error"; then
