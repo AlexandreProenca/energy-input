@@ -108,6 +108,9 @@ Alias `@/` → `src/`.
   pelo assistente. Objeto que o usuário editou e o assistente quer mudar vira **conflito**
   (`ConflictDialog`), nunca sobrescrita silenciosa; objeto criado pelo usuário nunca é removido.
   Qualquer mudança em geradores mexe indiretamente aqui — rode `wizardSync.test.ts`.
+  **Remoção nunca deixa referência órfã:** objeto do assistente que deixou de ser gerado
+  fica (em `retained`) enquanto algo que permanece apontar para ele, seguindo a cadeia
+  (T023, `referencias.test.ts`).
 - **`core/geometry/sharedSurfaces.ts`** pareia faces por contorno em coordenadas globais
   (origem + rotação da zona, tolerância 0,1 mm, normais opostas). O epJSON mantém **duas**
   `BuildingSurface:Detailed` recíprocas; o 3D mostra **um** elemento físico. Editar construção,

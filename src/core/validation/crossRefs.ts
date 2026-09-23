@@ -28,6 +28,27 @@ export function namesForLists(
   return out;
 }
 
+/**
+ * Listas de referência em que um alvo inexistente é **sempre** defeito — o EnergyPlus para
+ * com `Fatal` e nunca cria esses objetos por conta própria.
+ *
+ * Nas outras, ele sintetiza nomes: termostato expandido por `ZoneList`
+ * (`"SPACE3-1 AllControlledZones Thermostat"`), espaço criado automaticamente
+ * (`"Zone 5-Remainder"`), equipamento por zona. O índice do schema não tem como conhecê-los,
+ * então lá a falta segue como aviso — tratá-la como erro impediria de simular modelos que
+ * rodam.
+ *
+ * **A lista é medida, não suposta.** Nos 752 exemplos oficiais do EnergyPlus 26.1 convertidos
+ * para epJSON — todos rodam no motor —, estas listas somam 56 893 referências e nenhuma sem
+ * alvo. A regra "campo obrigatório vira erro", tentada antes, acusava 25 desses arquivos.
+ * Cobre a cadeia que derrubou uma simulação real: janela → construção → material → esquadria.
+ */
+export const LISTAS_SEM_SINTESE: ReadonlySet<string> = new Set([
+  'ConstructionNames',
+  'MaterialName',
+  'WindowFrameAndDividerNames',
+]);
+
 /** Best-effort check that reference fields point at existing objects. */
 export function checkCrossReferences(doc: EpJsonDocument, index: SchemaIndex): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
@@ -47,7 +68,12 @@ export function checkCrossReferences(doc: EpJsonDocument, index: SchemaIndex): V
     if (spec.kind === 'reference') {
       const names = lookup(spec.lists);
       if (names && !names.has(value.toUpperCase())) {
-        issues.push({ ...base, severity: 'warning', source: 'reference', message: `"${value}" não corresponde a nenhum objeto existente (${spec.lists.join(', ')})` });
+        issues.push({
+          ...base,
+          severity: spec.lists.some((l) => LISTAS_SEM_SINTESE.has(l)) ? 'error' : 'warning',
+          source: 'reference',
+          message: `"${value}" não corresponde a nenhum objeto existente (${spec.lists.join(', ')})`,
+        });
       }
     } else if (spec.kind === 'classReference') {
       const types = spec.lists.flatMap((l) => index.classMembersOf(l)).map((t) => t.toUpperCase());

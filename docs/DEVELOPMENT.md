@@ -55,6 +55,12 @@ scripts/           build-schema, fetch-schema, build-climates, eplus-check
 
 Every wizard answer has a default and the whole document is regenerated on each change. `planWizardSync` applies it without clobbering manual edits: it stores a hash of every object the wizard wrote; objects the user changed are kept silently when the wizard's version didn't change, and raise a "Manter / Sobrescrever" dialog when it did. Objects the user created are never removed. Opening or creating a file in Expert mode unlinks the wizard.
 
+**A removal never leaves a dangling reference (T023).** When a wizard object stops being generated — the glazing construction after the user picks another glass, for instance — it is removed only if nothing that stays still points at it. Otherwise it is *retained*, together with whatever it references in turn (the construction keeps its glazing material), and stays owned by the wizard so a later sync removes it once nothing points at it anymore. The reference scan is schema-agnostic (every string value, upper-cased, since EnergyPlus compares names case-insensitively): a coincidental match only keeps an object that could have gone; a missed reference is a `Fatal` in EnergyPlus.
+
+This is what broke a real simulation: windows placed in the 3D editor with the wizard's glass kept pointing at a construction the sync had deleted after the glass was changed, and EnergyPlus stopped at `GetSurfaceData` with `invalid construction_name`.
+
+**Dangling references in the window chain are errors, not warnings.** `checkCrossReferences` is best-effort, because EnergyPlus synthesizes some names the schema index cannot know (ZoneList-expanded thermostats, auto-created spaces), so a missing target is a warning by default. For `ConstructionNames`, `MaterialName` and `WindowFrameAndDividerNames` it is an error, and the simulation dialog blocks on it. The list is measured: across the 752 EnergyPlus 26.1 example files converted to epJSON (all of which run), those lists carry 56 893 references and none dangling, while "any required field is an error" flagged 25 valid files. Widening the list requires measuring again.
+
 ## Editor 3D
 
 Third mode, editing the same document. `core/geometry/model.ts` reads `BuildingSurface:Detailed` (and `Wall/RoofCeiling/Floor:Detailed`) plus `FenestrationSurface:Detailed`, building a frame per surface (u right, v up, n outward, seen from outside) so rectangles and openings get 2D coordinates. Writes honor `GlobalGeometryRules` (start corner, direction, Relative/World).
