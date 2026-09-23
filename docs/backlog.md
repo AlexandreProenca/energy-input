@@ -97,6 +97,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T026 | O assistente em sete páginas | — |
 | [x] | T027 | Chave da API por variável de ambiente, também no contêiner — **ADR** | — |
 | [ ] | T028 | Acompanhamento da simulação e "Analisar resultados" | T027 |
+| [x] | T029 | Revisão por IA reprovava com a resposta cortada pelo limite de tokens | T020 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -651,4 +652,12 @@ build do Docker, e deixou de entrar.
 Ao simular, o diálogo passa a mostrar o acompanhamento da execução, e ao concluir oferece
 **Analisar resultados**, que leva ao modo Resultados. Sem o campo de chave (T027), o diálogo já abre
 conectado.
+
+#### T029 · Revisão por IA reprovava com a resposta cortada pelo limite de tokens — **concluída**
+
+Entregue em [`docs/tasks/T029-revisao-cortada-por-limite.md`](tasks/T029-revisao-cortada-por-limite.md).
+No PR #24 o check obrigatório reprovou com "formato inválido" e só `forma: objeto, 8714
+caracteres` no log — muito provavelmente um JSON cortado pelo `max_tokens` de 3 500. O
+`finish_reason` passou a ser lido e resposta cortada tem diagnóstico próprio; o limite subiu
+para 8 000 e o prompt pede no máximo cinco achados. O portão não afrouxou.
 

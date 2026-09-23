@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ReviewFormatError, describeShape, parseReview } from './parse';
 import { renderReport } from './report';
+import { lerResposta } from './resposta';
 import { SYSTEM_PROMPT, buildUserPrompt } from './prompts';
 
 const ENDPOINT = 'https://api.deepseek.com/chat/completions';
@@ -44,6 +45,7 @@ async function main(): Promise<void> {
 
   let texto: string;
   let bruto: string;
+  let cortada = false;
   try {
     const resposta = await fetch(ENDPOINT, {
       method: 'POST',
@@ -56,7 +58,9 @@ async function main(): Promise<void> {
         ],
         temperature: 0.2,
         response_format: { type: 'json_object' },
-        max_tokens: 3500,
+        // O `deepseek-chat` aceita até 8 192 tokens de saída. Com 3 500, uma revisão longa de um
+        // PR grande parava no meio do JSON (T029) — 8 000 deixa folga para o limite do modelo.
+        max_tokens: 8000,
       }),
       signal: AbortSignal.timeout(120_000),
     });
@@ -78,10 +82,17 @@ async function main(): Promise<void> {
   // seria reportado como "falha na comunicação" — e a comunicação funcionou; o que falhou
   // foi o formato. Diagnóstico trocado custa a próxima investigação inteira.
   try {
-    const corpo = JSON.parse(texto) as { choices?: { message?: { content?: string } }[] };
-    bruto = corpo.choices?.[0]?.message?.content ?? '';
+    const resposta = lerResposta(JSON.parse(texto));
+    bruto = resposta.bruto;
+    cortada = resposta.cortada;
   } catch {
     morrer('A API DeepSeek respondeu com um corpo que não é JSON.', describeShape(texto));
+  }
+  // Resposta cortada tem diagnóstico próprio: sem isto, o parser a recusava como "formato
+  // inválido", e o log não dizia que o problema era o limite de tokens. Fora do `try` de
+  // cima, cujo `catch` trocaria esta mensagem pela de corpo não-JSON se `morrer` lançasse.
+  if (cortada) {
+    morrer('A resposta do modelo foi cortada pelo limite de tokens (max_tokens) antes de terminar o JSON.', describeShape(bruto));
   }
 
   try {

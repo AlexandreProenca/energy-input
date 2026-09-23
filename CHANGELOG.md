@@ -29,6 +29,9 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 - O `.env.local`, com a chave da API, entrava no cache de build do Docker: o `.dockerignore` não
   o excluía. A imagem final e o bundle nunca o levaram. (`Refs: T027`)
+- A revisão por IA do PR reprovava com "formato inválido" quando a resposta do modelo era cortada
+  pelo limite de tokens. Agora o corte é identificado e diagnosticado, o limite subiu de 3 500
+  para 8 000 e o prompt pede concisão. (`Refs: T029`)
 
 - **Com mais de uma zona, o painel de temperatura abria com erro.** O seletor oferecia a mensagem
   inteira do serviço (`candidata: key='…'`) como nome de zona, e escolhê-la pedia uma série que não

@@ -33,7 +33,11 @@ export const SYSTEM_PROMPT = [
   '{"findings":[{"severity":"critical|high|medium|low","confidence":0.0,',
   '"path":"arquivo","line":1,"title":"título curto","failure_scenario":"como falha",',
   '"evidence":"evidência concreta","suggested_test":"teste demonstrativo"}],',
-  '"summary":"conclusão concisa"}. Use findings=[] quando não houver defeitos.',
+  '"summary":"conclusão concisa"}. Use findings=[] quando não houver defeitos.\n',
+  // O relatório mostra no máximo cinco achados, e uma resposta longa demais é cortada no meio
+  // do JSON pelo limite de tokens (T029). Pedir concisão protege o próprio formato.
+  'Reporte NO MÁXIMO 5 achados, os mais graves. Seja conciso: cada campo de texto com até ',
+  '400 caracteres, e o resumo com até 800.',
 ].join('');
 
 export interface ContextoDoPr {
