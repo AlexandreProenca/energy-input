@@ -20,6 +20,10 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- A revisão por IA do PR reprovava com "formato inválido" quando a resposta do modelo era cortada
+  pelo limite de tokens. Agora o corte é identificado e diagnosticado, o limite subiu de 3 500
+  para 8 000 e o prompt pede concisão. (`Refs: T029`)
+
 - **Com mais de uma zona, o painel de temperatura abria com erro.** O seletor oferecia a mensagem
   inteira do serviço (`candidata: key='…'`) como nome de zona, e escolhê-la pedia uma série que não
   existe. Agora o painel abre a primeira zona sozinho, oferece as outras, e o de desconforto diz de
