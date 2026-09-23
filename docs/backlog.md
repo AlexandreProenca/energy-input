@@ -91,6 +91,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T020 | Tirar a revisão por IA do heredoc e pô-la em módulo testado | T019 |
 | [ ] | T021 | Download de artefato devolve URL interna em HTTP (serviço) | — |
 | [ ] | T022 | Tornar durável o conserto do motor, no repositório do serviço | T016 |
+| [x] | T023 | O sync do assistente não pode deixar referência órfã | — |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -412,7 +413,10 @@ três tentativas. **O EnergyPlus nunca chegou a rodar** — daí a ausência de 
 artefato. **O epJSON deste aplicativo nunca foi o problema.**
 
 O processo de simulação passou a ter acesso de leitura ao registro de imagens. **Falta
-observar a primeira simulação depois de uma limpeza real.**
+observar a primeira simulação depois de uma limpeza que de fato apague a imagem.** A data
+prevista no doc da tarefa (limpeza de 23/09) estava errada: a imagem tinha sido rebaixada
+durante o diagnóstico, tinha menos de 24 h no disco e sobreviveu. A primeira simulação de 23/09
+a encontrou presente, rodou até o motor e revelou a T023. A limpeza que a pega é a de 24/09.
 
 **O "segundo sintoma" não tinha a mesma origem.** O download de artefato é assinatura de URL,
 sem relação com o motor. Virou a T021.
@@ -571,4 +575,21 @@ a imagem do motor.
 
 **O detalhe está no repositório do serviço, que é privado.** Este repositório é público e não
 deve descrever a infraestrutura dele.
+
+#### T023 · O sync do assistente não pode deixar referência órfã — **concluída**
+
+Entregue em [`docs/tasks/T023-referencia-preservada-no-sync.md`](tasks/T023-referencia-preservada-no-sync.md).
+**Era o defeito do aplicativo que a falha do serviço (T016) escondia:** sem motor, não havia
+`.err` para mostrá-lo.
+
+Janelas desenhadas no Editor 3D com o vidro do assistente ficavam apontando para uma construção
+que o `planWizardSync` apagava quando o usuário trocava o vidro. O EnergyPlus parava em
+`GetSurfaceData` com `invalid construction_name`. Agora o sync retém o objeto do assistente
+que algo ainda referencia, seguindo a cadeia até o material de vidro. E a validação trata
+referência inexistente em construção, material e esquadria como **erro**, o que bloqueia o
+envio — medido contra os 752 exemplos oficiais do EnergyPlus sem nenhum falso positivo.
+
+**Documentos já quebrados não se consertam sozinhos:** o diálogo mostra os erros e aponta as
+janelas. **Decisão de produto em aberto:** as janelas desenhadas pelo usuário não acompanham o
+vidro escolhido no assistente.
 

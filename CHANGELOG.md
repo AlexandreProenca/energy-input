@@ -8,6 +8,15 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- **Trocar o vidro no assistente deixava as janelas desenhadas no Editor 3D apontando para uma
+  construção apagada**, e o EnergyPlus parava com `invalid construction_name`. O sync do
+  assistente agora mantém o objeto que algo ainda referencia, seguindo a cadeia até o
+  material de vidro. (`Refs: T023`)
+- **O diálogo de simulação deixava passar referência inexistente**: ela era sempre aviso, e o
+  diálogo só bloqueia erro. Construção, material e esquadria inexistentes agora são erro. A
+  lista foi medida contra os 752 exemplos oficiais do EnergyPlus, e não tem nenhum falso
+  positivo; a regra mais ampla que foi tentada antes bloquearia 25 deles. (`Refs: T023`)
+
 - **Nenhuma simulação concluía no serviço de homologação desde 19/09.** A causa estava no
   serviço, antes do motor: a imagem do EnergyPlus era removida toda madrugada por uma rotina
   de limpeza, e o processo de simulação não tinha permissão para baixá-la de volta. O motor
