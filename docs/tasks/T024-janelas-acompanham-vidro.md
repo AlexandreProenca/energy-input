@@ -81,7 +81,7 @@ desenhou? A resposta do dono do produto:
 - `src/generators/windows.ts`: `glazingFrameName`.
 - `docs/adr/0002-janelas-acompanham-o-vidro-do-assistente.md`: novo.
 - `AGENTS.md` §7, `docs/PRD.md` §4.4, `docs/DEVELOPMENT.md`, `CLAUDE.md`: a exceção.
-- Testes: `src/core/sync/__tests__/acompanharVidro.test.ts` (13) e
+- Testes: `src/core/sync/__tests__/acompanharVidro.test.ts` (14) e
   `src/store/__tests__/janelasAcompanhamVidro.test.ts` (6).
 
 ---
@@ -89,7 +89,7 @@ desenhou? A resposta do dono do produto:
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 330 testes (eram 311; +19 nesta tarefa)
+- [x] `npm test` — 331 testes (eram 311; +20 nesta tarefa, 1 vindo da revisão do PR)
 - [x] `npm run build`
 - [x] **Pelo caminho do incidente, no store real:** janela desenhada com vidro simples, preset
       Apartamento → a janela vai para PVC 4 mm com a esquadria, o vidro antigo sai, nenhuma
@@ -103,6 +103,20 @@ desenhou? A resposta do dono do produto:
       lido só para diagnóstico e não entrou no repositório.
 - [x] No navegador: trocar para o preset Apartamento mantém o arquivo válido, sem erro no
       console.
+
+---
+
+## 5.1 Revisão do PR
+
+Cinco achados: **um aceito em parte**, quatro declinados, cada um com o motivo.
+
+| Achado | Veredito |
+|---|---|
+| `Window` e `GlazedDoor` "não existem no epJSON" | **falso**: existem no schema 26.1, com `construction_name` e `frame_and_divider_name`, e aparecem em 10 e 1 dos exemplos oficiais. **Procede a outra metade**: não tinham teste. Teste acrescentado |
+| O reparo pode reescrever "em silêncio" uma janela com vidro do catálogo apagado de propósito | **declinado**: não é silencioso (há aviso, e o desfazer reverte), e uma janela sem vidro válido não simula, então não há escolha a preservar. É exatamente "todas acompanham o vidro do assistente" |
+| O aviso pode expor o identificador cru de um vidro inválido | **declinado**: inalcançável. Com `glazingId` inválido, `acompanhar` não muda nada, e sem mudança não há aviso |
+| Cópia rasa em `acompanharVidro` | **declinado**: a própria revisão conclui que é seguro — só mudam campos de texto de topo |
+| Pendência de conflito somada a nova mudança | **declinado**: `base` segue a mesma lógica que o fluxo de pendência já usa; enquanto há pendência, o documento reflete `pending.previous` |
 
 ---
 

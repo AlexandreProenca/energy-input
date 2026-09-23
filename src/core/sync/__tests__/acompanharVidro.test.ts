@@ -39,6 +39,22 @@ describe('a janela que segue o vidro do assistente', () => {
     expect(r.doc[F].J.construction_name).toBe(PVC.construcao);
   });
 
+  it('inclui os objetos de abertura simplificados (`Window`, `GlazedDoor`)', () => {
+    // O Editor 3D só escreve FenestrationSurface:Detailed, mas os simplificados existem no
+    // schema 26.1 e aparecem em 11 dos exemplos oficiais do EnergyPlus — chegam pelo
+    // Especialista. Não têm `surface_type`. Veio da revisão do PR, que os dava por
+    // inexistentes; a parte certa do achado é que não tinham teste.
+    const doc: EpJsonDocument = {
+      Construction: { [SIMPLES.construcao]: { outside_layer: 'x' } },
+      Window: { J: { construction_name: SIMPLES.construcao, building_surface_name: 'Parede' } },
+      GlazedDoor: { P: { construction_name: SIMPLES.construcao, building_surface_name: 'Parede' } },
+    };
+    const r = acompanharVidro(doc, {}, SIMPLES, PVC, CATALOGO);
+    expect(r.doc.Window.J).toMatchObject({ construction_name: PVC.construcao, frame_and_divider_name: PVC.esquadria });
+    expect(r.doc.GlazedDoor.P.construction_name).toBe(PVC.construcao);
+    expect(r.janelas.sort()).toEqual(['J', 'P']);
+  });
+
   it('inclui a porta de vidro', () => {
     const r = acompanharVidro(docCom({ P: janela(SIMPLES.construcao, { surface_type: 'GlassDoor' }) }), {}, SIMPLES, PVC, CATALOGO);
     expect(r.doc[F].P.construction_name).toBe(PVC.construcao);

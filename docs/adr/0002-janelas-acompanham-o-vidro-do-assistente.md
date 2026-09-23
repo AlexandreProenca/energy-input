@@ -80,7 +80,7 @@ assistente — incluindo o que causou o incidente.
 
 ## Verificação
 
-`src/core/sync/__tests__/acompanharVidro.test.ts` (13 testes) e
+`src/core/sync/__tests__/acompanharVidro.test.ts` (14 testes) e
 `src/store/__tests__/janelasAcompanhamVidro.test.ts` (6, pelo caminho do incidente: janela
 desenhada com vidro simples e preset Apartamento). Prova negativa: sem a integração no
 `wizardStore`, quatro dos testes do store reprovam. EnergyPlus 26.1 local: o caminho do
