@@ -11,7 +11,7 @@ paramos, no que já esbarramos, e o que não deve ser redescoberto do zero.
 
 ## Onde paramos
 
-**Versão 0.1.0, 297 testes.** Quatro modos: Assistente (10 etapas), Editor 3D e
+**Versão 0.1.0, 311 testes.** Quatro modos: Assistente (10 etapas), Editor 3D e
 Especialista **escrevem** no documento; **Resultados** lê execuções concluídas e não
 escreve.
 
@@ -24,12 +24,12 @@ escreve.
 | 2 — Modo Resultados | T006–T011 | **concluída**: os três painéis do PRD §9 |
 | 3 — Estudos | T012–T015 | **próxima**. A T012 escreve o ADR do estudo paramétrico |
 
-Fora das fases: **T016** (execução no serviço) concluída; **T017–T020** (CI e revisão por IA)
-concluídas; **T021** e **T022** são do serviço, não deste repositório, e ficam no backlog para
-não se perderem.
+Fora das fases: **T016** (execução no serviço), **T017–T020** (CI e revisão por IA) e **T023**
+(referência órfã no sync) concluídas; **T021** e **T022** são do serviço, não deste
+repositório, e ficam no backlog para não se perderem.
 
-**A execução no serviço voltou a funcionar em 23/09** (T016). Falta observar a primeira
-simulação depois da limpeza noturna do servidor para dar a verificação por fechada.
+**A execução no serviço voltou a funcionar em 23/09** (T016), e a primeira simulação chegou ao
+motor e revelou um defeito **deste** aplicativo, corrigido na T023.
 
 Decisões de rumo, já fechadas com o usuário:
 
@@ -110,11 +110,35 @@ o `Interior Lighting` da API (T011). O fallback que devolve o nome original faz 
 parecer "ainda não traduzido". `rotulos.test.ts` percorre a fixture real — é o padrão a
 seguir.
 
+### O sync do assistente não pode deixar referência órfã
+
+O `planWizardSync` apagava o objeto do assistente que deixava de ser gerado sem olhar quem
+ainda apontava para ele. Janelas desenhadas no Editor 3D com o vidro do assistente ficavam
+apontando para uma construção apagada quando o usuário trocava o vidro, e o EnergyPlus parava
+com `invalid construction_name` (T023). Agora o sync **retém** o que ainda é referenciado,
+seguindo a cadeia até o material. Qualquer mudança nessa remoção precisa passar em
+`referencias.test.ts`, que reproduz a sequência real.
+
+**As janelas do usuário não acompanham o vidro escolhido no assistente**, de propósito: objeto
+do usuário não é tocado. Veja "Perguntas em aberto".
+
+### Endurecer validação exige medir antes
+
+A checagem de referências é "best-effort", porque o EnergyPlus sintetiza nomes que o índice do
+schema não conhece (termostato expandido por `ZoneList`, espaço criado automaticamente). "Campo
+obrigatório sem alvo é erro" parecia óbvio e bloquearia **25 dos 752** exemplos oficiais do
+EnergyPlus, que rodam. Só viram erro as listas medidas sem nenhum falso positivo
+(`LISTAS_SEM_SINTESE`: construção, material, esquadria). **O corpus de medição** são os exemplos
+oficiais convertidos com o `ConvertInputFormat` do próprio EnergyPlus — 752 arquivos em cerca de
+10 segundos. Ampliar a lista exige medir de novo.
+
 ### Falha em menos de um segundo, em qualquer modelo, é o serviço
 
 `duracao_segundos: 0.0`, zero artefatos e nenhum `.err` em modelos diferentes quer dizer que
 o motor nem rodou (T016). epJSON inválido chega ao motor e deixa `Severe`/`Fatal` no `.err`.
-Não investigue o epJSON antes de descartar o serviço.
+Não investigue o epJSON antes de descartar o serviço. **O inverso também vale:** com o serviço
+funcionando, `Severe`/`Fatal` no `.err` é do modelo, e a primeira execução depois da T016
+mostrou exatamente isso (T023).
 
 ### O allowlist do proxy é controle só de desenvolvimento
 
@@ -169,6 +193,8 @@ fazia isso e foi reescrita antes do commit.
 | Troca de execução no meio da carga travava o painel em "Lendo…" | T008 |
 | Revisão por IA caía com JSON seguido de texto, depois passava em silêncio | T018–T020 |
 | Nenhuma simulação concluía no serviço (19/09 a 23/09) | T016 |
+| Trocar o vidro deixava janelas do Editor 3D sem construção (`invalid construction_name`) | T023 |
+| O diálogo de simulação deixava passar referência inexistente (era só aviso) | T023 |
 
 ---
 
@@ -177,8 +203,13 @@ fazia isso e foi reescrita antes do commit.
 Com a execução destravada, as três primeiras podem ser respondidas com execuções novas de
 modelos **gerados por este aplicativo**:
 
-- **A primeira simulação depois da limpeza noturna do servidor funciona?** É o que falta
-  para fechar a verificação da T016.
+- **A primeira simulação depois de uma limpeza do servidor que de fato apague a imagem do
+  motor funciona?** É o que falta para fechar a verificação da T016. A data prevista no doc da
+  tarefa (23/09) estava errada: a imagem tinha sido rebaixada durante o diagnóstico e
+  sobreviveu. A primeira limpeza que a pega é a de 24/09.
+- **Trocar o vidro no assistente deveria trocar também as janelas desenhadas pelo usuário?**
+  Hoje não troca, de propósito. É decisão de produto: perguntar na hora, ou oferecer "aplicar
+  também às janelas que você desenhou". Não é um ajuste silencioso no sync (T023).
 - **Retenção do `.sql`.** O contrato diz que `/results/timeseries` responde 410 depois de um
   prazo que não numera.
 - **Se `key_value: "*"` gera uma série por zona**, e como é o 422 de ambiguidade de chave.
