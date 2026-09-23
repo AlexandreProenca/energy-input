@@ -132,10 +132,15 @@ jobs:
             exit 1
           fi
 
+          # Sem chave, o serviço responde 401 — e só ele: o nginx nunca produz 401 por conta
+          # própria. Qualquer outro código numa rota permitida quer dizer que o pedido não
+          # chegou ao upstream: 404 seria o `proxy_pass` ignorado (a revisão do PR #24 apontou
+          # que o passo aceitava qualquer código como sucesso), 403/405 uma recusa indevida.
           case "$codigo" in
+            401) echo "O pedido permitido atravessou as recusas e chegou ao serviço, com TLS verificado." ;;
             502) echo "::warning::502 sem erro de verificação TLS no log — provável indisponibilidade do serviço, não regressão do proxy." ;;
             000) echo "::warning::Sem resposta do proxy; serviço possivelmente inacessível a partir do runner." ;;
-            *) echo "O proxy alcançou o upstream e o TLS foi verificado." ;;
+            *) echo "::error::Rota permitida respondeu $codigo, e não 401: o pedido não chegou ao serviço."; exit 1 ;;
           esac
 
       - name: Verificar as defesas do proxy com a chave no servidor (T027)
@@ -176,12 +181,19 @@ jobs:
             echo "::error::o contêiner subiu com uma chave que injeta configuração"; exit 1
           fi
           docker logs energy-input-chave-ruim 2>&1 | grep -q "caracteres fora" || { echo "::error::a recusa não explicou o motivo"; exit 1; }
+          # `=` só vale no fim, como no b64token da RFC 6750.
+          docker run -d --name energy-input-chave-igual -e 'SIMULATION_API_TOKEN=abc=def' energy-input:local-test >/dev/null
+          sleep 3
+          if [ "$(docker inspect -f '{{.State.Running}}' energy-input-chave-igual)" = true ]; then
+            echo "::error::o contêiner aceitou '=' no meio da chave"; exit 1
+          fi
+          docker rm -f energy-input-chave-igual >/dev/null
           docker rm -f energy-input-chave-ruim >/dev/null
           echo "Defesas do proxy conferidas."
 
       - name: Limpar container
         if: always()
-        run: docker rm -f energy-input-ci energy-input-chave energy-input-chave-ruim || true
+        run: docker rm -f energy-input-ci energy-input-chave energy-input-chave-ruim energy-input-chave-igual || true
 
   publicar_imagem:
     name: Publicar imagem no GHCR

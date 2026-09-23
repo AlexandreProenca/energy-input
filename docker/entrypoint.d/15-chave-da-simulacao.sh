@@ -25,11 +25,10 @@ hosts="${SIMULATION_TOKEN_HOSTS:-}"
 # o arquivo — ou pior, injetariam configuração. O conjunto aceito é exatamente o `b64token` da
 # RFC 6750, que define o token Bearer: letras, dígitos e `-._~+/`, com `=` no fim. Um token fora
 # disso não é um Bearer válido.
-case "$token" in
-  *[!A-Za-z0-9._~+/=-]*)
-    echo "15-chave-da-simulacao: SIMULATION_API_TOKEN tem caracteres fora de [A-Za-z0-9._~+/=-]; o contêiner não sobe com ela." >&2
-    exit 1 ;;
-esac
+if [ -n "$token" ] && ! printf '%s' "$token" | grep -Eq '^[A-Za-z0-9._~+/-]+=*$'; then
+  echo "15-chave-da-simulacao: SIMULATION_API_TOKEN tem caracteres fora de [A-Za-z0-9._~+/-] (com '=' só no fim, como no b64token da RFC 6750); o contêiner não sobe com ela." >&2
+  exit 1
+fi
 for h in $hosts; do
   case "$h" in
     *[!A-Za-z0-9.-]*|"")

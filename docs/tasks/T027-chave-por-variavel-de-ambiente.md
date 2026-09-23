@@ -127,6 +127,19 @@ Cinco achados. **Dois aceitos**, três declinados — um deles refutado pelo tes
 | A mensagem do 401 cita só o `.env.local` | **aceito** — agora diz "no ambiente do servidor", com o `.env.local` como o caso do compose e do `npm run dev` |
 | `nginxPattern` não escapa `.` | **declinado** — a lista é de expressões regulares por contrato, a mesma nos dois proxies |
 
+Numa segunda rodada, **dois achados procedentes em parte**:
+
+- **O CI não provava que o caminho permitido chegava ao serviço.** O passo antigo tratava qualquer
+  código como "alcançou o upstream" — um `proxy_pass` ignorado, que dá 404, passaria. A alegação
+  de que os `if` anulam o `proxy_pass` segue refutada pelo 200 observado, mas a lacuna de teste
+  era real: agora, sem chave, **só 401** prova que o pedido chegou ao serviço (o nginx nunca
+  produz 401 sozinho), e qualquer outro código numa rota permitida reprova.
+- **A validação não era exatamente o `b64token`**, como o comentário afirmava: aceitava `=` no
+  meio. Agora é a gramática exata (`=` só no fim), com teste no CI. A chave real continua passando.
+
+Declinado: a origem sem porta contra o `Host` com porta — os navegadores omitem a porta padrão nos
+dois cabeçalhos e incluem a não padrão nos dois, então eles sempre casam.
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
