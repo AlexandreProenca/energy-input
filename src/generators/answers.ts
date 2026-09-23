@@ -88,6 +88,38 @@ export const WIZARD_STEPS = [
 ] as const;
 export type WizardStepId = (typeof WIZARD_STEPS)[number];
 
+/**
+ * As páginas do assistente: etapas de resposta agrupadas para um fluxo com menos cliques.
+ *
+ * `WIZARD_STEPS` continua sendo a unidade das **respostas** — é a chave dos fragmentos que o
+ * `compose.ts` gera e do que o `update` do `wizardStore` recebe. As páginas agrupam só a
+ * **navegação**: projeto com clima, materiais com janelas, uso com climatização. Cada página
+ * tem o id da primeira etapa que mostra, para que o id de uma página seja também um id de etapa.
+ */
+export const WIZARD_PAGES = ['project', 'runPeriod', 'geometry', 'envelope', 'loads', 'outputs', 'review'] as const;
+export type WizardPageId = (typeof WIZARD_PAGES)[number];
+
+/** Etapas de resposta mostradas em cada página, na ordem em que aparecem. */
+export const PAGE_STEPS: Record<WizardPageId, readonly WizardStepId[]> = {
+  project: ['project', 'location'],
+  runPeriod: ['runPeriod'],
+  geometry: ['geometry'],
+  envelope: ['envelope', 'windows'],
+  loads: ['loads', 'hvac'],
+  outputs: ['outputs'],
+  review: ['review'],
+};
+
+/**
+ * A página que mostra uma etapa. Aceita qualquer valor porque também normaliza o que vem do
+ * autosave: uma sessão parada em "Clima" — que deixou de ser página — volta em "Projeto e clima",
+ * e um valor desconhecido volta ao começo.
+ */
+export function pageOf(step: unknown): WizardPageId {
+  for (const page of WIZARD_PAGES) if ((PAGE_STEPS[page] as readonly unknown[]).includes(step)) return page;
+  return 'project';
+}
+
 export function defaultAnswers(): WizardAnswers {
   return {
     project: { buildingName: 'Meu edifício', northAxis: 0, terrain: 'Suburbs' },

@@ -27,7 +27,7 @@ Todo o aplicativo opera sobre uma **única fonte da verdade reativa**: o documen
 
 ```mermaid
 flowchart LR
-    A[Assistente Guiado\n10 etapas conceituais] <-->|Sincronização com planWizardSync| D[(Documento epJSON\nÚnica Fonte da Verdade)]
+    A[Assistente Guiado\n7 páginas] <-->|Sincronização com planWizardSync| D[(Documento epJSON\nÚnica Fonte da Verdade)]
     B[Editor 3D & Planta 2D\nThree.js + Elevação Vetorial] <-->|Manipulação Geométrica e Camadas| D
     C[Modo Especialista\n700+ objetos do Schema oficial] <-->|Formulários Dinâmicos & CodeMirror| D
     D -->|Execução Remota| S[API de Simulação\nhomolog.ee.dev.br]
@@ -37,20 +37,23 @@ flowchart LR
 
 ### 🪄 Modo 1: Assistente Guiado (Wizard)
 
-Conduz o usuário em 10 etapas lógicas, com geração procedural de objetos epJSON:
+Conduz o usuário em 7 páginas, com geração procedural de objetos epJSON. Três delas reúnem duas etapas de resposta cada, para um fluxo com menos cliques:
 
-1. **Projeto:** Nome, orientação solar (Norte 0–360°), tipo de terreno e controle de simulação.
-2. **Localização e Clima:** Cidades brasileiras pré-configuradas (zonas bioclimáticas NBR 15220-3, ASHRAE Design Days, temperaturas de solo amortecidas) ou upload de arquivos `.epw` / `.ddy`.
-3. **Período da Simulação:** Ano completo (com suporte a _year-wrapping_), intervalos de datas ou apenas dias de projeto.
-4. **Geometria:**
+1. **Projeto e clima**
+   - **Projeto:** Nome, orientação solar (Norte 0–360°), tipo de terreno e controle de simulação.
+   - **Localização e Clima:** Cidades brasileiras pré-configuradas (zonas bioclimáticas NBR 15220-3, ASHRAE Design Days, temperaturas de solo amortecidas) ou upload de arquivos `.epw` / `.ddy`.
+2. **Período da Simulação:** Ano completo (com suporte a _year-wrapping_), intervalos de datas ou apenas dias de projeto.
+3. **Geometria:**
    - **Bloco Retangular (_Shoebox_):** Dimensões $X \times Y$, número de pavimentos, pé-direito, lajes intermediárias e condições de contorno de piso/teto.
    - **Planta 2D por Ambientes:** Editor vetorial interativo com paleta de formas (retângulo, L, triângulo, hexágono), desenho livre com coordenadas em metros, validação topológica, cálculo automático de área/perímetro/volume e divisão automática de paredes compartilhadas em "T".
-5. **Materiais e Envoltória:** Presets habitacionais (**Casa** com alvenaria tradicional e **Apartamento** com blocos de 14 cm, lajes de 12 cm, forro de gesso e lajes de borda adiabáticas), com cálculo em tempo real de Transmitância ($U$) e Capacidade Térmica ($CT$).
-6. **Janelas e Esquadrias:** Taxa de abertura de fachada (WWR) por orientação e catálogo de vidros (simples, duplos, Low-E, esquadrias de PVC com `WindowProperty:FrameAndDivider`).
-7. **Uso do Edifício:** Presets de ocupação, iluminação, equipamentos e horários (`Schedule:Compact`).
-8. **Climatização (HVAC):** Modelagem de cargas com `ZoneHVAC:IdealLoadsAirSystem` e termostatos de duplo setpoint.
-9. **Resultados:** Seleção de variáveis e tabelas de saída (`Output:Table:SummaryReports` `AllSummary`, conforto térmico, etc.).
-10. **Revisão e Download:** Resumo visual, pré-visualização do JSON bruto, exportação `.epJSON` ou disparo direto para simulação na nuvem.
+4. **Materiais e janelas**
+   - **Materiais e Envoltória:** Presets habitacionais (**Casa** com alvenaria tradicional e **Apartamento** com blocos de 14 cm, lajes de 12 cm, forro de gesso e lajes de borda adiabáticas), com cálculo em tempo real de Transmitância ($U$) e Capacidade Térmica ($CT$).
+   - **Janelas e Esquadrias:** Taxa de abertura de fachada (WWR) por orientação e catálogo de vidros (simples, duplos, Low-E, esquadrias de PVC com `WindowProperty:FrameAndDivider`).
+5. **Uso e climatização**
+   - **Uso do Edifício:** Presets de ocupação, iluminação, equipamentos e horários (`Schedule:Compact`).
+   - **Climatização (HVAC):** Modelagem de cargas com `ZoneHVAC:IdealLoadsAirSystem` e termostatos de duplo setpoint.
+6. **Resultados:** Seleção de variáveis e tabelas de saída (`Output:Table:SummaryReports` `AllSummary`, conforto térmico, etc.).
+7. **Revisão e Download:** Resumo visual, pré-visualização do JSON bruto, exportação `.epJSON` ou disparo direto para simulação na nuvem.
 
 ### 🧊 Modo 2: Editor 3D e Geometria Paramétrica
 
@@ -133,7 +136,7 @@ energy-input/
 │   ├── templates/          # Catálogos desacoplados (climas, materiais, cargas, esquadrias)
 │   ├── store/              # Stores globais Zustand (documentStore, wizardStore, etc.)
 │   ├── features/           # Módulos de interface
-│   │   ├── wizard/         # 10 etapas do assistente, ilustrações SVG, conflitos
+│   │   ├── wizard/         # assistente (7 páginas), ilustrações SVG, conflitos
 │   │   ├── geometry/       # Editor 3D (Three.js/R3F), elevação e árvore de elementos
 │   │   ├── expert/         # Navegador de tipos, formulários dinâmicos e CodeMirror
 │   │   ├── simulation/     # Diálogo de envio à API, polling de status e artefatos

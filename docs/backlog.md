@@ -94,6 +94,9 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T023 | O sync do assistente não pode deixar referência órfã | — |
 | [x] | T024 | As janelas desenhadas pelo usuário acompanham o vidro do assistente — **ADR** | T023 |
 | [x] | T025 | Painéis de temperatura e desconforto com mais de uma zona | T010 |
+| [x] | T026 | O assistente em sete páginas | — |
+| [ ] | T027 | Chave da API por variável de ambiente, também no contêiner — **ADR** | — |
+| [ ] | T028 | Acompanhamento da simulação e "Analisar resultados" | T027 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -624,4 +627,25 @@ reais, capturados e anonimizados.
 O painel abre a primeira zona e oferece as outras; o de desconforto diz de qual zona são as
 horas. **Em aberto, como decisão de produto:** horas do edifício inteiro, que exigem escolher
 critério para agregar zonas.
+
+#### T026 · O assistente em sete páginas — **concluída**
+
+Entregue em [`docs/tasks/T026-assistente-em-sete-paginas.md`](tasks/T026-assistente-em-sete-paginas.md).
+Pedido do dono do produto por um fluxo com menos etapas: projeto e clima, materiais e janelas, uso e
+climatização passam a dividir página. As **respostas** continuam por etapa — só a navegação foi
+agrupada —, e a sessão salva numa etapa que deixou de ser página volta na página que a mostra.
+
+#### T027 · Chave da API por variável de ambiente, também no contêiner
+
+A chave da API de simulação deixa de ser digitada na interface: vem de `SIMULATION_API_TOKEN`, no
+servidor de desenvolvimento **e no contêiner de produção**. Nunca no bundle. Como o proxy de
+produção repassa qualquer rota, a injeção no servidor exige levar para o nginx a lista de rotas
+permitidas que o proxy de desenvolvimento já tem, e ligar o deploy local só em `127.0.0.1`. Muda a
+regra do AGENTS.md §7 sobre onde o token pode existir — **ADR**.
+
+#### T028 · Acompanhamento da simulação e "Analisar resultados"
+
+Ao simular, o diálogo passa a mostrar o acompanhamento da execução, e ao concluir oferece
+**Analisar resultados**, que leva ao modo Resultados. Sem o campo de chave (T027), o diálogo já abre
+conectado.
 

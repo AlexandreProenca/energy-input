@@ -11,7 +11,7 @@ import {
   Box,
   type LucideIcon,
 } from 'lucide-react';
-import type { WizardStepId } from '@/generators/answers';
+import { PAGE_STEPS, WIZARD_PAGES, type WizardPageId, type WizardStepId } from '@/generators/answers';
 
 export interface StepMeta {
   id: WizardStepId;
@@ -33,3 +33,24 @@ export const STEP_META: StepMeta[] = [
   { id: 'outputs', title: 'Resultados', short: 'Resultados', question: 'Quais resultados você quer receber da simulação?', icon: FileBarChart },
   { id: 'review', title: 'Revisão e download', short: 'Revisão', question: 'Tudo pronto! Confira o resumo e baixe seu arquivo.', icon: ClipboardCheck },
 ];
+
+export interface PageMeta extends Omit<StepMeta, 'id'> {
+  id: WizardPageId;
+  /** Etapas de resposta mostradas na página, na ordem. */
+  steps: readonly WizardStepId[];
+}
+
+/**
+ * Títulos e perguntas das páginas. Página de uma etapa só reaproveita o texto da etapa; as
+ * unidas têm pergunta própria, que cobre as duas.
+ */
+const UNIDAS: Partial<Record<WizardPageId, Pick<StepMeta, 'title' | 'short' | 'question'>>> = {
+  project: { title: 'Projeto e clima', short: 'Projeto', question: 'Como se chama o edifício, e em qual cidade ele fica?' },
+  envelope: { title: 'Materiais e janelas', short: 'Envoltória', question: 'Do que são feitas as paredes, e quanto das fachadas é de vidro?' },
+  loads: { title: 'Uso e climatização', short: 'Uso', question: 'Para que o edifício é usado, e qual temperatura ele deve manter?' },
+};
+
+export const PAGE_META: PageMeta[] = WIZARD_PAGES.map((id) => {
+  const etapa = STEP_META.find((m) => m.id === id)!;
+  return { ...etapa, ...UNIDAS[id], id, steps: PAGE_STEPS[id] };
+});

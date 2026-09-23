@@ -25,7 +25,7 @@ O **Energy Input** é uma aplicação web moderna (Single-Page Application — S
 
 O aplicativo une três níveis complementares de trabalho sobre o **mesmo documento epJSON reativo**:
 
-1. **Assistente Guiado (Modo Básico):** Conduz o usuário em 10 etapas intuitivas, abstraindo a complexidade de baixo nível e gerando modelos completos, válidos e prontos para simulação.
+1. **Assistente Guiado (Modo Básico):** Conduz o usuário em 7 páginas intuitivas, abstraindo a complexidade de baixo nível e gerando modelos completos, válidos e prontos para simulação.
 2. **Editor 3D Paramétrico (Modo Geometria):** Permite inspecionar a edificação em Three.js, editar graficamente e numericamente paredes, lajes, esquadrias e camadas de materiais construtivos com espessura real e cálculo térmico.
 3. **Editor Especialista (Modo Especialista):** Disponibiliza uma interface técnica orientada pelo JSON Schema oficial do EnergyPlus, com navegação pelos 700+ tipos de objetos, validação em tempo real e editor JSON sincronizado.
 4. **Módulo de Simulação em Nuvem:** Envio direto do modelo para execução na API de simulação (`homolog.ee.dev.br/v1`), com acompanhamento de progresso e download de artefatos.
@@ -77,7 +77,7 @@ Conforme as diretrizes de licenciamento do motor EnergyPlus:
 ```mermaid
 flowchart TD
     subgraph UI ["Interface do Usuário (UI)"]
-        W[Assistente Guiado - 10 Etapas]
+        W[Assistente Guiado - 7 páginas]
         G[Editor 3D & Planta 2D]
         E[Modo Especialista - Schema-Driven]
     end
@@ -125,9 +125,11 @@ flowchart TD
 
 ### 4.1 MODO 1: Assistente Guiado (Wizard)
 
+As dez etapas de resposta abaixo são apresentadas em **sete páginas**: projeto com clima, materiais com janelas, e uso com climatização dividem página (T026). As respostas continuam separadas por etapa — é o que o gerador consome —; só a navegação foi agrupada.
+
 O modo padrão guia o usuário para construir uma simulação térmica completa a partir de decisões conceituais de alto nível.
 
-#### Etapa 1 — Projeto
+#### Página 1 — Projeto
 
 - **Entradas:** Nome do edifício, orientação do eixo norte (0° a 360°), tipo de terreno (`Country`, `Suburbs`, `City`, `Ocean`, `Urban`).
 - **Objetos Gerados no epJSON:**
@@ -136,7 +138,7 @@ O modo padrão guia o usuário para construir uma simulação térmica completa 
   - `Timestep` (padrão de 6 passos por hora);
   - `HeatBalanceAlgorithm` (padrão Conduction Transfer Function — CTF).
 
-#### Etapa 2 — Localização e Clima
+#### Página 1 — Localização e Clima
 
 - **Entradas:** Seleção de cidades brasileiras pré-cadastradas ou upload de arquivo `.epw` / `.ddy`.
 - **Funcionalidades:**
@@ -148,14 +150,14 @@ O modo padrão guia o usuário para construir uma simulação térmica completa 
   - `SizingPeriod:DesignDay` (mínimo 2 dias de projeto típicos);
   - `Site:GroundTemperature:BuildingSurface`.
 
-#### Etapa 3 — Período da Simulação
+#### Página 2 — Período da Simulação
 
 - **Entradas:** Ano completo (padrão), período restrito por datas (dia/mês inicial e final) ou somente dias de projeto.
 - **Tratamento especial:** Suporte a virada de ano (year-wrapping).
 - **Objetos Gerados no epJSON:**
   - `RunPeriod`.
 
-#### Etapa 4 — Geometria
+#### Página 3 — Geometria
 
 O usuário pode optar por duas abordagens geométricas complementares:
 
@@ -181,7 +183,7 @@ O usuário pode optar por duas abordagens geométricas complementares:
   - `Zone` para cada ambiente e pavimento;
   - `BuildingSurface:Detailed` (paredes externas, paredes internas divididas e pareadas, pisos, lajes entre pavimentos e coberturas).
 
-#### Etapa 5 — Materiais e Envoltória
+#### Página 4 — Materiais e Envoltória
 
 - **Presets Especializados:**
   - **Casa (Padrão):** Alvenaria cerâmica tradicional rebocada, laje de concreto, piso sobre o solo e telhado cerâmico/fibrocimento.
@@ -191,7 +193,7 @@ O usuário pode optar por duas abordagens geométricas complementares:
   - `Material` (propriedades termofísicas completas: espessura, condutividade, densidade, calor específico, absortâncias térmica e solar);
   - `Construction` (composição ordenada das camadas do exterior para o interior).
 
-#### Etapa 6 — Janelas e Esquadrias
+#### Página 4 — Janelas e Esquadrias
 
 - **Entradas:** Percentual de abertura (Window-to-Wall Ratio — WWR) por fachada ou global; seleção de tecnologia de envidraçamento (Vidro Simples 3mm/6mm, Vidro Duplo Insulado, Vidro Duplo Low-E, Vidro Laminado com PVC).
 - **Objetos Gerados no epJSON:**
@@ -199,7 +201,7 @@ O usuário pode optar por duas abordagens geométricas complementares:
   - `WindowMaterial:SimpleGlazingSystem` ou `WindowMaterial:Glazing`;
   - `WindowProperty:FrameAndDivider` (quando aplicável).
 
-#### Etapa 7 — Uso do Edifício e Cargas Internas
+#### Página 5 — Uso do Edifício e Cargas Internas
 
 - **Entradas:** Finalidade do edifício (Residencial, Escritório Comercial, Sala de Aula, etc.), densidade de ocupação e perfis de uso.
 - **Objetos Gerados no epJSON:**
@@ -208,7 +210,7 @@ O usuário pode optar por duas abordagens geométricas complementares:
   - `ElectricEquipment` (cargas de plugue/eletrodomésticos em $W/m^2$);
   - `ScheduleTypeLimits` e `Schedule:Compact` (horários de ocupação, iluminação e equipamentos em dias de semana, sábados e domingos).
 
-#### Etapa 8 — Climatização (HVAC)
+#### Página 5 — Climatização (HVAC)
 
 - **Entradas:** Definição de setpoints de aquecimento e resfriamento (ex.: aquecimento até 20 °C, resfriamento acima de 24 °C).
 - **Abordagem Técnica:** Sistema de ar ideal (`Ideal Loads`), ideal para cálculo puro das cargas térmicas horárias sem vincular a um fabricante ou ciclo de refrigeração específico.
@@ -218,7 +220,7 @@ O usuário pode optar por duas abordagens geométricas complementares:
   - `ThermostatSetpoint:DualSetpoint`;
   - `ZoneControl:Thermostat`.
 
-#### Etapa 9 — Resultados e Saídas
+#### Página 6 — Resultados e Saídas
 
 - **Entradas:** Seleção de pacotes de relatórios (Resumo Geral de Energia, Conforto Térmico Fanger/PMV, Balanço Térmico de Zonas, Perfil de Temperaturas Horárias).
 - **Objetos Gerados no epJSON:**
@@ -226,7 +228,7 @@ O usuário pode optar por duas abordagens geométricas complementares:
   - `Output:Variable` e `Output:Meter` para variáveis requisitadas;
   - `OutputControl:Table:Style` (formatação tabular HTML/CSV).
 
-#### Etapa 10 — Revisão, Download e Envio
+#### Página 7 — Revisão, Download e Envio
 
 - **Funcionalidades:**
   - Cartões explicativos com todas as opções selecionadas;
@@ -392,7 +394,7 @@ energy-input/
 │   ├── templates/          # Catálogos de dados desacoplados (climas, materiais, cargas, esquadrias)
 │   ├── store/              # Estados globais em Zustand (document, wizard, schema, ui)
 │   ├── features/           # Módulos de interface visual
-│   │   ├── wizard/         # 10 etapas do assistente, ilustrações SVG, resolução de conflitos
+│   │   ├── wizard/         # assistente (7 páginas), ilustrações SVG, resolução de conflitos
 │   │   ├── geometry/       # Editor 3D (Three.js/R3F), elevação de paredes, árvore de elementos
 │   │   ├── expert/         # Navegador de tipos, formulários dinâmicos, editor CodeMirror
 │   │   └── simulation/     # Modal de envio, polling de status e download de artefatos

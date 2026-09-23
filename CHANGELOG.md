@@ -8,6 +8,10 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Alterado
 
+- **O assistente tem 7 páginas em vez de 10**: projeto e clima, materiais e janelas, uso e
+  climatização passam a dividir página. As respostas não mudam, e uma sessão salva numa etapa que
+  deixou de ser página volta na página que a mostra. (`Refs: T026`)
+
 - **Trocar o vidro no assistente troca também o das janelas desenhadas no Editor 3D** que usavam
   o vidro dele, com a esquadria, e um aviso diz quantas mudaram. Janela com outro vidro,
   escolhido no Modo Especialista ou no Editor 3D, fica como está. Janelas que apontavam para
