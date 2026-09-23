@@ -32,7 +32,7 @@ O pedido: clicar em Simular e ver a execução andar, com um botão que leva aos
 - **Concluída:** "Analisar resultados" fecha o diálogo e abre o modo Resultados; "Nova
   simulação" volta ao formulário.
 - **Falha, tempo esgotado ou cancelamento:** o motivo, o diagnóstico do EnergyPlus aberto e
-  "Voltar e ajustar".
+  "Ajustar o modelo".
 - `src/core/simulation/acompanhamento.ts`: as decisões, testadas sem DOM.
 - `SimulationApi.weatherNear`: a busca por coordenadas que o contrato já oferecia.
 
@@ -89,11 +89,11 @@ O pedido: clicar em Simular e ver a execução andar, com um botão que leva aos
 - `src/core/simulation/acompanhamento.ts`: novo — `etapasDaExecucao`, `localDoModelo`,
   `pontoDeBusca`, `motoresCompativeis`, `motorPreferido`, `climaMaisProximo`.
 - `src/features/simulation/SimulationDialog.tsx`: conexão automática, duas vistas, linha do
-  tempo, "Analisar resultados", "Voltar e ajustar", "Nova simulação".
+  tempo, "Analisar resultados", "Ajustar o modelo", "Nova simulação".
 - `src/features/simulation/simulationStore.ts`: `resultadosDe`.
 - `src/features/simulation/api.ts`: `weatherNear`.
 - `docs/DEVELOPMENT.md`, `docs/PRD.md` §4.5.
-- Testes: `src/core/simulation/__tests__/acompanhamento.test.ts` (novo, 13) e
+- Testes: `src/core/simulation/__tests__/acompanhamento.test.ts` (novo, 14) e
   `simulationStore.test.ts` (+2).
 
 ---
@@ -101,7 +101,7 @@ O pedido: clicar em Simular e ver a execução andar, com um botão que leva aos
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 397 testes (eram 382; +15 nesta tarefa)
+- [x] `npm test` — 398 testes (eram 382; +16 nesta tarefa, 1 da revisão do PR)
 - [x] `npm run build`
 - [x] **Contra o serviço real, no navegador**, com um projeto em Florianópolis:
       - o diálogo abriu conectado, com o motor 26.1.0 e o clima de Florianópolis, "a 7,8 km de
@@ -116,6 +116,19 @@ O pedido: clicar em Simular e ver a execução andar, com um botão que leva aos
         reabrindo o diálogo, a vista de acompanhamento voltou.
 - [ ] **Caminho de falha no navegador:** não houve execução real com falha nesta tarefa. A vista
       usa o mesmo diagnóstico de antes, e as etapas de falha estão nos testes do módulo puro.
+
+---
+
+## 5.1 Revisão do PR
+
+Quatro achados. **Dois aceitos**, um em parte, um declinado:
+
+| Achado | Veredito |
+|---|---|
+| Se a busca automática do clima falhar depois da conexão, o bloco do clima fica sem explicação | **aceito** — a falha tem estado próprio: aviso no bloco, busca manual aberta e o motivo no topo. A conexão continua valendo |
+| `comparar` com `Number` vira NaN numa versão com sufixo (`26.1.0-beta`) e a ordenação fica indefinida | **aceito** — `parseInt` por parte, com teste |
+| "Voltar e ajustar" fecha o diálogo em vez de voltar ao formulário | **aceito em parte** — fechar é de propósito: a falha é do modelo, e o ajuste é no modelo, não no motor ou no clima. O rótulo virou **"Ajustar o modelo"**, que diz isso |
+| O clima pré-selecionado não acompanha o `Site:Location` se o documento mudar com o diálogo aberto | **declinado** — o diálogo é modal; o documento não muda enquanto ele está aberto. Ao reabrir, a conexão e a busca rodam de novo |
 
 ---
 

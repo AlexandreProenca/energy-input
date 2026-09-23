@@ -77,8 +77,11 @@ export const pontoDeBusca = (l: LocalDoModelo): string =>
   `${Number(l.latitude.toFixed(4))},${Number(l.longitude.toFixed(4))}`;
 
 const serie = (versao: string) => versao.split('.').slice(0, 2).join('.');
+// `parseInt`, e não `Number`: numa versão com sufixo (`26.1.0-beta`) o `Number` daria NaN, e
+// uma comparação com NaN deixa a ordenação indefinida.
+const partes = (v: string) => v.split('.').map(p => parseInt(p, 10) || 0);
 const comparar = (a: string, b: string) => {
-  const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  const x = partes(a), y = partes(b);
   for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
   return 0;
 };

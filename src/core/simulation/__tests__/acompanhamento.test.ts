@@ -73,6 +73,11 @@ describe('motor escolhido', () => {
     expect(motorPreferido(['26.1.10', '26.1.9', '25.2.0'], '25.2.0', '26.1')).toBe('26.1.10');
     expect(motorPreferido(['25.2.0'], '25.2.0', '26.1')).toBe('');
   });
+
+  it('ordena versão com sufixo sem cair em NaN', () => {
+    expect(motorPreferido(['26.1.2-beta', '26.1.10', '26.1.3'], undefined, '26.1')).toBe('26.1.10');
+    expect(motorPreferido(['26.1.0-beta', '26.1.1'], undefined, '26.1')).toBe('26.1.1');
+  });
 });
 
 describe('clima mais próximo', () => {

@@ -45,7 +45,7 @@ export function SimulationDialog() {
    */
   const [formulario, setFormulario] = useState(false);
   /** Resultado da busca automática de clima: achou, não achou ou não havia local no modelo. */
-  const [climaAuto, setClimaAuto] = useState<'achado' | 'nenhum' | 'sem-local'>();
+  const [climaAuto, setClimaAuto] = useState<'achado' | 'nenhum' | 'sem-local' | 'falhou'>();
   const [downloadLinks, setDownloadLinks] = useState<Record<string, string>>({});
   const modelVersion = String(Object.values(doc.Version ?? {})[0]?.version_identifier ?? '');
   const local = useMemo(() => localDoModelo(doc), [doc]);
@@ -71,7 +71,11 @@ export function SimulationDialog() {
     setConnected(true);
     if (s.simulation) await s.refresh();
     if (!local) { setClimaAuto('sem-local'); return; }
-    const perto = await api().weatherNear(pontoDeBusca(local), RAIO_KM);
+    // A busca de clima falhar não desfaz a conexão: o motor já foi escolhido, e a busca manual e
+    // o envio de EPW continuam disponíveis — por isso o erro fica só no bloco do clima.
+    let perto: { itens: Weather[] };
+    try { perto = await api().weatherNear(pontoDeBusca(local), RAIO_KM); }
+    catch (e) { setClimaAuto('falhou'); setError(`Não foi possível buscar o clima perto do modelo: ${e instanceof Error ? e.message : String(e)}`); return; }
     const melhor = climaMaisProximo(perto.itens);
     setWeather(perto.itens);
     setWeatherId(melhor?.id ?? '');
@@ -137,6 +141,7 @@ export function SimulationDialog() {
                 {typeof selected.distance_km === 'number' && local && <span className="text-slate-500"> — a {fmt(selected.distance_km, 1)} km de {local.nome}</span>}</span></p>
               : climaAuto === 'nenhum' && local ? <Callout tone="warning">Nenhum arquivo climático do catálogo a até {RAIO_KM} km de {local.nome}. Envie o EPW do projeto ou busque outra cidade.</Callout>
               : climaAuto === 'sem-local' ? <Callout tone="info">O modelo não tem local (Site:Location) com coordenadas. Busque a cidade ou envie o EPW.</Callout>
+              : climaAuto === 'falhou' ? <Callout tone="warning">A busca automática do clima falhou. Busque a cidade ou envie o EPW.</Callout>
               : null}
             <details open={!selected && !!climaAuto}><summary className="cursor-pointer text-sm font-medium text-brand-700">{selected ? 'Trocar o clima' : 'Buscar ou enviar um clima'}</summary><div className="mt-3 space-y-3">
               <div className="flex items-end gap-2"><Field label="Buscar cidade"><input className="input" value={city} onChange={e => { setCity(e.target.value); setCursor(null); }} placeholder="Florianopolis" /></Field>
@@ -197,7 +202,7 @@ export function SimulationDialog() {
             {s.simulation!.failure_reason ?? (s.simulation!.status === 'cancelled' ? 'A simulação foi cancelada.' : 'A simulação não terminou. Veja o diagnóstico abaixo.')}
           </Callout>
           <div className="flex flex-wrap gap-2">
-            <Button variant="primary" icon={<ArrowLeft size={14} />} onClick={() => s.setOpen(false)}>Voltar e ajustar</Button>
+            <Button variant="primary" icon={<ArrowLeft size={14} />} onClick={() => s.setOpen(false)}>Ajustar o modelo</Button>
             <Button icon={<RotateCcw size={14} />} disabled={disabled} onClick={() => setFormulario(true)}>Nova simulação</Button>
           </div>
         </div>}

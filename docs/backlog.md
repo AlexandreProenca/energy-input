@@ -654,7 +654,7 @@ Entregue em [`docs/tasks/T028-acompanhamento-da-simulacao.md`](tasks/T028-acompa
 O diálogo conecta sozinho e já traz o motor compatível e o clima mais próximo do modelo (por
 coordenadas: a busca por cidade diferencia acentos). Ao simular, uma linha do tempo mostra
 Envio → Fila → EnergyPlus → Resultados; ao concluir, **Analisar resultados** leva ao modo
-Resultados; em falha, o diagnóstico e **Voltar e ajustar**.
+Resultados; em falha, o diagnóstico e **Ajustar o modelo**.
 
 #### T029 · Revisão por IA reprovava com a resposta cortada pelo limite de tokens — **concluída**
 
