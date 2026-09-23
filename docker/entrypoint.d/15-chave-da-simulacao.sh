@@ -22,7 +22,9 @@ token="${token#Bearer }"
 hosts="${SIMULATION_TOKEN_HOSTS:-}"
 
 # A chave vai entre aspas na configuração do nginx. Aspas, `$`, `;` ou espaço ali quebrariam
-# o arquivo — ou pior, injetariam configuração. Chaves de API reais não usam esses caracteres.
+# o arquivo — ou pior, injetariam configuração. O conjunto aceito é exatamente o `b64token` da
+# RFC 6750, que define o token Bearer: letras, dígitos e `-._~+/`, com `=` no fim. Um token fora
+# disso não é um Bearer válido.
 case "$token" in
   *[!A-Za-z0-9._~+/=-]*)
     echo "15-chave-da-simulacao: SIMULATION_API_TOKEN tem caracteres fora de [A-Za-z0-9._~+/=-]; o contêiner não sobe com ela." >&2

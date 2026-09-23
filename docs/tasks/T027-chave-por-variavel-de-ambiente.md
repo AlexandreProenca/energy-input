@@ -115,6 +115,20 @@ até aqui, só o `npm run dev` a lia do ambiente.
 
 ---
 
+## 5.1 Revisão do PR
+
+Cinco achados. **Dois aceitos**, três declinados — um deles refutado pelo teste real:
+
+| Achado | Veredito |
+|---|---|
+| [ALTA] `if` com `proxy_pass` poderia fazer o serviço responder 401 mesmo com a chave | **refutado** — no contêiner real, com a chave, `localhost` recebeu **200** passando por esses `if`. E `return` dentro de `if` em `location` é o uso que a documentação do nginx dá como seguro |
+| A validação recusa `:` e outros caracteres | **declinado** — o conjunto aceito é exatamente o `b64token` da RFC 6750, a gramática do token Bearer; o comentário do script agora cita a RFC |
+| A comparação de origem quebra atrás de proxy que termina o TLS | **aceito** — o nginx vê `http` e o navegador manda `https://`. Passou a comparar só o host. Retestado: origem `https` do próprio host passa; outro site continua 403, inclusive na mesma porta |
+| A mensagem do 401 cita só o `.env.local` | **aceito** — agora diz "no ambiente do servidor", com o `.env.local` como o caso do compose e do `npm run dev` |
+| `nginxPattern` não escapa `.` | **declinado** — a lista é de expressões regulares por contrato, a mesma nos dois proxies |
+
+---
+
 ## 6. Observações / armadilhas para tarefas futuras
 
 **O `.env.local` entrava no cache de build do Docker.** O `.dockerignore` não o excluía, e o `COPY
