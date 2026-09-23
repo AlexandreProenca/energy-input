@@ -5,10 +5,13 @@
  * controle de segurança sem teste é uma suposição. Ele decide quais rotas do serviço de
  * simulação o `npm run dev` repassa — **e apenas o `npm run dev`**.
  *
- * O nginx de produção (`docker/nginx.conf`) usa um `location` de prefixo com `proxy_pass`,
- * que repassa qualquer sub-rota e query string. Ou seja: **produção é mais permissiva que o
- * desenvolvimento**, e depende da autorização do próprio serviço. Essa assimetria é
- * deliberada e anterior a este arquivo; não "sincronize" os dois apagando o allowlist.
+ * **Vale também para o nginx de produção** desde a T027 (ADR-0003): com a chave da API
+ * injetada no servidor, repassar qualquer rota daria a quem alcançasse o proxy a conta
+ * inteira do dono da chave. O mapa do nginx (`docker/simulation-routes.conf`) é **gerado**
+ * desta lista por `scripts/nginxRoutes.ts`, e um teste reprova se os dois divergirem.
+ *
+ * Antes da T027 a assimetria era deliberada — produção repassava tudo porque a credencial era
+ * a de cada navegador. A chave no servidor derrubou essa premissa.
  *
  * O import aqui é relativo de propósito: `vite.config.ts` carrega este módulo através de
  * `simulationProxy.ts`, e o esbuild resolve a config **antes** de existir o `resolve.alias`
@@ -18,6 +21,9 @@ import { ULID } from '../src/core/ids';
 
 const SIM = `sim_${ULID}`;
 const STD = `std_${ULID}`;
+/** O sufixo de query string das rotas; o gerador do nginx o reconhece e o retira. */
+export const QUERY_SUFFIX = '(?:\\?[^#]*)?';
+
 /**
  * Query string opcional. O `#` literal é recusado porque um pedido legítimo nunca o envia:
  * o fragmento fica no navegador. Já `%23` é aceito, porque é como se manda um `#` como
@@ -30,13 +36,13 @@ const STD = `std_${ULID}`;
  * aqui significaria duplicar o contrato do upstream e quebrar a cada campo novo que ele
  * aceitar.
  */
-const Q = '(?:\\?[^#]*)?';
+const Q = QUERY_SUFFIX;
 
 /**
  * Cada entrada é uma rota completa, ancorada nas duas pontas. Ampliar esta lista é ampliar
- * a superfície do proxy — veja em `DENIED_BY_DESIGN` o que ficou de fora e por quê.
+ * a superfície do proxy — dos dois proxies, desde a T027 — veja em `DENIED_BY_DESIGN` o que ficou de fora e por quê.
  */
-const ROUTES = [
+export const SIMULATION_ROUTES = [
   // Catálogos.
   `/v1/engines`,
   `/v1/weather${Q}`,
@@ -84,7 +90,8 @@ const ROUTES = [
  *   iterativo edita materiais pela API, o que criaria uma segunda fonte da verdade ao lado
  *   do documento em memória.
  * - `/v1/auth/*` e `/v1/api-keys*`: emitir ou revogar credencial pelo navegador contraria a
- *   regra de que segredo só vive em memória volátil (AGENTS.md §7).
+ *   regra de que a chave existe só no ambiente do servidor (AGENTS.md §7, ADR-0003) — e, com a
+ *   chave injetada pelo proxy, abriria ao navegador a gestão das chaves do dono da conta.
  * - `/v1/webhooks*`: configuração persistente no serviço, sem interface que a gerencie.
  * - `/v1/usage`: exige escopo `admin:billing`.
  * - `/v1/properties/*`: psicrometria e fluidos, fora do escopo do produto.
@@ -106,10 +113,10 @@ export const DENIED_BY_DESIGN = [
   '/v1/studies/std_01M2KXBC7E9GH4J6K8M0N2P4Q6/iterations',
 ];
 
-const ALLOWED = new RegExp(`^(?:${ROUTES.join('|')})$`);
+const ALLOWED = new RegExp(`^(?:${SIMULATION_ROUTES.join('|')})$`);
 
 /** Só GET e POST: o serviço não expõe mutação por outros verbos nas rotas aceitas. */
-const METHODS = ['GET', 'POST'];
+export const SIMULATION_METHODS = ['GET', 'POST'];
 
 /**
  * `url` é o caminho já sem o prefixo de montagem `/simulation-api`, como o middleware do
@@ -119,6 +126,6 @@ const METHODS = ['GET', 'POST'];
  * de `undefined` depois de já ter passado por aqui.
  */
 export function isAllowedSimulationRoute(method: string | undefined, url: string | undefined): url is string {
-  if (!url || !method || !METHODS.includes(method)) return false;
+  if (!url || !method || !SIMULATION_METHODS.includes(method)) return false;
   return ALLOWED.test(url);
 }

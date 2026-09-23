@@ -30,7 +30,8 @@ export function SimulationDialog() {
   const pending = !!s.simulation && !terminal(s.simulation.status);
   const uncertain = !!s.attempt && !s.simulation;
   const disabled = working || s.busy;
-  const api = () => new SimulationApi(useSimulationStore.getState().token);
+  // Sem chave: o proxy a injeta do ambiente (T027). A interface nunca vê a credencial.
+  const api = () => new SimulationApi();
   const perform = async (action: () => Promise<void>) => {
     if (working) return;
     setWorking(true); setError('');
@@ -60,10 +61,7 @@ export function SimulationDialog() {
       <p className="text-sm text-slate-600">Envie uma cópia do modelo atual para <strong>homolog.ee.dev.br</strong>. As edições locais continuam disponíveis; os resultados pertencem à cópia enviada.</p>
       <section className="space-y-3 rounded-xl bg-slate-50 p-4">
         <h3 className="font-semibold">Conexão</h3>
-        <Field label="Chave de API ou token (opcional quando configurado no servidor local)">
-          <input className="input" type="password" autoComplete="off" spellCheck={false} value={s.token} onChange={e => { s.setToken(e.target.value); setEngines([]); }} placeholder="Credencial de homologação" />
-        </Field>
-        <p className="text-xs text-slate-500">A credencial digitada é mantida apenas em memória nesta página.</p>
+        <p className="text-xs text-slate-500">A chave da API é configurada no servidor, pela variável de ambiente <code>SIMULATION_API_TOKEN</code>.</p>
         <Button onClick={() => void connect()} disabled={disabled}>Conectar à API</Button>
       </section>
       {(error || s.error) && <Callout tone="error">{error || s.error}</Callout>}

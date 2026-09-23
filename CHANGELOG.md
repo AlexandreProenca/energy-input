@@ -8,6 +8,13 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Alterado
 
+- **A chave da API de simulação vem da variável de ambiente `SIMULATION_API_TOKEN`**, também no
+  contêiner (`docker compose up` lê o mesmo `.env.local` do `npm run dev`). O diálogo de
+  simulação não pede mais credencial. O proxy do contêiner passou a recusar rota fora da lista,
+  método fora de GET/POST e pedido de outra origem, e só entrega a chave a `localhost`; o deploy
+  local escuta só em `127.0.0.1`. [ADR-0003](docs/adr/0003-chave-da-api-no-ambiente-do-servidor.md).
+  (`Refs: T027`)
+
 - **O assistente tem 7 páginas em vez de 10**: projeto e clima, materiais e janelas, uso e
   climatização passam a dividir página. As respostas não mudam, e uma sessão salva numa etapa que
   deixou de ser página volta na página que a mostra. (`Refs: T026`)
@@ -19,6 +26,9 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
   [ADR-0002](docs/adr/0002-janelas-acompanham-o-vidro-do-assistente.md). (`Refs: T024`)
 
 ### Corrigido
+
+- O `.env.local`, com a chave da API, entrava no cache de build do Docker: o `.dockerignore` não
+  o excluía. A imagem final e o bundle nunca o levaram. (`Refs: T027`)
 
 - **Com mais de uma zona, o painel de temperatura abria com erro.** O seletor oferecia a mensagem
   inteira do serviço (`candidata: key='…'`) como nome de zona, e escolhê-la pedia uma série que não

@@ -12,7 +12,8 @@
     "fetch-schema": "tsx scripts/fetch-schema.ts",
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
-    "eplus-check": "tsx scripts/eplus-check.ts"
+    "eplus-check": "tsx scripts/eplus-check.ts",
+    "nginx-routes": "tsx scripts/nginxRoutes.ts"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",

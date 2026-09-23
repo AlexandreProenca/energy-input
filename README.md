@@ -83,7 +83,7 @@ Editor completo e de baixo nível governado pelo **JSON Schema oficial** do Ener
 - Conexão direta com a API de homologação (`https://homolog.ee.dev.br/v1`).
 - Upload multipart do modelo epJSON, seleção de versões compatíveis do motor EnergyPlus e arquivos climáticos EPW.
 - Acompanhamento reativo de status (`queued`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`), exibição de logs/erros e download de artefatos gerados.
-- Segurança rigorosa: credenciais mantidas apenas em memória volátil da sessão.
+- A chave da API vem da variável de ambiente `SIMULATION_API_TOKEN`, no servidor; a interface não pede credencial.
 
 ### 📊 Modo 4: Resultados
 
@@ -110,7 +110,7 @@ Para humanos e agentes de IA que contribuem neste repositório, os seguintes pri
 3. **Proteção contra perda de dados (`planWizardSync`):**
    - O assistente nunca sobrescreve silenciosamente objetos customizados pelo usuário no Modo Especialista ou 3D. Quando há divergência de intenção, o diálogo de resolução de conflitos deve ser disparado. Objetos novos criados pelo usuário nunca são apagados.
 4. **Nenhum segredo em bundle nem em storage persistente:**
-   - Tokens como `SIMULATION_API_TOKEN` funcionam apenas no proxy local do Vite via `.env.local` (nunca com prefixo `VITE_`). No navegador em produção, residem apenas em memória volátil.
+   - A chave `SIMULATION_API_TOKEN` existe só no ambiente do servidor — o do proxy do Vite (`.env.local`) e o do contêiner — e nunca com prefixo `VITE_`. O proxy do contêiner só a entrega a `localhost`, recusa rotas fora da lista e pedidos de outra origem ([ADR-0003](docs/adr/0003-chave-da-api-no-ambiente-do-servidor.md)).
 5. **Conformidade de Marca:**
    - O nome oficial do produto é **Energy Input** ("Arquivos epJSON para EnergyPlus"). Nunca utilize "EnergyPlus API" como nome comercial (cláusula 4 da licença do EnergyPlus).
 

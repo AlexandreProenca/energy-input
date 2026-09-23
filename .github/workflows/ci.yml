@@ -61,7 +61,22 @@ jobs:
         run: npm test
 
       - name: Build do bundle estático (Vite)
-        run: npm run build
+        # Canário (T027): a chave da API vive em SIMULATION_API_TOKEN, no ambiente do servidor.
+        # O build roda com um valor falso nessa variável — e em .env.local, que o Vite também
+        # lê — e reprova se ele aparecer no bundle. O Vite só expõe variáveis `VITE_`, e é
+        # exatamente essa garantia que este passo trava.
+        env:
+          SIMULATION_API_TOKEN: canario-da-chave-nao-pode-ir-para-o-bundle
+        run: |
+          set -euo pipefail
+          echo "SIMULATION_API_TOKEN=canario-do-env-local-nao-pode-ir-para-o-bundle" > .env.local
+          npm run build
+          rm -f .env.local
+          if grep -rl "canario-da-chave\|canario-do-env-local" dist/; then
+            echo "::error::A chave da API foi parar no bundle. Nenhum segredo pode ter o prefixo VITE_."
+            exit 1
+          fi
+          echo "Nenhum rastro da chave no bundle."
 
   docker_test:
     name: Validar container Docker
@@ -123,9 +138,50 @@ jobs:
             *) echo "O proxy alcançou o upstream e o TLS foi verificado." ;;
           esac
 
+      - name: Verificar as defesas do proxy com a chave no servidor (T027)
+        run: |
+          set -euo pipefail
+          # Com a chave da API injetada pelo nginx, o proxy precisa recusar o que o proxy de
+          # desenvolvimento recusa: rota fora da lista, método fora de GET/POST, outra origem.
+          # Estas recusas acontecem no nginx, antes do upstream — independem de o serviço de
+          # simulação estar no ar, e por isso são portão, não aviso.
+          c() { curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$@"; }
+          SIM=sim_01M2KXB9D4TQ7F3S0YJ8N5VZQK
+          falhou=0
+          confere() { if [ "$2" != "$3" ]; then echo "::error::$1: esperado $3, veio $2"; falhou=1; else echo "ok  $1 -> $2"; fi; }
+          confere "rota fora da lista"      "$(c http://127.0.0.1:8080/simulation-api/v1/api-keys)" 404
+          confere "conteúdo de modelo"      "$(c http://127.0.0.1:8080/simulation-api/v1/models/mdl_01M2KXAZ9WQK8YT4N6P0R2S5V7/content)" 404
+          confere "travessia no artefato"   "$(c --path-as-is http://127.0.0.1:8080/simulation-api/v1/simulations/$SIM/artifacts/..%2f..%2fetc%2fpasswd)" 404
+          confere "método DELETE"           "$(c -X DELETE http://127.0.0.1:8080/simulation-api/v1/simulations/$SIM)" 405
+          confere "pedido de outra origem"  "$(c -H 'Origin: http://evil.example' http://127.0.0.1:8080/simulation-api/v1/engines)" 403
+          [ "$falhou" = 0 ]
+
+          # A chave só vai para localhost e para os hosts declarados. Conferido na configuração
+          # que o nginx carrega, porque o cabeçalho enviado ao upstream não é observável daqui.
+          docker run -d --name energy-input-chave -e SIMULATION_API_TOKEN=canario-ci \
+            -e SIMULATION_TOKEN_HOSTS=energia.exemplo energy-input:local-test >/dev/null
+          sleep 3
+          conf="$(docker exec energy-input-chave nginx -T 2>/dev/null)"
+          echo "$conf" | grep -q '1 "Bearer canario-ci";' || { echo "::error::a chave não entrou no mapa de autorização"; exit 1; }
+          echo "$conf" | grep -q 'energia.exemplo 1;' || { echo "::error::o host declarado não entrou no mapa"; exit 1; }
+          echo "$conf" | grep -A3 'map $host $host_recebe_chave' | grep -q 'default 0;' || { echo "::error::host não declarado estaria recebendo a chave"; exit 1; }
+          docker rm -f energy-input-chave >/dev/null
+
+          # Chave com caractere que quebraria a configuração: o contêiner não sobe. Em segundo
+          # plano e conferido pelo estado — em primeiro plano, um contêiner que subisse por
+          # engano travaria o CI até estourar o tempo, em vez de reprovar.
+          docker run -d --name energy-input-chave-ruim -e 'SIMULATION_API_TOKEN=abc";x' energy-input:local-test >/dev/null
+          sleep 3
+          if [ "$(docker inspect -f '{{.State.Running}}' energy-input-chave-ruim)" = true ]; then
+            echo "::error::o contêiner subiu com uma chave que injeta configuração"; exit 1
+          fi
+          docker logs energy-input-chave-ruim 2>&1 | grep -q "caracteres fora" || { echo "::error::a recusa não explicou o motivo"; exit 1; }
+          docker rm -f energy-input-chave-ruim >/dev/null
+          echo "Defesas do proxy conferidas."
+
       - name: Limpar container
         if: always()
-        run: docker rm -f energy-input-ci || true
+        run: docker rm -f energy-input-ci energy-input-chave energy-input-chave-ruim || true
 
   publicar_imagem:
     name: Publicar imagem no GHCR

@@ -8,11 +8,10 @@ import { SimulationApi, SimulationApiError, terminal, type RunRequest, type Simu
 interface Attempt { key: string; body: RunRequest; fileName: string; sentAt: string }
 interface SimulationState {
   logs?: SimulationLogs;
-  open: boolean; token: string; busy: boolean; phase?: string; error?: string;
+  open: boolean; busy: boolean; phase?: string; error?: string;
   canRestart?: boolean;
   attempt?: Attempt; simulation?: Simulation; summary?: Summary; diagnostics?: Diagnostics; artifacts?: Artifacts;
   setOpen: (open: boolean) => void;
-  setToken: (token: string) => void;
   start: (engine: string, runType: 'annual' | 'design_day', weatherId?: string) => Promise<void>;
   retry: () => Promise<void>;
   discardRejected: () => void;
@@ -36,9 +35,8 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 let refreshing = false;
 const errorText = (e: unknown) => e instanceof Error ? e.message : String(e);
 export const useSimulationStore = create<SimulationState>((set, get) => ({
-  open: false, token: '', busy: false, ...restore(),
+  open: false, busy: false, ...restore(),
   setOpen: open => set({ open }),
-  setToken: token => set({ token }),
   discardRejected: () => { if (!get().canRestart || get().busy) return; set({ attempt: undefined, error: undefined, canRestart: false }); try { sessionStorage.removeItem(KEY); } catch { /* unavailable */ } },
   async start(engine, runType, weatherId) {
     if (get().busy || (get().simulation && !terminal(get().simulation!.status))) return;
@@ -52,7 +50,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       if (!engine) throw new Error('Selecione uma versão do EnergyPlus.');
       if (runType === 'annual' && !weatherId) throw new Error('Selecione ou envie um arquivo climático EPW.');
       const content = serializeDocument(d.doc, schema.index), fileName = d.fileName;
-      const api = new SimulationApi(get().token);
+      const api = new SimulationApi();
       const model = await api.uploadModel(content, fileName);
       const attempt: Attempt = { key: crypto.randomUUID(), fileName, sentAt: new Date().toISOString(), body: {
         model_version_id: model.versao.id, engine_version: engine, run_type: runType,
@@ -69,7 +67,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     const { attempt, busy } = get(); if (!attempt || busy) return;
     set({ busy: true, error: undefined, phase: 'Retomando a solicitação original…' });
     try {
-      const simulation = await new SimulationApi(get().token).create(attempt.body, attempt.key);
+      const simulation = await new SimulationApi().create(attempt.body, attempt.key);
       set({ simulation }); remember(attempt, simulation);
     } catch (e) { set({ error: errorText(e), canRestart: e instanceof SimulationApiError && e.status >= 400 && e.status < 500 && ![408, 429].includes(e.status) }); }
     finally { set({ busy: false, phase: undefined }); }
@@ -79,7 +77,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     const { simulation } = get(); if (!simulation || refreshing) return;
     refreshing = true; clearTimeout(timer);
     try {
-      const updated = await new SimulationApi(get().token).status(simulation.id);
+      const updated = await new SimulationApi().status(simulation.id);
       if (get().simulation?.id !== updated.id) return;
       set({ simulation: updated, error: undefined });
       remember(get().attempt, updated);
@@ -97,7 +95,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     if (!isSimulationId(id)) { set({ error: 'Informe um identificador válido de simulação (sim_…).' }); return; }
     set({ busy: true, error: undefined });
     try {
-      const simulation = await new SimulationApi(get().token).status(id);
+      const simulation = await new SimulationApi().status(id);
       clearTimeout(timer);
       set({ simulation, attempt: undefined, summary: undefined, diagnostics: undefined, artifacts: undefined, logs: undefined });
       remember(undefined, simulation);
@@ -109,7 +107,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     const { simulation, busy } = get(); if (!simulation || busy) return;
     clearTimeout(timer); set({ busy: true, error: undefined });
     try {
-      const updated = await new SimulationApi(get().token).cancel(simulation.id);
+      const updated = await new SimulationApi().cancel(simulation.id);
       set({ simulation: updated }); remember(get().attempt, updated);
     } catch (e) { set({ error: errorText(e) }); }
     finally { set({ busy: false }); }
@@ -117,7 +115,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
   async loadResults() {
     const { simulation } = get(); if (!simulation || !terminal(simulation.status)) return;
-    const api = new SimulationApi(get().token);
+    const api = new SimulationApi();
     const [summary, diagnostics, artifacts, logs] = await Promise.allSettled([
       simulation.status === 'succeeded' ? api.summary(simulation.id) : Promise.resolve(undefined), api.diagnostics(simulation.id), api.artifacts(simulation.id), api.logs(simulation.id),
     ]);

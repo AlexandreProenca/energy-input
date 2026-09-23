@@ -66,7 +66,9 @@ export class SimulationApi {
     if (!response.ok) {
       const body = (await response.json().catch(() => ({}))) as ApiProblem;
       const fields = Array.isArray(body.errors) ? body.errors.map((e: { field?: string; message?: string }) => `${e.field ?? ''}: ${e.message ?? ''}`).join('; ') : '';
-      const message = response.status === 401 ? 'Credencial ausente, inválida ou expirada. Configure a conexão novamente.'
+      // A chave vem do ambiente do servidor desde a T027: 401 quer dizer que ela não foi
+      // configurada, está errada ou expirou — e a correção é lá, não na interface.
+      const message = response.status === 401 ? 'A chave da API de simulação não está configurada no servidor, ou foi recusada. Defina SIMULATION_API_TOKEN no .env.local e reinicie o app (npm run dev ou docker compose up).'
         : response.status === 410 ? 'A série horária desta simulação expirou. O resumo permanente continua disponível.'
         : typeof body.detail === 'string' ? body.detail : `A API recusou a solicitação (HTTP ${response.status}).`;
       // O corpo inteiro viaja junto: achatá-lo na mensagem perderia as candidatas do 422,

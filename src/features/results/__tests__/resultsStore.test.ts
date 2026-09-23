@@ -22,7 +22,7 @@ const lenta = (ms: number) => (_id: string, _q: unknown, _max?: number, signal?:
 
 beforeEach(() => {
   useResultsStore.getState().limpar();
-  useSimulationStore.setState({ simulation: A, token: '' });
+  useSimulationStore.setState({ simulation: A });
   vi.restoreAllMocks();
 });
 
