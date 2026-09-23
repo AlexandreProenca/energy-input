@@ -29,12 +29,19 @@ if [ -n "$token" ] && ! printf '%s' "$token" | grep -Eq '^[A-Za-z0-9._~+/-]+=*$'
   echo "15-chave-da-simulacao: SIMULATION_API_TOKEN tem caracteres fora de [A-Za-z0-9._~+/-] (com '=' só no fim, como no b64token da RFC 6750); o contêiner não sobe com ela." >&2
   exit 1
 fi
+# Cada host vira uma chave do `map` do nginx, então precisa ser um nome de host de verdade:
+# rótulos de letras, dígitos e hífen, sem hífen nas pontas. E não pode ser palavra reservada do
+# `map`: `default` impede o nginx de subir com um erro obscuro, e `hostnames` muda em silêncio
+# como as outras entradas são lidas.
 for h in $hosts; do
   case "$h" in
-    *[!A-Za-z0-9.-]*|"")
-      echo "15-chave-da-simulacao: host inválido em SIMULATION_TOKEN_HOSTS: '$h'." >&2
-      exit 1 ;;
+    default|hostnames|volatile|include) valido=0 ;;
+    *) printf '%s' "$h" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$' && valido=1 || valido=0 ;;
   esac
+  if [ "$valido" = 0 ]; then
+    echo "15-chave-da-simulacao: host inválido em SIMULATION_TOKEN_HOSTS: '$h'." >&2
+    exit 1
+  fi
 done
 
 umask 077

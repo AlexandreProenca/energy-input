@@ -187,13 +187,23 @@ jobs:
           if [ "$(docker inspect -f '{{.State.Running}}' energy-input-chave-igual)" = true ]; then
             echo "::error::o contêiner aceitou '=' no meio da chave"; exit 1
           fi
+          # Host que não é nome de host, ou que é palavra reservada do `map` do nginx.
+          for host in default hostnames .. -mal 'a;b'; do
+            docker run -d --name energy-input-host-ruim -e SIMULATION_API_TOKEN=abc -e "SIMULATION_TOKEN_HOSTS=$host" energy-input:local-test >/dev/null
+            sleep 3
+            if [ "$(docker inspect -f '{{.State.Running}}' energy-input-host-ruim)" = true ]; then
+              echo "::error::o contêiner aceitou '$host' em SIMULATION_TOKEN_HOSTS"; exit 1
+            fi
+            docker logs energy-input-host-ruim 2>&1 | grep -q "host inválido" || { echo "::error::a recusa de '$host' não explicou o motivo"; exit 1; }
+            docker rm -f energy-input-host-ruim >/dev/null
+          done
           docker rm -f energy-input-chave-igual >/dev/null
           docker rm -f energy-input-chave-ruim >/dev/null
           echo "Defesas do proxy conferidas."
 
       - name: Limpar container
         if: always()
-        run: docker rm -f energy-input-ci energy-input-chave energy-input-chave-ruim energy-input-chave-igual || true
+        run: docker rm -f energy-input-ci energy-input-chave energy-input-chave-ruim energy-input-chave-igual energy-input-host-ruim || true
 
   publicar_imagem:
     name: Publicar imagem no GHCR

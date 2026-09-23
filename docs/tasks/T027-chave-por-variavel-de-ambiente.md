@@ -140,6 +140,24 @@ Numa segunda rodada, **dois achados procedentes em parte**:
 Declinado: a origem sem porta contra o `Host` com porta — os navegadores omitem a porta padrão nos
 dois cabeçalhos e incluem a não padrão nos dois, então eles sempre casam.
 
+A terceira rodada só pôde rodar depois da T030: nas duas anteriores a este commit, a própria
+revisão reprovava sem conseguir ler a resposta do modelo, que citava a regex do nginx com barra
+invertida crua. Cinco achados; **um procedente em parte**:
+
+- **A validação de `SIMULATION_TOKEN_HOSTS` aceitava o que não é nome de host.** O achado citava
+  `..` e `-mal`; testado no contêiner, nenhum dos dois entrega a chave a outro host — viram
+  chaves do `map` que nenhum `Host` real casa. **O que o teste mostrou de fato foram as palavras
+  reservadas do `map`:** `default` impede o nginx de subir com "duplicate default map parameter",
+  e `hostnames` é lido como diretiva, mudando em silêncio como as outras entradas casam. Agora cada
+  host precisa seguir a gramática de nome de host (rótulos sem hífen nas pontas) e não pode ser
+  palavra reservada, com recusa explicada e cinco casos no CI.
+
+Declinados, por repetirem rodadas anteriores: `if` com `proxy_pass` (o CI agora exige o 401 que
+só o serviço produz), origem sem porta, `=` no meio da chave e `.` sem escape nas rotas. E a
+mensagem do 401 que cita `SIMULATION_API_TOKEN`: o nome está no README deste repositório público,
+e "não configurada" e "recusada" se corrigem no mesmo lugar — o serviço não distingue as duas, e o
+proxy de propósito não sabe qual é.
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
