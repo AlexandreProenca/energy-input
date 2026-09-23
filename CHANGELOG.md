@@ -6,6 +6,14 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Alterado
+
+- **Trocar o vidro no assistente troca também o das janelas desenhadas no Editor 3D** que usavam
+  o vidro dele, com a esquadria, e um aviso diz quantas mudaram. Janela com outro vidro,
+  escolhido no Modo Especialista ou no Editor 3D, fica como está. Janelas que apontavam para
+  um vidro que não existe mais são reparadas na próxima mudança no assistente.
+  [ADR-0002](docs/adr/0002-janelas-acompanham-o-vidro-do-assistente.md). (`Refs: T024`)
+
 ### Corrigido
 
 - **Trocar o vidro no assistente deixava as janelas desenhadas no Editor 3D apontando para uma

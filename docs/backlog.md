@@ -92,6 +92,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T021 | Download de artefato devolve URL interna em HTTP (serviço) | — |
 | [ ] | T022 | Tornar durável o conserto do motor, no repositório do serviço | T016 |
 | [x] | T023 | O sync do assistente não pode deixar referência órfã | — |
+| [x] | T024 | As janelas desenhadas pelo usuário acompanham o vidro do assistente — **ADR** | T023 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -590,6 +591,20 @@ referência inexistente em construção, material e esquadria como **erro**, o q
 envio — medido contra os 752 exemplos oficiais do EnergyPlus sem nenhum falso positivo.
 
 **Documentos já quebrados não se consertam sozinhos:** o diálogo mostra os erros e aponta as
-janelas. **Decisão de produto em aberto:** as janelas desenhadas pelo usuário não acompanham o
-vidro escolhido no assistente.
+janelas. A decisão de produto que ficou em aberto — as janelas desenhadas pelo usuário deveriam
+acompanhar o vidro do assistente? — foi respondida na T024: **sim**.
+
+#### T024 · As janelas desenhadas pelo usuário acompanham o vidro do assistente — **concluída**
+
+Entregue em [`docs/tasks/T024-janelas-acompanham-vidro.md`](tasks/T024-janelas-acompanham-vidro.md),
+com o [ADR-0002](adr/0002-janelas-acompanham-o-vidro-do-assistente.md).
+
+Decisão do dono do produto: trocar o vidro no assistente troca o de **todas** as janelas; para
+ajustar uma específica, Modo Especialista. É a única exceção à regra de que o assistente não
+altera objeto do usuário, e é **anunciada**: um aviso diz quantas janelas mudaram.
+
+Só mudam as janelas que **seguem** o vidro do assistente. Uma janela com outro vidro é escolha
+específica e fica — é o que torna o caminho do Especialista estável. As janelas que o defeito da
+T023 deixou apontando para um vidro inexistente são reparadas na próxima mudança no assistente.
+Verificado com o EnergyPlus no modelo real que falhou: depois do reparo, roda sem erro grave.
 

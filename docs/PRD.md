@@ -306,7 +306,8 @@ O produto permite alternar livremente entre o Assistente, o Editor 3D e o Modo E
   - Armazena hashes de propriedade dos objetos criados originalmente pelo assistente.
   - Objetos que o usuário customizou no Modo 3D ou Especialista têm suas alterações preservadas silenciosamente caso o assistente não tenha tentado modificar o mesmo objeto.
   - Caso haja colisão direta (o usuário alterou manualmente um objeto e depois alterou uma etapa do assistente que mexe no mesmo objeto), um diálogo amigável é exibido: **"Manter alterações manuais"** ou **"Sobrescrever com o Assistente"**.
-  - Objetos criados manualmente pelo usuário nunca são apagados pelo assistente.
+  - Objetos criados manualmente pelo usuário nunca são apagados pelo assistente, e o assistente nunca apaga um objeto que algo ainda referencia.
+  - **Exceção anunciada:** ao trocar o vidro no assistente, as janelas desenhadas pelo usuário que seguiam o vidro anterior passam para o novo, com aviso na tela. Janela com outro vidro, escolhido no Modo Especialista ou no Editor 3D, fica como está ([ADR-0002](adr/0002-janelas-acompanham-o-vidro-do-assistente.md)).
 
 ---
 
