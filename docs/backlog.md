@@ -93,6 +93,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [ ] | T022 | Tornar durável o conserto do motor, no repositório do serviço | T016 |
 | [x] | T023 | O sync do assistente não pode deixar referência órfã | — |
 | [x] | T024 | As janelas desenhadas pelo usuário acompanham o vidro do assistente — **ADR** | T023 |
+| [x] | T025 | Painéis de temperatura e desconforto com mais de uma zona | T010 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -607,4 +608,20 @@ Só mudam as janelas que **seguem** o vidro do assistente. Uma janela com outro 
 específica e fica — é o que torna o caminho do Especialista estável. As janelas que o defeito da
 T023 deixou apontando para um vidro inexistente são reparadas na próxima mudança no assistente.
 Verificado com o EnergyPlus no modelo real que falhou: depois do reparo, roda sem erro grave.
+
+#### T025 · Painéis de temperatura e desconforto com mais de uma zona — **concluída**
+
+Entregue em [`docs/tasks/T025-zonas-multiplas.md`](tasks/T025-zonas-multiplas.md). **Fecha a
+pendência que a T010 tinha registrado** — o seletor de zonas nunca exercitado com dado real — e a
+lacuna da T001, que não conseguiu capturar o 422 de ambiguidade.
+
+A primeira execução real com duas zonas abriu o painel de temperatura com erro. O parser entregava
+a mensagem inteira do 422 (`candidata: key='…', frequency=hourly`) como nome de zona; escolhê-la
+mandava esse texto como `key`, e o serviço respondia com o outro 422. **Passou porque os testes
+usavam um corpo de 422 inventado**, com a mensagem igual à chave. Agora os testes usam os corpos
+reais, capturados e anonimizados.
+
+O painel abre a primeira zona e oferece as outras; o de desconforto diz de qual zona são as
+horas. **Em aberto, como decisão de produto:** horas do edifício inteiro, que exigem escolher
+critério para agregar zonas.
 

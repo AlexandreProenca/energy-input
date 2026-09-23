@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SimulationApi, SimulationApiError, type Simulation } from '@/features/simulation/api';
 import { useSimulationStore } from '@/features/simulation/simulationStore';
 import { useResultsStore } from '../resultsStore';
+import ambigua from '@/core/results/__fixtures__/erro-422-chave-ambigua.json';
+import chaveInexistente from '@/core/results/__fixtures__/erro-422-chave-inexistente.json';
+import variavelInexistente from '@/core/results/__fixtures__/erro-422-variavel-inexistente.json';
 
 const sim = (id: string): Simulation => ({
   id, model_version_id: 'mv_01M2KXB16RP92SR9SCA3PBVMSF', status: 'succeeded',
@@ -126,20 +129,76 @@ describe('carga de temperaturas', () => {
     expect(useResultsStore.getState().externa).toBeUndefined();
   });
 
+  /**
+   * Os corpos de 422 abaixo são as fixtures reais, e não inventados. O teste anterior usava
+   * `{ field: 'key', message: 'ZONA 1' }` — a mensagem igual à chave —, enquanto o serviço
+   * manda `candidata: key='ZONA 1', frequency=hourly`. Contra o formato adivinhado o teste
+   * passava, e o defeito só apareceu na primeira execução real com duas zonas (T025).
+   */
+  const erroDe = (corpo: { detail?: string; errors?: { field?: string; message?: string }[] }) =>
+    new SimulationApiError(corpo.detail ?? '422', 422, 0, corpo);
+  const A = 'PAVIMENTO 1 · AMBIENTE A';
+  const B = 'PAVIMENTO 1 · AMBIENTE B';
+
+  /** Serviço com duas zonas: sem chave é ambíguo; com chave certa, devolve a série. */
+  const duasZonas = () => vi.spyOn(SimulationApi.prototype, 'allTimeseries').mockImplementation(
+    (async (_id: string, q: { variable: string; key?: string }) => {
+      if (q.variable.startsWith('Site')) return serieDe(q.variable, 'Environment');
+      if (!q.key) throw erroDe(ambigua);
+      if (q.key === A || q.key === B) return serieDe(q.variable, q.key);
+      throw erroDe(chaveInexistente);
+    }) as never,
+  );
+
+  it('com várias zonas, abre a primeira e oferece as outras', async () => {
+    const espiao = duasZonas();
+    await useResultsStore.getState().carregarTemperaturas();
+    const s = useResultsStore.getState();
+    // Chaves limpas, e não a mensagem `candidata: key='…'` que o seletor mostrava.
+    expect(s.zonas).toEqual([A, B]);
+    expect(s.zonaEscolhida).toBe(A);
+    expect(s.interna?.variable.key).toBe(A);
+    expect(s.erro).toBeUndefined();
+    // Chave e frequência, como o serviço pede ("escolha uma por key e frequency").
+    expect(espiao).toHaveBeenCalledWith(expect.any(String), { variable: 'Zone Operative Temperature', key: A, frequency: 'hourly' }, 12, expect.anything());
+  });
+
+  it('trocar de zona carrega a outra', async () => {
+    duasZonas();
+    await useResultsStore.getState().carregarTemperaturas();
+    await useResultsStore.getState().carregarTemperaturas(B);
+    const s = useResultsStore.getState();
+    expect(s.interna?.variable.key).toBe(B);
+    expect(s.zonaEscolhida).toBe(B);
+    expect(s.zonas).toEqual([A, B]);
+    expect(s.erro).toBeUndefined();
+  });
+
+  it('variável não registrada não é erro nem zona', async () => {
+    // O painel explica a ausência ("marque o preset Conforto"), em vez de acusar erro. A
+    // versão anterior punha a mensagem do 422 na lista de zonas.
+    vi.spyOn(SimulationApi.prototype, 'allTimeseries').mockImplementation(
+      (async (_id: string, q: { variable: string }) => {
+        if (q.variable.startsWith('Zone')) throw erroDe(variavelInexistente);
+        return serieDe(q.variable, 'Environment');
+      }) as never,
+    );
+    await useResultsStore.getState().carregarTemperaturas();
+    const s = useResultsStore.getState();
+    expect(s.interna).toBeUndefined();
+    expect(s.erro).toBeUndefined();
+    expect(s.zonas).toEqual([]);
+  });
+
   it('escolher uma zona que falha mostra o erro, em vez de voltar ao seletor em laço', async () => {
     // Repor a lista de candidatas e limpar a escolha devolveria o usuário ao seletor para
     // escolher de novo, indefinidamente.
-    const ambiguo = new SimulationApiError('ambígua', 422, 0, {
-      errors: [{ field: 'key', message: 'ZONA 1' }, { field: 'key', message: 'ZONA 2' }],
-    });
-    vi.spyOn(SimulationApi.prototype, 'allTimeseries').mockRejectedValue(ambiguo as never);
-
+    duasZonas();
     await useResultsStore.getState().carregarTemperaturas();
-    expect(useResultsStore.getState().zonas).toEqual(['ZONA 1', 'ZONA 2']);
-
-    await useResultsStore.getState().carregarTemperaturas('ZONA 1');
+    await useResultsStore.getState().carregarTemperaturas('ZONA QUE NÃO EXISTE');
     const s = useResultsStore.getState();
     expect(s.erro).toBeDefined();
-    expect(s.zonaEscolhida).toBe('ZONA 1');
+    expect(s.zonaEscolhida).toBe('ZONA QUE NÃO EXISTE');
+    expect(s.zonas).toEqual([A, B]);
   });
 });
