@@ -96,7 +96,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T025 | Painéis de temperatura e desconforto com mais de uma zona | T010 |
 | [x] | T026 | O assistente em sete páginas | — |
 | [x] | T027 | Chave da API por variável de ambiente, também no contêiner — **ADR** | — |
-| [ ] | T028 | Acompanhamento da simulação e "Analisar resultados" | T027 |
+| [x] | T028 | Acompanhamento da simulação e "Analisar resultados" | T027 |
 | [x] | T029 | Revisão por IA reprovava com a resposta cortada pelo limite de tokens | T020 |
 | [x] | T030 | Revisão por IA: escape inválido e diagnóstico que distingue as causas | T029 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
@@ -648,11 +648,13 @@ o nginx passou a ter as defesas do proxy de desenvolvimento (lista de rotas gera
 GET/POST, recusa de outra origem, chave só para localhost). O `.env.local` entrava no cache de
 build do Docker, e deixou de entrar.
 
-#### T028 · Acompanhamento da simulação e "Analisar resultados"
+#### T028 · Acompanhamento da simulação e "Analisar resultados" — **concluída**
 
-Ao simular, o diálogo passa a mostrar o acompanhamento da execução, e ao concluir oferece
-**Analisar resultados**, que leva ao modo Resultados. Sem o campo de chave (T027), o diálogo já abre
-conectado.
+Entregue em [`docs/tasks/T028-acompanhamento-da-simulacao.md`](tasks/T028-acompanhamento-da-simulacao.md).
+O diálogo conecta sozinho e já traz o motor compatível e o clima mais próximo do modelo (por
+coordenadas: a busca por cidade diferencia acentos). Ao simular, uma linha do tempo mostra
+Envio → Fila → EnergyPlus → Resultados; ao concluir, **Analisar resultados** leva ao modo
+Resultados; em falha, o diagnóstico e **Voltar e ajustar**.
 
 #### T029 · Revisão por IA reprovava com a resposta cortada pelo limite de tokens — **concluída**
 

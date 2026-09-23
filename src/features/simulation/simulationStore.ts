@@ -11,6 +11,12 @@ interface SimulationState {
   open: boolean; busy: boolean; phase?: string; error?: string;
   canRestart?: boolean;
   attempt?: Attempt; simulation?: Simulation; summary?: Summary; diagnostics?: Diagnostics; artifacts?: Artifacts;
+  /**
+   * Id da execução cujos resultados já foram consultados depois do fim — com ou sem sucesso em
+   * cada consulta. É o que encerra a etapa "Resultados" do acompanhamento (T028); pelo id, e não
+   * por um booleano, para não valer para outra execução aberta depois.
+   */
+  resultadosDe?: string;
   setOpen: (open: boolean) => void;
   start: (engine: string, runType: 'annual' | 'design_day', weatherId?: string) => Promise<void>;
   retry: () => Promise<void>;
@@ -42,7 +48,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     if (get().busy || (get().simulation && !terminal(get().simulation!.status))) return;
     clearTimeout(timer);
     try { sessionStorage.removeItem(KEY); } catch { /* unavailable */ }
-    set({ canRestart: false, busy: true, error: undefined, phase: 'Enviando uma cópia do modelo…', summary: undefined, diagnostics: undefined, artifacts: undefined, logs: undefined, simulation: undefined, attempt: undefined });
+    set({ canRestart: false, busy: true, error: undefined, phase: 'Enviando uma cópia do modelo…', summary: undefined, diagnostics: undefined, artifacts: undefined, logs: undefined, resultadosDe: undefined, simulation: undefined, attempt: undefined });
     try {
       const d = useDocumentStore.getState(), schema = useSchemaStore.getState();
       const issues = schema.validator?.validate(d.doc).filter(i => i.severity === 'error') ?? [];
@@ -124,6 +130,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       diagnostics: diagnostics.status === 'fulfilled' ? diagnostics.value : undefined,
       artifacts: artifacts.status === 'fulfilled' ? artifacts.value : undefined,
       logs: logs.status === 'fulfilled' ? logs.value : undefined,
+      resultadosDe: simulation.id,
       error: [summary, diagnostics, artifacts, logs].filter(r => r.status === 'rejected').map(r => errorText((r as PromiseRejectedResult).reason)).join(' ') || undefined });
   },
 }));
