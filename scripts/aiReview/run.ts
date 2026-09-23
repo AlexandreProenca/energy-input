@@ -45,6 +45,7 @@ async function main(): Promise<void> {
 
   let texto: string;
   let bruto: string;
+  let cortada = false;
   try {
     const resposta = await fetch(ENDPOINT, {
       method: 'POST',
@@ -83,13 +84,15 @@ async function main(): Promise<void> {
   try {
     const resposta = lerResposta(JSON.parse(texto));
     bruto = resposta.bruto;
-    // Resposta cortada tem diagnóstico próprio: sem isto, o parser a recusava como "formato
-    // inválido", e o log não dizia que o problema era o limite de tokens.
-    if (resposta.cortada) {
-      morrer('A resposta do modelo foi cortada pelo limite de tokens (max_tokens) antes de terminar o JSON.', describeShape(bruto));
-    }
+    cortada = resposta.cortada;
   } catch {
     morrer('A API DeepSeek respondeu com um corpo que não é JSON.', describeShape(texto));
+  }
+  // Resposta cortada tem diagnóstico próprio: sem isto, o parser a recusava como "formato
+  // inválido", e o log não dizia que o problema era o limite de tokens. Fora do `try` de
+  // cima, cujo `catch` trocaria esta mensagem pela de corpo não-JSON se `morrer` lançasse.
+  if (cortada) {
+    morrer('A resposta do modelo foi cortada pelo limite de tokens (max_tokens) antes de terminar o JSON.', describeShape(bruto));
   }
 
   try {

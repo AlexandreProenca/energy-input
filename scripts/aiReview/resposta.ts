@@ -15,5 +15,7 @@ export function lerResposta(corpo: unknown): RespostaDoModelo {
   const escolha = (corpo as { choices?: { message?: { content?: unknown }; finish_reason?: unknown }[] } | null)
     ?.choices?.[0];
   const conteudo = escolha?.message?.content;
-  return { bruto: typeof conteudo === 'string' ? conteudo : '', cortada: escolha?.finish_reason === 'length' };
+  // `length` é a grafia da OpenAI e do DeepSeek; `max_tokens`, a de alguns gateways compatíveis.
+  const cortada = escolha?.finish_reason === 'length' || escolha?.finish_reason === 'max_tokens';
+  return { bruto: typeof conteudo === 'string' ? conteudo : '', cortada };
 }

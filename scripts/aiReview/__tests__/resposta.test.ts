@@ -14,6 +14,10 @@ describe('leitura da resposta da API do modelo (T029)', () => {
       .toEqual({ bruto: '{"findings":[{"title":"x"', cortada: true });
   });
 
+  it('reconhece a grafia `max_tokens` de gateways compatíveis', () => {
+    expect(lerResposta({ choices: [{ message: { content: '{' }, finish_reason: 'max_tokens' }] }).cortada).toBe(true);
+  });
+
   it('tolera corpo sem escolha, sem mensagem ou com conteúdo que não é texto', () => {
     expect(lerResposta({})).toEqual({ bruto: '', cortada: false });
     expect(lerResposta(null)).toEqual({ bruto: '', cortada: false });

@@ -67,6 +67,18 @@ No PR #24 a revisão por IA — check obrigatório — reprovou com
 
 ---
 
+## 5.1 Revisão do PR
+
+- **Aceito:** a checagem de corte estava dentro do `try` cujo `catch` reescreve a mensagem para
+  "corpo que não é JSON". Funcionava porque `morrer` chama `process.exit`, que não lança — mas
+  dependia disso. Saiu do `try`.
+- **Aceito:** `finish_reason: "max_tokens"`, grafia de alguns gateways compatíveis, também conta
+  como corte.
+- **Refutado:** "8 000 pode exceder o teto do modelo e dar 400". A revisão deste mesmo PR rodou com
+  `max_tokens: 8000`, e a API a aceitou.
+
+---
+
 ## 6. Observações / armadilhas para tarefas futuras
 
 **A mensagem genérica escondeu a causa.** "Formato inválido" era verdade, mas não dizia qual
