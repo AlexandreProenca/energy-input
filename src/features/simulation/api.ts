@@ -49,6 +49,11 @@ export const isSeriesExpired = (e: unknown): boolean => e instanceof SimulationA
 export const seriesCandidates = (e: unknown): SeriesCandidate[] =>
   e instanceof SimulationApiError && e.status === 422 ? parseSeriesCandidates(e.problem) : [];
 export class SimulationApi {
+  /**
+   * `token` existe só para scripts em Node que falam direto com o serviço
+   * (`scripts/capture-results-fixtures.ts`). O app no navegador nunca o passa: a chave fica no
+   * ambiente do servidor, e o proxy a injeta (T027, ADR-0003).
+   */
   constructor(private token = '', private base = '/simulation-api/v1') {}
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     let response: Response;

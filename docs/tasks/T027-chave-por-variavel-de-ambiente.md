@@ -163,6 +163,13 @@ mensagem de recusa da chave cita o mesmo conjunto da regex (`[A-Za-z0-9._~+/-]`,
 e a comparação de origem sensível a maiúsculas não afeta navegador — o analisador de URL põe o host
 em minúsculas tanto no `Origin` quanto no `Host`.
 
+A quinta rodada também só repetiu, com três ângulos novos declinados: rótulo com hífen inicial
+(a regex exige letra ou dígito no começo de **cada** rótulo, e IDN chega como `xn--…`, que casa);
+`Origin: null` recusado (é o certo — origem opaca, como iframe isolado, não deve usar a chave); e
+o parâmetro `token` de `SimulationApi` que o teste ainda usa. Esse continua de propósito: serve aos
+scripts em Node que falam direto com o serviço. Ganhou um comentário dizendo isso, porque o achado
+mostra que a leitura do código sugeria o contrário.
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
