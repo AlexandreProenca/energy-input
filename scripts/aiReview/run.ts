@@ -8,7 +8,7 @@
  *   npx tsx scripts/aiReview/run.ts
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { ReviewFormatError, describeShape, parseReview } from './parse';
+import { ReviewFormatError, describeShape, diagnoseResponse, parseReview } from './parse';
 import { renderReport } from './report';
 import { lerResposta } from './resposta';
 import { SYSTEM_PROMPT, buildUserPrompt } from './prompts';
@@ -102,7 +102,7 @@ async function main(): Promise<void> {
       // O log do CI é público e a resposta deriva do diff do PR: vai para lá a forma, não o
       // conteúdo. O portão continua reprovando — check obrigatório que passa sem entender o
       // resultado não é portão nenhum.
-      morrer(`Resposta do modelo em formato inválido: ${e.message}`, describeShape(bruto));
+      morrer(`Resposta do modelo em formato inválido: ${e.message}`, diagnoseResponse(bruto));
     }
     // Qualquer outra falha aqui — escrita em disco, por exemplo — também precisa da anotação
     // `::error::`. Relançar deixaria o job vermelho sem dizer por quê no lugar onde o
