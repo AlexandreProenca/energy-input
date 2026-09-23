@@ -130,6 +130,16 @@ Quatro achados. **Dois aceitos**, um em parte, um declinado:
 | "Voltar e ajustar" fecha o diálogo em vez de voltar ao formulário | **aceito em parte** — fechar é de propósito: a falha é do modelo, e o ajuste é no modelo, não no motor ou no clima. O rótulo virou **"Ajustar o modelo"**, que diz isso |
 | O clima pré-selecionado não acompanha o `Site:Location` se o documento mudar com o diálogo aberto | **declinado** — o diálogo é modal; o documento não muda enquanto ele está aberto. Ao reabrir, a conexão e a busca rodam de novo |
 
+Numa segunda rodada, cinco achados, **todos declinados**:
+
+| Achado | Veredito |
+|---|---|
+| O erro da busca de clima apagaria o da conexão | **não acontece** — se `engines()` falha, `connect` para ali e a busca de clima nem roda |
+| Um atalho global de desfazer mudaria o documento com o diálogo aberto | **declinado** — o `Simular` envia o documento do momento do clique; o que ficaria desatualizado é só a sugestão de clima, que aparece com o nome e a distância na tela |
+| Empate entre `26.1.0` e `26.1.0-beta` depende da ordem da lista | **declinado** — o serviço lista versões publicadas, e o padrão dele é preferido antes da ordenação |
+| `weatherNear` aceita qualquer texto em `near` | **declinado** — o único chamador usa `pontoDeBusca`, testado contra o padrão do contrato |
+| Reabrir o diálogo com a conexão falhando | **declinado** — a vista de acompanhamento não depende da conexão, e o erro vem com "Tentar de novo" |
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
