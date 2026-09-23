@@ -98,7 +98,7 @@ capturar.
 - `src/core/results/__fixtures__/erro-422-chave-ambigua.json` e `…-chave-inexistente.json`:
   novas, anonimizadas; o `README.md` das fixtures registra a exceção.
 - Testes: `src/core/results/__tests__/candidatas.test.ts` (novo, 7); `resultsStore.test.ts`
-  reescrito contra as fixtures reais (+3); `resultsApi.test.ts` com a asserção corrigida.
+  reescrito contra as fixtures reais (+5); `resultsApi.test.ts` com a asserção corrigida.
 - `docs/DEVELOPMENT.md`: os três 422 e o comportamento com várias zonas.
 
 ---
@@ -106,7 +106,7 @@ capturar.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 343 testes (eram 331; +12 nesta tarefa)
+- [x] `npm test` — 345 testes (eram 331; +14 nesta tarefa, 2 da rodada de revisão)
 - [x] `npm run build`
 - [x] **Prova negativa:** devolvendo o parser ao comportamento antigo, 11 testes reprovam.
 - [x] **Contra o serviço real, com a execução que falhou** (duas zonas):
@@ -118,6 +118,33 @@ capturar.
       - nenhuma mensagem de "não registrou".
 - [x] **Consulta direta ao serviço:** com chave e frequência certas volta a série anual inteira,
       8 760 pontos.
+
+---
+
+## 5.1 Revisão do PR, e um defeito vizinho que ela não apontou
+
+Três achados. **Um virou teste**, dois foram declinados:
+
+| Achado | Veredito |
+|---|---|
+| A abertura automática poderia reentrar em laço | **teste acrescentado** — a zona aberta leva chave, e o ramo que descobre candidatas só vale sem chave: um segundo 422 vira erro visível. O teste prova que são duas chamadas, não um laço |
+| A regra da candidata não ancora o início | **declinado** — é de propósito: o prefixo (`candidata:`/`existe:`) distingue o caso, não a chave. Ancorar nos prefixos conhecidos trocaria um prefixo novo do serviço por falha total |
+| 422 sem candidata com zona escolhida vira erro | **declinado** — com zona escolhida, 422 quer dizer que a chave não existe para aquela variável; erro é a resposta certa |
+
+**Ao investigar o primeiro, apareceu um defeito real que a revisão não apontou: `limpar()` nunca
+é chamado pelo app.** Ao abrir outra execução, as zonas da anterior continuavam: uma execução de
+uma zona, aberta depois da de duas, oferecia no seletor as duas chaves antigas — que não existem
+nela —, e o painel de desconforto diria "uma das 2 zonas". A temperatura antiga também ficava na
+tela enquanto a nova carregava. O defeito vinha da T010, mas o aviso de zona desta tarefa o
+tornaria visível. Agora toda carga sem zona recomeça a descoberta.
+
+Verificado no navegador, alternando entre a execução de duas zonas e uma de zona única (a da
+T010): em cada troca, seletor, zona, extremos e aviso corretos, e os valores da zona única
+(12,7 °C / 32 °C) iguais aos registrados na T010.
+
+**Uma armadilha minha no teste:** dentro do `describe`, a zona B se chamava `B` e sombreava a
+execução `B` do arquivo; o teste pôs uma *string* no lugar da simulação e falhou pelo motivo
+errado. Só o isolamento do caso mostrou.
 
 ---
 

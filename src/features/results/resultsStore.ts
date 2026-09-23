@@ -132,7 +132,14 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
     tempEmCurso = { id: minha, abort };
     const atual = () => tempEmCurso?.id === minha;
 
-    set({ carregandoTemperatura: true, erro: undefined, zonaEscolhida: zona });
+    // Sem zona é descoberta nova — é assim que cada execução é aberta. Recomeça do zero: o
+    // app nunca chama `limpar()`, e sem isto a execução nova herdava as zonas da anterior (o
+    // seletor oferecia chaves que não existem nela) e mostrava a temperatura antiga enquanto
+    // carregava. Com zona, é troca dentro da mesma execução, e a lista fica.
+    set({
+      carregandoTemperatura: true, erro: undefined, zonaEscolhida: zona,
+      ...(zona ? {} : { zonas: [], frequenciaDaZona: {}, interna: undefined, externa: undefined }),
+    });
     try {
       const frequencia = zona ? get().frequenciaDaZona[zona] : undefined;
       const interna = await api().allTimeseries(
@@ -154,7 +161,9 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
         interna: { variable: interna.variable, itens: interna.itens, completa: interna.completa },
         externa: externa && { variable: externa.variable, itens: externa.itens, completa: externa.completa },
         zonaEscolhida: interna.variable.key || zona,
-        zonas: get().zonas.length ? get().zonas : [interna.variable.key].filter(Boolean),
+        // Sem zona, a lista acabou de ser zerada e a execução tem uma zona só; com zona, é a
+        // lista descoberta pelo 422.
+        zonas: zona ? get().zonas : [interna.variable.key].filter(Boolean),
       });
     } catch (e) {
       if (!atual()) return;

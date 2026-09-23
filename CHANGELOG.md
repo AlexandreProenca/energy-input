@@ -21,6 +21,8 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
   existe. Agora o painel abre a primeira zona sozinho, oferece as outras, e o de desconforto diz de
   qual zona são as horas. Os testes usavam um corpo de resposta inventado; passaram a usar os reais.
   (`Refs: T025`)
+- Abrir outra execução mantinha as zonas da anterior no seletor, e a temperatura antiga na tela
+  enquanto a nova carregava. (`Refs: T025`)
 
 - **Trocar o vidro no assistente deixava as janelas desenhadas no Editor 3D apontando para uma
   construção apagada**, e o EnergyPlus parava com `invalid construction_name`. O sync do

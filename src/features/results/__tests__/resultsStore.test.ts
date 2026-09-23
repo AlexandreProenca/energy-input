@@ -201,4 +201,36 @@ describe('carga de temperaturas', () => {
     expect(s.zonaEscolhida).toBe('ZONA QUE NÃO EXISTE');
     expect(s.zonas).toEqual([A, B]);
   });
+
+  it('trocar para uma execução de uma zona não herda as zonas da anterior', async () => {
+    // `limpar()` nunca é chamado pelo app. Sem recomeçar a descoberta, a execução nova
+    // herdava as duas zonas da anterior: o seletor oferecia chaves que não existem nela, e o
+    // painel de desconforto diria "uma das 2 zonas" de uma execução com uma.
+    duasZonas();
+    await useResultsStore.getState().carregarTemperaturas();
+    expect(useResultsStore.getState().zonas).toEqual([A, B]);
+
+    vi.restoreAllMocks();
+    vi.spyOn(SimulationApi.prototype, 'allTimeseries').mockImplementation(
+      (async (_id: string, q: { variable: string }) => serieDe(q.variable, q.variable.startsWith('Site') ? 'Environment' : 'ZONE ONE')) as never,
+    );
+    // `B` aqui é a zona, e sombreia a execução `B` do arquivo; a execução vai pelo nome.
+    useSimulationStore.setState({ simulation: sim('sim_01M2KXZQ8HMGH0MPEG8VN9FP7A') });
+    await useResultsStore.getState().carregarTemperaturas();
+    const s = useResultsStore.getState();
+    expect(s.interna?.variable.key).toBe('ZONE ONE');
+    expect(s.zonas).toEqual(['ZONE ONE']);
+    expect(s.zonaEscolhida).toBe('ZONE ONE');
+    expect(s.frequenciaDaZona).toEqual({});
+  });
+
+  it('a abertura automática não entra em laço se a zona também vier ambígua', async () => {
+    // Da revisão do PR: a zona aberta sozinha leva chave, e o ramo que descobre candidatas
+    // só vale sem chave — então um segundo 422 vira erro visível, não outra volta.
+    const espiao = vi.spyOn(SimulationApi.prototype, 'allTimeseries').mockRejectedValue(erroDe(ambigua) as never);
+    await useResultsStore.getState().carregarTemperaturas();
+    expect(espiao).toHaveBeenCalledTimes(2);
+    expect(useResultsStore.getState().erro).toBeDefined();
+    expect(useResultsStore.getState().carregandoTemperatura).toBe(false);
+  });
 });
