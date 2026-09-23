@@ -81,8 +81,8 @@ era a outra metade: objeto do usuário também não pode ficar apontando para o 
   o usuário apagasse as janelas.
 - **A varredura não depende do schema:** todo valor de texto do objeto, em maiúsculas, porque
   o EnergyPlus compara nomes sem diferenciar maiúsculas. Uma coincidência (valor de enum igual
-  ao nome de um objeto) só mantém algo que poderia ter saído, o que é inofensivo; uma
-  referência perdida é `Fatal` no motor.
+  ao nome de um objeto) só mantém no documento um objeto sem uso, que o motor aceita — e nos
+  documentos gerados não há nenhuma (§5.1); uma referência perdida é `Fatal` no motor.
 
 ### O conserto na validação: erro, mas só onde a medição permite
 
@@ -118,7 +118,7 @@ janela → construção → material → esquadria. As outras seguem como aviso.
 
 - `src/core/sync/wizardSync.ts`: remoção com retenção por referência; `SyncPlan.retained`.
 - `src/core/validation/crossRefs.ts`: `LISTAS_SEM_SINTESE` e a severidade por lista.
-- `src/core/sync/__tests__/referencias.test.ts`: novo, 7 testes. Inclui a sequência real do
+- `src/core/sync/__tests__/referencias.test.ts`: novo, 8 testes. Inclui a sequência real do
   incidente.
 - `src/core/validation/__tests__/crossRefs.test.ts`: novo, 5 testes.
 - `docs/DEVELOPMENT.md` (Wizard ⇄ Expert) e `CLAUDE.md`: a regra nova.
@@ -128,7 +128,7 @@ janela → construção → material → esquadria. As outras seguem como aviso.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 309 testes (eram 297; +12 nesta tarefa)
+- [x] `npm test` — 310 testes (eram 297; +13 nesta tarefa, 1 vindo da revisão do PR)
 - [x] `npm run build`
 - [x] **O defeito foi reproduzido antes do conserto.** Com a sequência real, o teste central
       reprovou com a construção apagada. A contraprova, de que o documento está íntegro
@@ -150,6 +150,28 @@ janela → construção → material → esquadria. As outras seguem como aviso.
 
       Na segunda execução o sync reteve a construção **e** o material de vidro
       `WindowMaterial:SimpleGlazingSystem`: a cadeia é necessária.
+
+---
+
+## 5.1 Revisão do PR
+
+Cinco achados. **Um aceito, quatro declinados, cada um com o motivo.**
+
+| Achado | Veredito |
+|---|---|
+| Faltava teste da cadeia de 3 níveis | **aceito** — a lógica já cobria (a própria revisão concluiu isso), e o teste trava |
+| `some` deveria ser `every` em `LISTAS_SEM_SINTESE` | **declinado** — com `every`, o conserto **não pegaria o próprio incidente**: o `construction_name` da janela aponta para `ComplexFenestrationStates` e `ConstructionNames`, e só a segunda está no conjunto. A medição é por lista em toda referência que a inclui, e a remedição com `some` deu zero falsos positivos |
+| O ponto fixo é O(N²) | **declinado** — o número de voltas é limitado pela profundidade da cadeia (janela → construção → material → esquadria), não pelo número de objetos |
+| A varredura sem schema pode reter objeto por coincidência de texto | **declinado com medição** — veja abaixo |
+| Assimetria entre referências de objetos que saem e objetos que ficam | **declinado** — a própria revisão concluiu que é intencional e correta |
+
+**A coincidência de texto foi medida, não suposta.** Em 7 variantes do documento gerado (o
+padrão, os cinco vidros com janelas automáticas e o recuo noturno), **nenhum** nome de objeto
+coincide com o valor de um campo que não é referência. O caso restante é o usuário, no
+Especialista, escrever em campo comum um texto igual ao nome de um objeto do assistente. O
+efeito é um objeto sem uso que fica no documento, e o EnergyPlus o aceita. Usar o schema na
+varredura acoplaria o sync ao índice do schema para evitar esse caso, e o erro oposto — perder
+uma referência — é `Fatal`.
 
 ---
 

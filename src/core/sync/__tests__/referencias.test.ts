@@ -91,6 +91,19 @@ describe('objeto do assistente ainda referenciado', () => {
     ]));
   });
 
+  it('segue a cadeia em qualquer profundidade', () => {
+    // Usuário → A → B → C, os três do assistente e fora da geração: os três ficam. Veio da
+    // revisão do PR — a lógica já cobria, e o teste trava.
+    const g1: EpJsonDocument = { Construction: { A: { outside_layer: 'B' } }, Material: { B: { roughness: 'C' } }, 'Schedule:Constant': { C: {} }, Zone: { Z: {} } };
+    const primeira = planWizardSync({}, g1, {}, 'overwrite');
+    const doc = { ...primeira.next, 'FenestrationSurface:Detailed': { W: { construction_name: 'A' } } };
+    const plano = planWizardSync(doc, { Zone: { Z: {} } }, primeira.owned, 'overwrite');
+    expect(plano.next.Construction?.A).toBeDefined();
+    expect(plano.next.Material?.B).toBeDefined();
+    expect(plano.next['Schedule:Constant']?.C).toBeDefined();
+    expect(plano.retained).toHaveLength(3);
+  });
+
   it('compara nomes sem diferenciar maiúsculas, como o EnergyPlus', () => {
     const primeira = planWizardSync({}, gen1, {}, 'overwrite');
     const doc = { ...primeira.next, 'FenestrationSurface:Detailed': { W: { construction_name: 'c' } } };
