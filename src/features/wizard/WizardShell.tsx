@@ -1,14 +1,14 @@
 import { lazy, Suspense, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Code2, Eye, Info, Loader2, TriangleAlert, Wrench } from 'lucide-react';
 import { clsx } from 'clsx';
-import { WIZARD_STEPS } from '@/generators/answers';
+import { WIZARD_PAGES } from '@/generators/answers';
 import { useUiStore } from '@/store/uiStore';
 import { useWizardStore } from '@/store/wizardStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { countObjects } from '@/core/epjson/document';
 import { useValidation } from '@/hooks/useValidation';
 import { Button, Callout } from '@/ui/primitives';
-import { STEP_META } from './steps';
+import { PAGE_META, STEP_META } from './steps';
 import { ProjectStep } from './steps/ProjectStep';
 import { LocationStep } from './steps/LocationStep';
 import { RunPeriodStep } from './steps/RunPeriodStep';
@@ -47,13 +47,12 @@ export function WizardShell() {
   const [cutaway, setCutaway] = useState(false);
   const validation = useValidation();
 
-  const idx = WIZARD_STEPS.indexOf(step);
-  const meta = STEP_META[idx];
-  const StepComponent = STEP_COMPONENTS[step];
+  const idx = WIZARD_PAGES.indexOf(step);
+  const meta = PAGE_META[idx];
   const Icon = meta.icon;
 
   const go = (i: number) => {
-    goTo(WIZARD_STEPS[i]);
+    goTo(WIZARD_PAGES[i]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -62,7 +61,7 @@ export function WizardShell() {
       {/* Step list */}
       <nav aria-label="Etapas do assistente" className="xl:w-56 xl:shrink-0">
         <ol className="scrollbar-thin -mx-4 flex gap-1 overflow-x-auto px-4 pb-1 xl:sticky xl:top-20 xl:mx-0 xl:flex-col xl:overflow-visible xl:px-0">
-          {STEP_META.map((s, i) => {
+          {PAGE_META.map((s, i) => {
             const StepIcon = s.icon;
             const active = s.id === step;
             const done = visited.includes(s.id) && !active;
@@ -117,22 +116,40 @@ export function WizardShell() {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">
-                Etapa {idx + 1} de {STEP_META.length} · {meta.title}
+                Etapa {idx + 1} de {PAGE_META.length} · {meta.title}
               </p>
               <h1 className="mt-0.5 text-xl font-semibold text-slate-900 sm:text-2xl">{meta.question}</h1>
             </div>
           </header>
           <div className="px-5 py-6 sm:px-7">
-            <StepComponent />
+            {/*
+              Página unida mostra as etapas em sequência, cada uma com o próprio título, para que
+              "Materiais" e "Janelas" continuem reconhecíveis dentro de "Materiais e janelas".
+            */}
+            {meta.steps.map((etapa, i) => {
+              const Etapa = STEP_COMPONENTS[etapa];
+              const titulo = STEP_META.find((m) => m.id === etapa)!;
+              const EtapaIcon = titulo.icon;
+              return (
+                <section key={etapa} className={clsx(i > 0 && 'mt-8 border-t border-slate-100 pt-8')} aria-label={titulo.title}>
+                  {meta.steps.length > 1 && (
+                    <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-800">
+                      <EtapaIcon size={18} className="text-brand-600" /> {titulo.title}
+                    </h2>
+                  )}
+                  <Etapa />
+                </section>
+              );
+            })}
           </div>
           <footer className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:px-7">
             <Button variant="ghost" icon={<ArrowLeft size={16} />} disabled={idx === 0} onClick={() => go(idx - 1)}>
               Voltar
             </Button>
             <div className="hidden h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 sm:mx-6 sm:block">
-              <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${((idx + 1) / STEP_META.length) * 100}%` }} />
+              <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${((idx + 1) / PAGE_META.length) * 100}%` }} />
             </div>
-            {idx < STEP_META.length - 1 ? (
+            {idx < PAGE_META.length - 1 ? (
               <Button variant="primary" onClick={() => go(idx + 1)}>
                 Próximo <ArrowRight size={16} />
               </Button>

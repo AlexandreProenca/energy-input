@@ -1,5 +1,5 @@
 import type { EpJsonDocument } from '@/core/epjson/types';
-import type { WizardAnswers, WizardStepId } from '@/generators/answers';
+import { pageOf, type WizardAnswers, type WizardPageId } from '@/generators/answers';
 import type { OwnershipMap } from '@/core/sync/wizardSync';
 import { useDocumentStore, type ProjectOrigin } from './documentStore';
 import { useUiStore, type AppMode } from './uiStore';
@@ -16,8 +16,8 @@ interface Snapshot {
   owned: OwnershipMap;
   linked: boolean;
   mode: AppMode;
-  wizardStep: WizardStepId;
-  visitedSteps: WizardStepId[];
+  wizardStep: WizardPageId;
+  visitedSteps: WizardPageId[];
 }
 
 function readSnapshot(): Snapshot | undefined {
@@ -57,7 +57,10 @@ export function restoreSnapshot(): string | undefined {
     ? { kind: 'upload', doc: structuredClone(s.doc), fileName: s.fileName, recovered: true }
     : { kind: 'generated' }) });
   useWizardStore.getState().hydrate({ answers: s.answers, owned: s.owned ?? {}, linked: s.linked ?? true });
-  useUiStore.setState({ mode: modoValido(s.mode), wizardStep: s.wizardStep ?? 'project', visitedSteps: s.visitedSteps ?? ['project'] });
+  // Sessões salvas antes da T026 guardam etapas que deixaram de ser página ("Clima", "Janelas",
+  // "Climatização"): cada uma volta na página que a mostra agora.
+  const visitadas = [...new Set((Array.isArray(s.visitedSteps) ? s.visitedSteps : ['project']).map(pageOf))];
+  useUiStore.setState({ mode: modoValido(s.mode), wizardStep: pageOf(s.wizardStep), visitedSteps: visitadas });
   return s.savedAt;
 }
 
