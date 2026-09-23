@@ -1,6 +1,8 @@
 import { safeFileName } from '@/lib/files';
 import type { ApiProblem, TimeSeries, TimeSeriesPoint, TimeSeriesQuery, VariableCatalog } from '@/core/results/types';
 export type { ApiProblem, CatalogItem, Frequency, SeriesVariable, TimeSeries, TimeSeriesPoint, TimeSeriesQuery, VariableCatalog } from '@/core/results/types';
+import { parseSeriesCandidates, type SeriesCandidate } from '@/core/results/candidatas';
+export type { SeriesCandidate } from '@/core/results/candidatas';
 /** Contract: https://homolog.ee.dev.br/v1/openapi.json (2026-09-22). */
 export interface Simulation {
   id: string; model_version_id: string; status: string; run_type: 'annual' | 'design_day';
@@ -40,15 +42,12 @@ export class SimulationApiError extends Error {
  */
 export const isSeriesExpired = (e: unknown): boolean => e instanceof SimulationApiError && e.status === 410;
 /**
- * **422 cobre dois casos distintos** e só o corpo os separa: variável que a execução não
- * registrou, e chave ambígua (a mesma variável em mais de uma zona). No segundo, as
- * candidatas vêm em `errors[]` — é a única forma de descobri-las, já que o catálogo é por
- * tipo e não traz chave.
+ * As séries candidatas de um 422 de `/results/timeseries` — chave e frequência de cada uma.
+ * O 422 de variável não registrada não tem candidatas e devolve lista vazia. Os três casos
+ * estão em `src/core/results/candidatas.ts`.
  */
-export const seriesCandidates = (e: unknown): string[] =>
-  e instanceof SimulationApiError && e.status === 422
-    ? (e.problem?.errors ?? []).map(f => f.message ?? '').filter(Boolean)
-    : [];
+export const seriesCandidates = (e: unknown): SeriesCandidate[] =>
+  e instanceof SimulationApiError && e.status === 422 ? parseSeriesCandidates(e.problem) : [];
 export class SimulationApi {
   constructor(private token = '', private base = '/simulation-api/v1') {}
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {

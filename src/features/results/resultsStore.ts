@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SimulationApi, isSeriesExpired, seriesCandidates, type TimeSeriesPoint, type SeriesVariable } from '@/features/simulation/api';
+import { SimulationApi, SimulationApiError, isSeriesExpired, seriesCandidates, type Frequency, type TimeSeriesPoint, type SeriesVariable } from '@/features/simulation/api';
 import { useSimulationStore } from '@/features/simulation/simulationStore';
 
 /**
@@ -34,6 +34,12 @@ interface ResultsState {
   /** Zonas que o serviço reconheceu, quando a variável existe em mais de uma. */
   zonas: string[];
   zonaEscolhida?: string;
+  /**
+   * Frequência de cada zona, como o 422 a informou. Vai junto da chave porque o serviço pede
+   * "escolha uma por key e frequency": um modelo que gravasse a mesma zona em horária e
+   * diária continuaria ambíguo só com a chave.
+   */
+  frequenciaDaZona: Record<string, Frequency>;
   carregandoTemperatura: boolean;
   carregarMedidores: () => Promise<void>;
   carregarTemperaturas: (zona?: string) => Promise<void>;
@@ -97,6 +103,7 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
   medidores: [],
   ausentes: [],
   zonas: [],
+  frequenciaDaZona: {},
 
   limpar: () => {
     emCurso?.abort.abort();
@@ -104,7 +111,7 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
     set({
       simulationId: undefined, medidores: [], ausentes: [], erro: undefined, expirada: false,
       carregando: false, carregandoTemperatura: false, interna: undefined, externa: undefined,
-      zonas: [], zonaEscolhida: undefined,
+      zonas: [], zonaEscolhida: undefined, frequenciaDaZona: {},
     });
   },
 
@@ -125,10 +132,21 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
     tempEmCurso = { id: minha, abort };
     const atual = () => tempEmCurso?.id === minha;
 
-    set({ carregandoTemperatura: true, erro: undefined, zonaEscolhida: zona });
+    // Sem zona é descoberta nova — é assim que cada execução é aberta. Recomeça do zero: o
+    // app nunca chama `limpar()`, e sem isto a execução nova herdava as zonas da anterior (o
+    // seletor oferecia chaves que não existem nela) e mostrava a temperatura antiga enquanto
+    // carregava. Com zona, é troca dentro da mesma execução, e a lista fica.
+    set({
+      carregandoTemperatura: true, erro: undefined, zonaEscolhida: zona,
+      ...(zona ? {} : { zonas: [], frequenciaDaZona: {}, interna: undefined, externa: undefined }),
+    });
     try {
+      const frequencia = zona ? get().frequenciaDaZona[zona] : undefined;
       const interna = await api().allTimeseries(
-        simulation.id, { variable: OPERATIVA, ...(zona ? { key: zona } : {}) }, 12, abort.signal,
+        simulation.id,
+        { variable: OPERATIVA, ...(zona ? { key: zona } : {}), ...(frequencia ? { frequency: frequencia } : {}) },
+        12,
+        abort.signal,
       );
       if (!atual()) return;
       // A externa pode faltar sem que isso invalide o painel: ela só é necessária para a
@@ -143,7 +161,9 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
         interna: { variable: interna.variable, itens: interna.itens, completa: interna.completa },
         externa: externa && { variable: externa.variable, itens: externa.itens, completa: externa.completa },
         zonaEscolhida: interna.variable.key || zona,
-        zonas: get().zonas.length ? get().zonas : [interna.variable.key].filter(Boolean),
+        // Sem zona, a lista acabou de ser zerada e a execução tem uma zona só; com zona, é a
+        // lista descoberta pelo 422.
+        zonas: zona ? get().zonas : [interna.variable.key].filter(Boolean),
       });
     } catch (e) {
       if (!atual()) return;
@@ -153,7 +173,24 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
       // falhou, repor a lista e limpar a escolha o devolveria ao seletor para escolher de
       // novo, em laço — o erro tem de aparecer.
       if (candidatas.length && !zona) {
-        set({ carregandoTemperatura: false, zonas: candidatas, zonaEscolhida: undefined });
+        const zonas = [...new Set(candidatas.map((c) => c.key))];
+        const frequenciaDaZona: Record<string, Frequency> = {};
+        for (const c of candidatas) if (c.frequency && !frequenciaDaZona[c.key]) frequenciaDaZona[c.key] = c.frequency;
+        set({ zonas, frequenciaDaZona });
+        // Abre a primeira zona em vez de esperar a escolha. Parado no seletor, os dois
+        // painéis diriam "esta execução não registrou a temperatura operativa" — falso, e
+        // o mesmo tipo de defeito da T008. A troca continua no seletor.
+        //
+        // A guarda não depende de `parseSeriesCandidates` descartar chave vazia: chamar com
+        // `''` cairia de novo no ramo sem zona, e a garantia de outra função é tudo que
+        // separaria isto de um laço infinito.
+        const primeira = zonas[0];
+        if (primeira) return get().carregarTemperaturas(primeira);
+      }
+      // 422 sem candidatas, na consulta sem zona, é "a execução não registrou a variável":
+      // ausência esperada, como nos medidores, e o painel explica em vez de acusar erro.
+      if (!zona && e instanceof SimulationApiError && e.status === 422) {
+        set({ carregandoTemperatura: false, interna: undefined, externa: undefined });
         return;
       }
       set({

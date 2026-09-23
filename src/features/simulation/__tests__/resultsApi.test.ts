@@ -150,7 +150,10 @@ describe('erros próprios das séries', () => {
     const erro = await new SimulationApi().timeseries(SIM, { variable: 'Electricity:Facility' }).catch(e => e);
     expect(erro.status).toBe(422);
     expect(erro.problem?.detail).toBe('variável inexistente nesta simulação');
-    expect(seriesCandidates(erro)).toEqual(["a simulação não registrou 'Electricity:Facility'"]);
+    // Variável não registrada não tem candidatas. Esta asserção travava o contrário — a
+    // mensagem de erro devolvida como se fosse uma zona —, e escondeu o defeito que apareceu
+    // na primeira execução com duas zonas (T025).
+    expect(seriesCandidates(erro)).toEqual([]);
     expect(seriesCandidates(new SimulationApiError('x', 500))).toEqual([]);
   });
 

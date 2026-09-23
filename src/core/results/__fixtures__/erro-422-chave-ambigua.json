@@ -1,0 +1,19 @@
+{
+  "_http_status": 422,
+  "type": "https://api.exemplo.com/errors/entrada-invalida",
+  "title": "Entrada inválida",
+  "status": 422,
+  "detail": "2 séries de 'Zone Operative Temperature'; escolha uma por key e frequency",
+  "instance": "/v1/simulations/sim_01M2KXB9D4TQ7F3S0YJ8N5VZQK/results/timeseries",
+  "request_id": "<request_id>",
+  "errors": [
+    {
+      "field": "key",
+      "message": "candidata: key='PAVIMENTO 1 · AMBIENTE A', frequency=hourly"
+    },
+    {
+      "field": "key",
+      "message": "candidata: key='PAVIMENTO 1 · AMBIENTE B', frequency=hourly"
+    }
+  ]
+}

@@ -27,6 +27,19 @@ Nada além disto — números, nomes de campo e nomes de objeto do modelo estão
 - **Séries recortadas** a 48–72 pontos. Uma página horária anual tem 8 760 pontos e passa
   de 1 MB; a fixture fixa formato, não volume.
 
+## Os 422 de chave (T025) — a exceção
+
+`erro-422-chave-ambigua.json` e `erro-422-chave-inexistente.json` **não** vieram do script: foram
+capturados à mão, pelo proxy de desenvolvimento, da primeira execução real com duas zonas — a
+que revelou o defeito da T025. Além das trocas acima, **os nomes dos ambientes foram trocados**
+por `PAVIMENTO 1 · AMBIENTE A` e `… AMBIENTE B`: o modelo é projeto de um usuário, e este
+repositório é público.
+
+O que importa para o parser foi preservado exatamente: as maiúsculas que o EnergyPlus escreve no
+`.sql`, o separador ` · `, as aspas simples em volta da chave e o prefixo de cada caso
+(`candidata:` na consulta ambígua, `existe:` na chave inexistente). Junto com
+`erro-422-variavel-inexistente.json`, cobrem os três 422 de `/results/timeseries`.
+
 ## Campo sintético
 
 `_pontos_na_pagina_original` **não existe na API**. É adicionado pelo script para registrar

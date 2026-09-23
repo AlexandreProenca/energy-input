@@ -69,6 +69,8 @@ export function DesconfortoPanel({ simulation, summary }: {
   const externa = useResultsStore((s) => s.externa);
   const carregandoTemperatura = useResultsStore((s) => s.carregandoTemperatura);
   const expirada = useResultsStore((s) => s.expirada);
+  const zonas = useResultsStore((s) => s.zonas);
+  const zonaEscolhida = useResultsStore((s) => s.zonaEscolhida);
   // A faixa fixa vem do **documento**, e não de `answers.hvac`. Este painel abre execução de
   // outra sessão pelo identificador, e o Modo Especialista desliga o vínculo com o
   // assistente (PRD §3.2): nos dois casos as respostas do assistente não têm relação com o
@@ -134,6 +136,18 @@ export function DesconfortoPanel({ simulation, summary }: {
 
       {calculado && (
         <>
+          {/*
+            Com mais de uma zona, as horas são de UMA delas. Sem dizer qual, o número pareceria
+            ser do edifício inteiro — plausível na tela e indefensável no papel.
+          */}
+          {zonas.length > 1 && zonaEscolhida && (
+            <p className="text-sm text-slate-600">
+              Horas da zona <span className="font-medium">{zonaEscolhida}</span>, uma das{' '}
+              {zonas.length} que a execução registrou. Para ver outra, troque a zona no painel de
+              temperatura operativa.
+            </p>
+          )}
+
           <Field
             label="Critério de conforto"
             hint={

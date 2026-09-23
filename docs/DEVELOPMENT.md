@@ -352,6 +352,22 @@ caminhos SVG e células do carpete) e `rotulos.ts` (dicionário pt-BR). Os compo
 `charts/` **recebem dados já agregados e não calculam nada**: o Vitest roda em
 `environment: 'node'`, sem jsdom, então lógica dentro de `.tsx` não tem como ser testada.
 
+**Com mais de uma zona, a série é escolhida pelo 422 (T025).** O catálogo de variáveis é de
+tipos e não traz chave, então as zonas são descobertas consultando sem `key`. `/results/timeseries`
+tem três 422, e só dois trazem candidatas:
+
+| Caso | Mensagem em `errors[]` |
+| --- | --- |
+| sem chave, várias zonas | `candidata: key='PAVIMENTO 1 · …', frequency=hourly` |
+| chave inexistente | `existe: key='…', frequency=hourly` |
+| variável não registrada | `a simulação não registrou '…'` (sem candidata) |
+
+A candidata é **o que está entre as aspas**, não a mensagem (`src/core/results/candidatas.ts`), e o
+pedido seguinte leva chave **e** frequência, como o serviço orienta. As chaves vêm em maiúsculas,
+como o EnergyPlus as grava no `.sql`. O painel abre a primeira zona e oferece as outras num
+seletor; parado no seletor, diria "a execução não registrou" — falso. O painel de desconforto diz
+de qual zona são as horas.
+
 Estados que o painel precisa distinguir, e que não são erro: execução em dias de projeto (não
 há ano para agregar), saída não solicitada antes de simular (**422**), série expirada pela
 retenção do `.sql` (**410** — o resumo permanente continua valendo) e medidor **registrado
