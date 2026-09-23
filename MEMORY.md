@@ -11,7 +11,7 @@ paramos, no que já esbarramos, e o que não deve ser redescoberto do zero.
 
 ## Onde paramos
 
-**Versão 0.1.0, 345 testes.** Quatro modos: Assistente (10 etapas), Editor 3D e
+**Versão 0.1.0, 398 testes.** Quatro modos: Assistente (7 páginas, T026), Editor 3D e
 Especialista **escrevem** no documento; **Resultados** lê execuções concluídas e não
 escreve.
 
@@ -25,8 +25,11 @@ escreve.
 | 3 — Estudos | T012–T015 | **próxima**. A T012 escreve o ADR do estudo paramétrico |
 
 Fora das fases: **T016** (execução no serviço), **T017–T020** (CI e revisão por IA) e **T023**
-(referência órfã no sync), **T024** (janelas acompanham o vidro) e **T025** (várias zonas) concluídas; **T021** e **T022** são do serviço, não deste
-repositório, e ficam no backlog para não se perderem.
+(referência órfã no sync), **T024** (janelas acompanham o vidro), **T025** (várias zonas), **T026**
+(assistente em 7 páginas), **T027** (chave da API no ambiente do servidor, [ADR-0003](docs/adr/0003-chave-da-api-no-ambiente-do-servidor.md)),
+**T028** (diálogo de simulação conecta sozinho, acompanha e leva aos resultados) e **T029–T030**
+(revisão por IA) concluídas; **T021** e **T022** são do serviço, não deste repositório, e ficam
+no backlog para não se perderem.
 
 **A execução no serviço voltou a funcionar em 23/09** (T016), e a primeira simulação chegou ao
 motor e revelou um defeito **deste** aplicativo, corrigido na T023.
@@ -169,23 +172,30 @@ Não investigue o epJSON antes de descartar o serviço. **O inverso também vale
 funcionando, `Severe`/`Fatal` no `.err` é do modelo, e a primeira execução depois da T016
 mostrou exatamente isso (T023).
 
-### O allowlist do proxy é controle só de desenvolvimento
+### A chave da API está no servidor, e os dois proxies recusam o mesmo
 
-`scripts/simulationRoutes.ts` barra rotas não previstas no `npm run dev`. O
-`docker/nginx.conf` de produção usa um `location` de **prefixo** e repassa qualquer
-sub-rota. **Produção é mais permissiva que o desenvolvimento**, de propósito; a assimetria
-precisa ficar escrita, e não ser "corrigida" apagando o allowlist. No CI, o teste de
-contêiner chama o proxy e aceita **401** como sucesso: prova o handshake TLS (T017).
+Desde a T027 a chave vive só no ambiente (`.env.local` para `npm run dev` e `docker compose`),
+e os dois proxies a injetam. **A premissa antiga — produção repassa qualquer rota porque a
+credencial era do navegador — caiu.** Agora o nginx usa um mapa **gerado** de
+`scripts/simulationRoutes.ts` (`npm run nginx-routes`; um teste reprova se o arquivo divergir) e
+recusa rota fora da lista (404), método fora de GET/POST (405) e outra origem (403). A chave só
+vai para `localhost`/`127.0.0.1` ou hosts em `SIMULATION_TOKEN_HOSTS`, validados como nome de
+host e nunca palavra reservada do `map` (`default` derruba o nginx; `hostnames` muda a leitura em
+silêncio). No CI, **só 401** numa rota permitida prova que o pedido chegou ao serviço — o nginx
+nunca produz 401 sozinho. Sem resposta, o curl já escreve `000`; `|| echo 000` somava outro.
 
 ### `@/` não resolve dentro de `scripts/simulationProxy.ts`
 
 O `vite.config.ts` importa esse plugin, e o esbuild carrega a config **antes** de o alias
 existir. Use caminho relativo.
 
-### O catálogo de climas do tenant tem dois arquivos, e a busca por nome é exata
+### O catálogo de climas do tenant tem dois arquivos, e a busca por nome diferencia acentos
 
 `GET /v1/weather?city=São Paulo` devolve lista vazia porque o tenant só tem
-**Florianópolis (SC)** e **Peixe (TO)**. `city=` vazio lista tudo. O tipo `Weather` em
+**Florianopolis (SC)** e **Peixe (TO)** — e `city=Florianópolis`, como o modelo grava, também:
+a busca diferencia acentos. Por isso o diálogo (T028) pré-seleciona por
+`near=lat,lon&radius_km=100`, com as coordenadas do `Site:Location`; a resposta traz
+`distance_km`. `city=` vazio lista tudo. O tipo `Weather` em
 `src/features/simulation/api.ts` segue defasado em relação à resposta real (`country`,
 `declared_type`, graus-dia, licença e outros campos não modelados).
 
@@ -196,6 +206,15 @@ quando ele ficava dentro do YAML (T018, T019). Resposta ambígua **reprova**, em
 parser adivinhar. Na prática: aceite o achado que tem cenário de falha, decline o
 especulativo **com o motivo escrito no doc da tarefa**, e leia o parecer **mais recente**
 antes de mesclar. No PR #12 o merge veio antes da leitura e deixou passar uma regressão.
+
+**Quando a revisão reprova por formato, o log diz por quê sem repetir conteúdo** (T030): se o
+JSON decodifica, o tipo e a posição do erro, se decodificaria depois de reparar escapes e as
+chaves de topo. A T029 atribuiu uma falha ao limite de tokens com base só em "objeto, 8714
+caracteres", e a execução seguinte desmentiu; a causa provável era barra invertida crua de regex
+citada na evidência, que agora é reparada. O tipo do erro sai de uma **lista fixa**: a mensagem
+do `JSON.parse` cita o texto e muda entre Node 18 e 20. **Depois de duas ou três rodadas, a
+revisão passa a repetir achados declinados**; o critério para mesclar é não haver achado
+procedente em aberto, com cada rodada registrada no doc da tarefa.
 
 ### No navegador embutido, digitação e Enter não são confiáveis
 
@@ -226,6 +245,8 @@ fazia isso e foi reescrita antes do commit.
 | O diálogo de simulação deixava passar referência inexistente (era só aviso) | T023 |
 | Trocar o vidro no assistente deixava as janelas desenhadas com o vidro antigo | T024 |
 | Seletor de zonas oferecia a mensagem do 422 como zona; abrir outra execução herdava as zonas | T025 |
+| A chave da API era digitada no navegador; o proxy de produção repassava qualquer rota | T027 |
+| Revisão por IA reprovava a resposta que citava regex com barra invertida crua | T030 |
 
 ---
 
@@ -244,5 +265,11 @@ modelos **gerados por este aplicativo**:
   qual. Agregar exige escolher critério (área? ocupação?) — decisão de produto (T025).
 - **Cota de estudo.** Existe `402` no contrato e um `/v1/usage`, que exige escopo
   `admin:billing`. Um estudo de 20 variações pode ser recusado. Afeta a T014.
+- **A causa das falhas de formato da revisão no PR #24 foi mesmo o escape?** Com a T030 na
+  `main`, a revisão leu uma resposta que citava a regex com `\|\1` — compatível, mas uma
+  aprovação não mostra se o reparo foi usado. A próxima reprovação por formato traz o
+  diagnóstico que responde.
+- **O caminho de falha do diálogo de simulação** (T028) não teve execução real com falha; está
+  só nos testes do módulo puro.
 - **Estabilidade de `TabelaDeResultados.columns[].key`** (ex.: `end_use::Heating::Electricity`)
   entre versões do motor. Afeta a união de colunas entre páginas na T015.
