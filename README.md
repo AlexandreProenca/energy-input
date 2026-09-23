@@ -19,7 +19,7 @@ O **Energy Input** é uma aplicação web moderna (_Single-Page Application_ —
 
 Historicamente, o uso do EnergyPlus dependia do formato textual legado (IDF/IDD) e de ferramentas complexas com curva de aprendizado íngreme. O **Energy Input** permite partir de decisões conceituais de alto nível (orientação, clima, geometria da planta, materiais, cargas e climatização) e obter em segundos um modelo epJSON válido, robusto e pronto para simulação.
 
-Todo o aplicativo opera sobre uma **única fonte da verdade reativa**: o documento epJSON em memória. Usuários e agentes podem alternar livremente entre três modos integrados de trabalho.
+Todo o aplicativo opera sobre uma **única fonte da verdade reativa**: o documento epJSON em memória. Usuários e agentes podem alternar livremente entre três modos integrados de edição, e um quarto modo, **Resultados**, lê as execuções concluídas sem alterar o documento.
 
 ---
 
@@ -32,6 +32,7 @@ flowchart LR
     C[Modo Especialista\n700+ objetos do Schema oficial] <-->|Formulários Dinâmicos & CodeMirror| D
     D -->|Execução Remota| S[API de Simulação\nhomolog.ee.dev.br]
     D -->|Exportação| F[Arquivo .epJSON]
+    S -->|Séries e resumo| R[Resultados\nconsumo, temperatura, desconforto]
 ```
 
 ### 🪄 Modo 1: Assistente Guiado (Wizard)
@@ -78,8 +79,18 @@ Editor completo e de baixo nível governado pelo **JSON Schema oficial** do Ener
 
 - Conexão direta com a API de homologação (`https://homolog.ee.dev.br/v1`).
 - Upload multipart do modelo epJSON, seleção de versões compatíveis do motor EnergyPlus e arquivos climáticos EPW.
-- Acompanhamento reativo de status (`queued`, `running`, `completed`, `failed`), exibição de logs/erros e download de artefatos gerados.
+- Acompanhamento reativo de status (`queued`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`), exibição de logs/erros e download de artefatos gerados.
 - Segurança rigorosa: credenciais mantidas apenas em memória volátil da sessão.
+
+### 📊 Modo 4: Resultados
+
+Lê uma execução concluída — a desta sessão ou qualquer outra, pelo identificador `sim_…` — e **não altera o documento**. As séries vêm da API em JSON; nada de `.csv`/`.sql` é interpretado no navegador.
+
+- **Consumo anual:** consumo medido, por uso final e pico de demanda, em kWh, com barras mensais.
+- **Temperatura operativa:** curva anual com a amplitude de cada dia, carpete dia × hora e a externa para comparação.
+- **Horas de desconforto:** frio e quente **em separado**, horas sem dado à vista, carpete por estado de conforto e dois critérios — a faixa do termostato do modelo e a faixa adaptativa ASHRAE 55 / EN 16798.
+- Execução em dias de projeto e série expirada pela retenção do serviço aparecem como estados explicados, não como gráfico vazio.
+- Indicadores **informativos**; não são verificação de conformidade com norma.
 
 ---
 

@@ -321,12 +321,26 @@ O produto permite alternar livremente entre o Assistente, o Editor 3D e o Modo E
    - **Catálogo de Motores:** Consulta a `/engines` para selecionar versões compatíveis do EnergyPlus (ex.: 26.1.0).
    - **Upload de Modelo:** Envio multipart (`file`) para `/models`, obtendo o identificador do modelo e versão.
    - **Despacho de Simulação:** Requisição `POST /simulations` com o `versao.id`, `engine_id`, `weather_id` (ou upload de EPW) e cabeçalho de proteção `Idempotency-Key`.
-   - **Acompanhamento (Polling):** Sondagem a cada 5 segundos para transição de estados (`queued` $\rightarrow$ `running` $\rightarrow$ `completed` / `failed` / `cancelled`).
+   - **Acompanhamento (Polling):** Sondagem a cada 5 segundos para transição de estados (`queued` $\rightarrow$ `running` $\rightarrow$ `succeeded` / `failed` / `cancelled` / `timeout`).
    - **Recuperação de Falhas e Retomada:** Armazenamento em `sessionStorage` do ID da simulação e da chave idempotente para permitir reabertura de aba sem perda de monitoramento.
 
 3. **Tratamento de Resultados e Artefatos:**
    - Exibição de resumo (`summary`), avisos e erros (`errors`) e logs de execução (`stdout`/`stderr`).
-   - Disponibilização de arquivos gerados (ex.: `.csv`, `.html`, `.eso`, `.err`) através de links pré-assinados temporários (transformação de redirecionamento 302 para evitar exposição de cabeçalhos de autorização).
+   - **Séries temporais em JSON**, sem baixar nem interpretar `.csv`/`.sql` no navegador: `/results/timeseries` (uma variável por chamada, paginada por `proximo_cursor`) e `/results/variables` (catálogo RDD/MDD). A série vive com o `eplusout.sql` e responde **410** quando a retenção o apaga; o `summary` é **permanente** e continua disponível. São a fonte do modo Resultados (§4.6).
+   - Disponibilização de arquivos gerados (ex.: `.csv`, `.html`, `.eso`, `.err`) através de links pré-assinados temporários (transformação de redirecionamento 302 para evitar exposição de cabeçalhos de autorização). **Hoje bloqueado no serviço:** o 302 aponta para uma URL interna em HTTP, que o proxy recusa corretamente (T021 do backlog).
+
+### 4.6 MODO 4: Resultados (Dashboards de Análise Energética)
+
+Quarto item do cabeçalho, carregado sob demanda. **Lê** resultados de uma execução concluída e **não escreve** no documento epJSON — os três modos anteriores continuam sendo os únicos que o editam.
+
+1. **Origem dos dados:** a execução acompanhada nesta sessão, ou qualquer execução anterior adotada pelo identificador (`sim_…`), inclusive de outra sessão.
+2. **Painéis:**
+   - **Consumo anual:** consumo medido, consumo por uso final (do resumo permanente) e pico de demanda elétrica; barras mensais por medidor e barras por uso final, em kWh. Distingue medidor **ausente** de medidor **registrado marcando zero**.
+   - **Temperatura operativa:** curva anual com a amplitude de cada dia (mínima, média e máxima), carpete dia × hora e a temperatura externa para comparação. Seletor de zona quando a execução registrou mais de uma.
+   - **Horas de desconforto:** horas **frias e quentes em separado** — pedem decisões de projeto opostas —, confortáveis e sem dado; barras mensais classificadas e carpete por estado. Dois critérios: a **faixa fixa** lida do termostato do modelo aberto, e a **faixa adaptativa** da ASHRAE 55 / EN 16798, que informa em quantos dias caiu para a faixa fixa. Os indicadores do resumo permanente aparecem rotulados pelo que medem: os de setpoint medem controle do sistema, não conforto.
+3. **Estados sem gráfico, tratados como estados e não como erro:** nenhuma execução, execução em andamento, execução sem sucesso, execução em **dias de projeto** (não há ano para agregar) e **série expirada** (410).
+4. **Postura:** indicadores informativos, na mesma linha de `src/generators/nbr15575.ts` — **não** são verificação de conformidade com norma.
+5. **Planejado (Fase 3 do épico E1):** agrupar e comparar execuções por **estudo paramétrico** (`/v1/studies`).
 
 ---
 

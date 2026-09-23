@@ -13,8 +13,9 @@ Documentação, comentários, mensagens de commit e UI em **pt-BR**.
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — algoritmos de geometria, superfícies
   compartilhadas, tolerâncias, mapeamento schema → widget e notas do motor.
 
-`MEMORY.md`, `CHANGELOG.md` e `docs/backlog.md` são citados pelo AGENTS.md mas ainda não
-existem/estão vazios — crie-os quando o ciclo pedir, não assuma que têm conteúdo.
+Também leia antes: [`MEMORY.md`](MEMORY.md) (onde paramos e armadilhas que já custaram tempo)
+e [`docs/backlog.md`](docs/backlog.md) (épico E1 — dashboards e estudos). O `CHANGELOG.md`
+recebe uma entrada por tarefa.
 
 ## Comandos
 
@@ -44,6 +45,7 @@ Validações opcionais que exigem recursos externos (nunca rodam no CI):
 EPLUS_DIR=/Applications/EnergyPlus-26-1-0 EPW=cidade.epw npm run eplus-check
 CASE=planta-ambientes EPLUS_DIR=… EPW=… npm run eplus-check   # um cenário só
 npx tsx scripts/simulation-api-check.ts                        # exige npm run dev em outra aba
+SIMULATION_ID=sim_… npx tsx scripts/capture-results-fixtures.ts  # recaptura as fixtures de resultados
 ```
 
 `npm run schema` só reescreve o destino quando o `.epJSON` de origem é mais novo; apague
@@ -58,7 +60,10 @@ Vite que encaminha `/simulation-api/v1/*` para `https://homolog.ee.dev.br`.
 **Uma única fonte da verdade reativa:** o documento epJSON em `store/documentStore.ts`
 (com undo/redo e coalescência de 800 ms). Três modos de edição escrevem no mesmo documento —
 Assistente (`features/wizard`), Editor 3D (`features/geometry`) e Especialista
-(`features/expert`) — e o modo ativo vive em `store/uiStore.ts`.
+(`features/expert`). Um quarto modo, **Resultados** (`features/results`), lê execuções
+concluídas da API e **não escreve** no documento. O modo ativo vive em `store/uiStore.ts`, e
+`App.tsx` o resolve por uma tabela total (`Record<modo, …>`): modo novo sem entrada é erro de
+tipo, não queda silenciosa noutro modo.
 
 Fluxo do Assistente:
 
@@ -76,7 +81,9 @@ Camadas:
   imutáveis, rename com propagação), `schema/` (SchemaIndex e mapeador fragmento JSON-Schema →
   `FieldSpec`), `validation/` (Ajv 8 com mensagens pt-BR, cross-refs, nomes duplicados),
   `weather/` (parsers EPW/DDY), `sync/`, `geometry/` (modelo de leitura, frames, edições puras,
-  superfícies compartilhadas, resumo U/CT).
+  superfícies compartilhadas, resumo U/CT), `results/` (normalização e agregação de séries,
+  horas de desconforto fixa e adaptativa, unidades, geometria de gráfico, rótulos pt-BR,
+  faixa de setpoints lida do documento).
 - **`src/generators/`** — funções puras `(answers) → fragmento epJSON`; `compose.ts` orquestra.
   `geometry/boxGeometry.ts` (shoebox) e `geometry/floorPlan.ts` (planta 2D por ambientes) são
   intercambiáveis via `answers.geometry.mode`.
@@ -85,8 +92,13 @@ Camadas:
 - **`src/store/`** — Zustand: `documentStore`, `wizardStore`, `schemaStore`, `uiStore`,
   `persistence.ts` (autosave em localStorage, chave `energy-input:autosave:v1`),
   `resetProject.ts`.
-- **`src/features/`** — UI por módulo; `ExpertShell`, `GeometryEditor` e `SimulationDialog` são
-  carregados com `lazy()` (evite importá-los estaticamente do `App.tsx`).
+- **`src/features/`** — UI por módulo; `ExpertShell`, `GeometryEditor`, `ResultsShell` e
+  `SimulationDialog` são carregados com `lazy()` (evite importá-los estaticamente do
+  `App.tsx`). Os gráficos de `features/results/charts/` recebem dados já agregados e não
+  calculam nada — a conta mora em `core/results/`.
+- **`scripts/`** — utilitários de desenvolvimento e CI. `simulationRoutes.ts` (allowlist do
+  proxy de dev) e `aiReview/` (a revisão por IA do PR, check obrigatório) são módulos puros
+  com teste no Vitest.
 
 Alias `@/` → `src/`.
 
@@ -103,6 +115,18 @@ Alias `@/` → `src/`.
   geometria exigem contraprovas (falso positivo, orientação reversa, tolerância).
 - **Escrita de geometria honra `GlobalGeometryRules`** (starting corner, direction,
   Relative/World) — não presuma a ordem dos vértices.
+- **O Vitest roda em `environment: 'node'`, sem jsdom.** Lógica dentro de `.tsx` não tem como
+  ser testada; qualquer decisão que afete o que o usuário vê vai para `src/core/` ou para um
+  módulo `.ts` ao lado do componente.
+- **O contrato de séries da API engana:** `hour` vai de 1 a 24 e é o **fim** do intervalo (a
+  hora 24 pertence ao dia anterior), e o ano é o do arquivo climático. Detalhes no
+  `MEMORY.md` e em `docs/DEVELOPMENT.md` (Dashboards de resultados).
+- **Falha em menos de um segundo, em qualquer modelo, sem `.err` é o serviço**, não o epJSON
+  (T016). epJSON inválido chega ao motor e deixa `Severe`/`Fatal` no `.err`.
+- **Este repositório é público.** Docs, commits, PRs e logs de CI não descrevem a
+  infraestrutura do serviço de simulação (caminhos no servidor, contas, credenciais,
+  isolamento). Registre o efeito sobre este aplicativo; o detalhe operacional pertence ao
+  repositório do serviço, que é privado.
 
 ## Regras invioláveis (resumo; íntegra no AGENTS.md §7)
 

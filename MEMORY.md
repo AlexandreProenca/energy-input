@@ -11,136 +11,180 @@ paramos, no que já esbarramos, e o que não deve ser redescoberto do zero.
 
 ## Onde paramos
 
-**Versão 0.1.0.** Os três modos de edição funcionam e geram epJSON válido: Assistente
-(10 etapas), Editor 3D e Especialista. A integração de simulação envia o modelo, cria a
-execução e acompanha o status.
+**Versão 0.1.0, 297 testes.** Quatro modos: Assistente (10 etapas), Editor 3D e
+Especialista **escrevem** no documento; **Resultados** lê execuções concluídas e não
+escreve.
 
-**Em andamento: épico E1 — Dashboards de Análise Energética e Estudos**
-([`docs/backlog.md`](docs/backlog.md), 15 tarefas + a T016 fora do épico). Implementa o
-item 1 do roadmap do PRD §9 e adota o recurso `/v1/studies` da API para versionar e agrupar
-execuções. **T001 concluída**: as fixtures reais estão em `src/core/results/__fixtures__/`.
+**Épico E1 — Dashboards de Análise Energética e Estudos** ([`docs/backlog.md`](docs/backlog.md)):
+
+| Fase | Tarefas | Estado |
+| --- | --- | --- |
+| 0 — Destravar | T001, T002 | concluída |
+| 1 — Núcleo puro | T003–T005 | concluída |
+| 2 — Modo Resultados | T006–T011 | **concluída**: os três painéis do PRD §9 |
+| 3 — Estudos | T012–T015 | **próxima**. A T012 escreve o ADR do estudo paramétrico |
+
+Fora das fases: **T016** (execução no serviço) concluída; **T017–T020** (CI e revisão por IA)
+concluídas; **T021** e **T022** são do serviço, não deste repositório, e ficam no backlog para
+não se perderem.
+
+**A execução no serviço voltou a funcionar em 23/09** (T016). Falta observar a primeira
+simulação depois da limpeza noturna do servidor para dar a verificação por fechada.
 
 Decisões de rumo, já fechadas com o usuário:
 
 | Assunto | Escolha |
 | --- | --- |
-| Gráficos | SVG próprio, sem dependência nova; agregação pura em `src/core/` |
+| Gráficos | SVG próprio, sem dependência nova; carpete em `<canvas>`; agregação em `src/core/` |
 | Modo do estudo | `parametric` (não `iterative`) |
 | Lugar na interface | Novo modo **Resultados**, quarto item do cabeçalho |
 | Sequência | Dashboards primeiro; estudos depois |
+| Preset `conforto` | ligado por padrão — [ADR-0001](docs/adr/0001-preset-de-conforto-ligado-por-padrao.md) |
 
 ---
 
-## Armadilhas
-
-### `defaultOn` em `outputs.json` é dado morto
-
-`src/templates/outputs/outputs.json` tem um campo `defaultOn` por preset, mas
-`grep -rn defaultOn src/ scripts/` só encontra o próprio JSON e
-`src/templates/outputs/types.ts`. **Nada lê esse campo.** O conjunto padrão real é a lista
-literal em `src/generators/answers.ts`:
-
-```ts
-outputs: { selected: ['resumo', 'cargas', 'conta'] },
-```
-
-As duas fontes coincidem hoje por acaso. Quem tentar mudar as saídas padrão editando só o
-JSON **não muda nada**. A T009 fecha a divergência derivando o padrão de `defaultOn`.
-
-### A execução no serviço está quebrada desde 19/09/2026
-
-Nenhuma simulação conclui: 8 falhas em 6 modelos diferentes, todas com `attempts: 3`,
-`err_available: false`, `entries: []` e **zero artefatos**. As três execuções de 16/09
-concluíram normalmente. O modelo gerado por este app **passa** em
-`POST /v1/models/{id}/validate` e falha igual em `annual` e `design_day`. Sem `.err` e sem
-artefato, o EnergyPlus não chegou a rodar — a falha é anterior ao motor.
-
-**Não reporte isso como problema do epJSON sem evidência nova, nem como sucesso da
-simulação.** Acompanhamento na T016. O épico de dashboards não está bloqueado: as
-execuções de 16/09 continuam com resultados não expirados, e delas saíram as fixtures em
-`src/core/results/__fixtures__/`.
-
-### `occupied_*_setpoint_not_met` é ~0 nos modelos que este app gera
-
-`src/generators/hvac.ts` escreve `heating_limit: 'NoLimit'` e `cooling_limit: 'NoLimit'`
-em todo `ZoneHVAC:IdealLoadsAirSystem`. Um sistema ideal ilimitado atende o setpoint em
-praticamente toda hora, então `occupied_cooling_setpoint_not_met` — que é o
-*Comfort and Setpoint Not Met Summary* do EnergyPlus — fica estruturalmente próximo de
-zero. **Ele mede controle e dimensionamento, não conforto do ocupante.**
-
-Confirmado em execução real: ambos deram **0 h** nas duas execuções observadas.
-
-Mas `Summary.comfort` tem **três** nomes, não dois — o terceiro é
-**`simple_ashrae_55_not_comfortable`**, também em horas, que deu 332,5 h numa das
-execuções. Esse é conforto de verdade, é permanente e sobrevive à retenção do `.sql`.
-
-Consequência: "horas de desconforto" (PRD §9) é calculado da série de
-`Zone Operative Temperature` contra uma faixa de conforto, e o campo ASHRAE 55 do resumo é
-o fallback quando a série expira (410) — **se** os modelos deste app o produzirem, o que
-depende de os objetos `People` carregarem modelo de conforto e só uma execução nova
-responde.
-
-### O allowlist do proxy é controle só de desenvolvimento
-
-`scripts/simulationProxy.ts` tem um regex que barra rotas não previstas. O
-`docker/nginx.conf` de produção usa um `location` de **prefixo** com `proxy_pass`, que
-repassa qualquer sub-rota e query string. **Produção é mais permissiva que o
-`npm run dev`.** Essa assimetria é anterior ao épico E1; ela precisa ficar escrita, não ser
-"corrigida" apagando o allowlist.
-
-O nginx também não tem `gzip_proxied`, sem o qual ele **nunca** comprime resposta vinda de
-proxy — mesmo com `application/json` já listado em `gzip_types`.
-
-### `@/` não resolve dentro de `scripts/simulationProxy.ts`
-
-`vite.config.ts` importa esse plugin, e o esbuild carrega a config **antes** de o
-`resolve.alias` declarado nela própria existir. Import com alias falha ao resolver; use
-caminho relativo. O arquivo está no `include` do `tsconfig.json`, então o typecheck cobre.
-
-### O catálogo de climas do tenant tem dois arquivos, e a busca por nome é exata
-
-`GET /v1/weather?city=São Paulo` devolve lista vazia — não porque a busca esteja quebrada,
-mas porque o tenant só tem **Florianópolis (SC)** e **Peixe (TO)** enviados como
-`source: "tenant"`. `city=` vazio lista tudo. Qualquer script ou teste que precise de uma
-execução `annual` tem que escolher dentro desse acervo, e o `Site:Location` do modelo
-deveria acompanhar a estação escolhida para não gerar aviso no motor.
-
-O tipo `Weather` em `src/features/simulation/api.ts` também está defasado: a resposta real
-traz `country`, `declared_type`, `hours`, `heating_degree_days`, `cooling_degree_days`,
-`degree_day_bases_c`, `license`, `license_url`, `redistributable` e `owner`, nenhum deles
-modelado.
+## Armadilhas vigentes
 
 ### O contrato de séries tem três convenções que enganam
 
-Tudo confirmado com dado real e travado em `src/core/results/__tests__/fixtures.test.ts`:
+Confirmado com dado real e travado em `src/core/results/__tests__/fixtures.test.ts`:
 
 - **`hour` vai de 1 a 24 e é o fim do intervalo.** A hora 24 ainda pertence ao dia
-  anterior, embora seu `timestamp` UTC já esteja no dia seguinte
-  (`month: 1, day: 1, hour: 24` ⇄ `2013-01-02T03:00:00Z`, `utc_offset_hours: -3`).
-  Tratar 24 como hora 0 do dia seguinte desloca a série inteira em um dia.
+  anterior, embora seu `timestamp` UTC já esteja no dia seguinte. Tratar 24 como hora 0 do
+  dia seguinte desloca a série inteira em um dia.
 - **O ano é o do arquivo climático** (2013 nas fixtures), não o da execução.
 - **`frequency` e `aggregation` usam grafias diferentes no mesmo objeto:** `hourly`
-  (contrato, minúscula) e `Avg` (motor, capitalizada).
+  (contrato) e `Avg` (motor).
 
 ### O catálogo de variáveis não diz o que foi gravado
 
 `/results/variables` é RDD/MDD — o que o modelo *poderia* relatar — e vem paginado em 200.
-`Zone Operative Temperature` foi gravada por uma execução e **não** aparece na primeira
-página dela. Não existe rota que responda "o que esta execução registrou": a descoberta é
-por tentativa, e variável ausente devolve **422** `"variável inexistente nesta simulação"`.
-O mesmo 422 cobre ambiguidade de chave — só o corpo distingue.
+Não existe rota que responda "o que esta execução registrou": a descoberta é por
+tentativa, e variável ausente devolve **422**. O mesmo 422 cobre ambiguidade de chave, e só
+o corpo distingue os dois casos. **A zona é descoberta pelo 422, não pelo catálogo** (T010).
+
+### Os indicadores de conforto do resumo não medem a mesma coisa
+
+`src/generators/hvac.ts` escreve `NoLimit` em todo `ZoneHVAC:IdealLoadsAirSystem`, então
+`occupied_heating_setpoint_not_met` e `occupied_cooling_setpoint_not_met` são
+**estruturalmente zero** nos modelos deste app. Eles medem controle do sistema, não conforto.
+
+Já `simple_ashrae_55_not_comfortable` **não é zero**: o modelo padrão do gerador, rodado
+localmente em anual, dá **7 587 h** (T011). É o fallback de verdade quando a série expira.
+
+**As fixtures não servem para julgar conforto.** Vieram de um modelo sem ocupante nem
+climatização (`conditioned: 0 m²`, só `Exterior Lighting` com consumo), e por isso dão 0 h
+nos três indicadores e um medidor de energia zerado o ano inteiro. Antes de concluir algo
+sobre o serviço, confira se o modelo tinha o que medir.
+
+### A faixa de conforto vem do documento, não do assistente
+
+O modo Resultados abre execução de outra sessão pelo identificador, e o Modo Especialista
+desliga o vínculo com o assistente. Classificar horas contra `answers.hvac` daria um número
+plausível e indefensável. `bandFromDocument` lê o termostato do documento e exige que todos
+os termostatos concordem (T011).
+
+### O Vitest roda sem DOM
+
+`environment: 'node'`, sem jsdom. Lógica dentro de `.tsx` não tem teste possível. Os
+componentes de gráfico recebem dado já agregado; tudo que decide o que aparece na tela fica
+em `src/core/` ou num `.ts` ao lado (`features/results/estado.ts`).
+
+### Gráfico plausível em mais de uma configuração se verifica por número
+
+O carpete da T010 parecia certo com o eixo de horas **invertido**, porque a madrugada é fria
+nas duas pontas. Só a leitura de pixels do `<canvas>` provou a orientação. Na T011, a
+contagem de pixels por cor bateu célula a célula com os indicadores. **Olho não basta.**
+
+### `summary` não sobrevive ao HMR
+
+O resumo da execução não é persistido, por decisão de projeto. Depois de um hot reload o
+painel de consumo fica em branco e parece regressão. Readote a execução antes de concluir
+qualquer coisa.
+
+### Tabela de tradução sem teste de cobertura apodrece em silêncio
+
+Três casos de dado morto até aqui: `defaultOn` que nada lia (T009), a lista literal em
+`answers.ts` (T009) e o dicionário com `InteriorLighting` sem espaço, que nunca casou com
+o `Interior Lighting` da API (T011). O fallback que devolve o nome original faz o defeito
+parecer "ainda não traduzido". `rotulos.test.ts` percorre a fixture real — é o padrão a
+seguir.
+
+### Falha em menos de um segundo, em qualquer modelo, é o serviço
+
+`duracao_segundos: 0.0`, zero artefatos e nenhum `.err` em modelos diferentes quer dizer que
+o motor nem rodou (T016). epJSON inválido chega ao motor e deixa `Severe`/`Fatal` no `.err`.
+Não investigue o epJSON antes de descartar o serviço.
+
+### O allowlist do proxy é controle só de desenvolvimento
+
+`scripts/simulationRoutes.ts` barra rotas não previstas no `npm run dev`. O
+`docker/nginx.conf` de produção usa um `location` de **prefixo** e repassa qualquer
+sub-rota. **Produção é mais permissiva que o desenvolvimento**, de propósito; a assimetria
+precisa ficar escrita, e não ser "corrigida" apagando o allowlist. No CI, o teste de
+contêiner chama o proxy e aceita **401** como sucesso: prova o handshake TLS (T017).
+
+### `@/` não resolve dentro de `scripts/simulationProxy.ts`
+
+O `vite.config.ts` importa esse plugin, e o esbuild carrega a config **antes** de o alias
+existir. Use caminho relativo.
+
+### O catálogo de climas do tenant tem dois arquivos, e a busca por nome é exata
+
+`GET /v1/weather?city=São Paulo` devolve lista vazia porque o tenant só tem
+**Florianópolis (SC)** e **Peixe (TO)**. `city=` vazio lista tudo. O tipo `Weather` em
+`src/features/simulation/api.ts` segue defasado em relação à resposta real (`country`,
+`declared_type`, graus-dia, licença e outros campos não modelados).
+
+### A revisão por IA é check obrigatório, e erra dos dois lados
+
+Vive em `scripts/aiReview/`, com teste (T020). Três tarefas seguidas remendaram o parser
+quando ele ficava dentro do YAML (T018, T019). Resposta ambígua **reprova**, em vez de o
+parser adivinhar. Na prática: aceite o achado que tem cenário de falha, decline o
+especulativo **com o motivo escrito no doc da tarefa**, e leia o parecer **mais recente**
+antes de mesclar. No PR #12 o merge veio antes da leitura e deixou passar uma regressão.
+
+### No navegador embutido, digitação e Enter não são confiáveis
+
+`cmd+a` não seleciona dentro do campo, `triple_click` concatena, e `Return` depois de
+`type` pode não chegar. O caminho confiável é definir o valor com o setter nativo mais um
+evento `input` e **clicar** no botão. Falha de automação não é defeito do aplicativo.
+
+### Este repositório é público
+
+Docs, commits, PRs e logs de CI são públicos. Não descreva a infraestrutura do serviço de
+simulação (caminhos, contas, credenciais, isolamento). A primeira versão do doc da T016
+fazia isso e foi reescrita antes do commit.
+
+---
+
+## Resolvidas — não redescobrir
+
+| O que era | Onde foi resolvido |
+| --- | --- |
+| Proxy da imagem Docker devolvia 502 em toda chamada (`proxy_ssl_verify_depth` padrão 1) | T002 |
+| nginx nunca comprimia resposta de proxy (faltava `gzip_proxied`) | T002 |
+| `defaultOn` ignorado; o padrão real era uma lista literal | T009 |
+| Seletor de modo caía silenciosamente no Especialista | T006 |
+| Troca de execução no meio da carga travava o painel em "Lendo…" | T008 |
+| Revisão por IA caía com JSON seguido de texto, depois passava em silêncio | T018–T020 |
+| Nenhuma simulação concluía no serviço (19/09 a 23/09) | T016 |
 
 ---
 
 ## Perguntas em aberto
 
+Com a execução destravada, as três primeiras podem ser respondidas com execuções novas de
+modelos **gerados por este aplicativo**:
+
+- **A primeira simulação depois da limpeza noturna do servidor funciona?** É o que falta
+  para fechar a verificação da T016.
 - **Retenção do `.sql`.** O contrato diz que `/results/timeseries` responde 410 depois de um
-  prazo que ele não numera. As execuções de 16/09 ainda respondem, com artefatos de
-  `expires_at: null` — mas isso não define a política.
-- **Se `key_value: "*"` gera uma série por zona.** As execuções bem-sucedidas disponíveis
-  têm uma zona só, então a fixture não responde — e é também o que impede capturar o 422
-  de ambiguidade de chave.
-- **Cota de estudo.** Existe `402` no contrato e um endpoint `/v1/usage`, mas o limite por
-  tenant é desconhecido. Um estudo de 20 variações pode ser recusado.
+  prazo que não numera.
+- **Se `key_value: "*"` gera uma série por zona**, e como é o 422 de ambiguidade de chave.
+  Exige um modelo com mais de uma zona; o seletor de zona do painel de temperatura nunca foi
+  exercitado com dado real.
+- **Cota de estudo.** Existe `402` no contrato e um `/v1/usage`, que exige escopo
+  `admin:billing`. Um estudo de 20 variações pode ser recusado. Afeta a T014.
 - **Estabilidade de `TabelaDeResultados.columns[].key`** (ex.: `end_use::Heating::Electricity`)
   entre versões do motor. Afeta a união de colunas entre páginas na T015.
