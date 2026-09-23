@@ -70,14 +70,15 @@ climatização**. O assistente passa de 10 para 7 páginas.
 - `src/store/uiStore.ts`: `wizardStep` é página; `goToStep` normaliza.
 - `src/store/persistence.ts`: restauração normalizada.
 - `README.md`, `docs/PRD.md`: sete páginas.
-- Testes: `src/generators/__tests__/paginas.test.ts` (novo, 5) e `persistence.test.ts` (+3).
+- Testes: `src/generators/__tests__/paginas.test.ts` (novo, 5), `src/features/wizard/__tests__/pageMeta.test.ts`
+  (novo, 4) e `persistence.test.ts` (+3).
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 353 testes (eram 345; +8 nesta tarefa)
+- [x] `npm test` — 357 testes (eram 345; +12 nesta tarefa, 4 da revisão do PR)
 - [x] `npm run build`
 - [x] **Toda etapa aparece em exatamente uma página, na ordem original** — o teste compara a
       concatenação das páginas com `WIZARD_STEPS`.
@@ -85,6 +86,20 @@ climatização**. O assistente passa de 10 para 7 páginas.
 - [x] **No navegador:** a barra mostra 7 páginas; "Projeto e clima", "Materiais e janelas" e "Uso
       e climatização" mostram as duas etapas cada, com os títulos; "Editar Janelas", na Revisão,
       abre a página 4.
+
+---
+
+## 5.1 Revisão do PR
+
+Cinco achados. **Um aceito**, quatro declinados:
+
+| Achado | Veredito |
+|---|---|
+| `PAGE_META` usa `!` no `find` sem garantia de que toda página tem metadados | **aceito** — o `!` cala o tipo e o erro só apareceria na tela. `pageMeta.test.ts` confere que toda página tem título, pergunta, ícone e etapas, e que toda etapa tem título |
+| "Etapa 4 de 7" conta páginas, e README/PRD "ainda falam em 10 etapas" | **declinado** — para quem usa, a página é a etapa, e o pedido foi "menos etapas". README e PRD foram atualizados neste mesmo PR |
+| O visto verde marca a página inteira quando só uma das etapas foi visitada | **declinado** — o visto indica visitada, não validada; quem viu Clima viu parte da página 1 |
+| `find` dentro do render | **declinado** — sete páginas; não há custo mensurável |
+| `pageOf` volta ao começo em silêncio | **declinado** — o teste de "toda etapa em exatamente uma página" reprova antes de uma etapa ficar sem página |
 
 ---
 
