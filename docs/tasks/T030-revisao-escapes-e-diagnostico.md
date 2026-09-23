@@ -90,6 +90,7 @@ e trata a causa mais provável que sobrou.
 - [x] **Prova negativa:** sem o reparo, os dois testes de leitura reprovam.
 - [x] **O diagnóstico não vaza:** quatro respostas com um marcador no conteúdo, em chave, valor
       sem aspas, prosa e string aberta; o marcador não aparece.
+- [x] **Em Node 18, 20 e 22**, porque a mensagem de erro do `JSON.parse` muda entre versões (ver §6).
 - [ ] **Confirmação da causa no PR #24:** depende da próxima execução da revisão, com esta tarefa
       na `main`.
 
@@ -101,3 +102,9 @@ e trata a causa mais provável que sobrou.
 caracteres" era compatível com corte e com escape inválido, e a T029 escolheu a mais provável sem
 poder confirmar — registrou isso, mas a próxima falha só desmentiu, sem apontar a causa. O log agora
 separa decodifica/não decodifica, onde o erro ocorre e se o reparo resolveria.
+
+**A mensagem de erro do `JSON.parse` muda com a versão do Node, e o teste de vazamento pegou
+isso.** O primeiro corte procurava `, "` — a forma do Node 18 que rodou localmente. O CI roda Node
+20, que cita o trecho como `, ..."…"`, e o marcador vazou no log do teste. O corte passou a ser no
+primeiro apóstrofo ou aspa, conferido nas três versões. No Node 20, "Unexpected token" nem traz a
+posição; "Bad escaped character", o caso desta tarefa, traz.

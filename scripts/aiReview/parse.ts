@@ -244,11 +244,12 @@ export function diagnoseResponse(bruto: string): string {
       partes.push(`JSON válido; chaves de topo: ${chaves.join(', ') || 'nenhuma'}`);
     }
   } catch (e) {
-    // A mensagem do V8 às vezes cita um trecho do texto (`Unexpected token 'x', "…" is not valid
-    // JSON`); o trecho depois de `, "` sai, e fica só o tipo do erro e a posição.
+    // A mensagem do V8 às vezes cita um trecho do texto, e a forma muda entre versões do Node
+    // (`Unexpected token 's', ..."summary": se"... is not valid JSON` no 20). Corta-se no
+    // primeiro apóstrofo ou aspa: fica só o tipo do erro, e a posição vem à parte.
     const mensagem = e instanceof Error ? e.message : String(e);
     const posicao = /at position (\d+)/.exec(mensagem)?.[1];
-    const tipo = mensagem.split(', "')[0].replace(/ in JSON at position \d+.*$/s, '').slice(0, 80);
+    const tipo = mensagem.split(/['"]/)[0].replace(/ in JSON at position \d+.*$/s, '').replace(/[\s,.]+$/, '').slice(0, 80);
     partes.push(`JSON inválido: ${tipo}${posicao ? ` na posição ${posicao}` : ''}`);
     if (decodifica(repararEscapes(texto)) !== undefined) partes.push('decodifica depois de reparar escapes');
   }
