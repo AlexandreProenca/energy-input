@@ -1,6 +1,7 @@
 import { ShapeUtils, Vector2 } from 'three';
 import type { EpObject } from '@/core/epjson/types';
 import { toVertices, wallRect, ZONE_LIST_NAME, type BoxGeometryParams, type BoxGeometryResult, type Vec3, type WallInfo } from './boxGeometry';
+import { chaveDoAmbiente } from '../conditioningKeys';
 
 export type Point2 = [number, number];
 export interface PlanRoom { id: string; name: string; points: Point2[] }
@@ -67,7 +68,7 @@ export function generateFloorPlan(p: BoxGeometryParams & { rooms: PlanRoom[]; in
     for (const r of rooms) {
       const zn = zoneName(floor, r), H = p.floorHeight;
       zones[zn] = { x_origin: 0, y_origin: 0, z_origin: floor * H, direction_of_relative_north: 0, type: 1, multiplier: 1, ceiling_height: H, volume: roomArea(r.points) * H, floor_area: roomArea(r.points) };
-      const info = { name: zn, floorIndex: floor, zOrigin: floor * H, floorArea: roomArea(r.points), walls: [] as WallInfo[] };
+      const info = { name: zn, floorIndex: floor, zOrigin: floor * H, floorArea: roomArea(r.points), walls: [] as WallInfo[], conditioningKey: chaveDoAmbiente(r.id) };
       infos.push(info);
       let edgeIndex = 0;
       for (let i = 0; i < r.points.length; i++) {

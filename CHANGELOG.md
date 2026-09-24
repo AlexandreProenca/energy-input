@@ -6,6 +6,13 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Escolher quais ambientes são climatizados**, na página "Uso e climatização": cada ambiente
+  da planta (ou cada pavimento, no modo caixa) pode ser desmarcado. O ambiente sem climatização
+  fica sem sistema e sem termostato, e a temperatura dele acompanha o clima externo. A Revisão
+  diz quantos são climatizados. (`Refs: T031`)
+
 ### Alterado
 
 - **Simular ficou em um clique:** o diálogo conecta sozinho e já traz o motor compatível e o

@@ -212,13 +212,14 @@ O usuário pode optar por duas abordagens geométricas complementares:
 
 #### Página 5 — Climatização (HVAC)
 
-- **Entradas:** Definição de setpoints de aquecimento e resfriamento (ex.: aquecimento até 20 °C, resfriamento acima de 24 °C).
+- **Entradas:** Definição de setpoints de aquecimento e resfriamento (ex.: aquecimento até 20 °C, resfriamento acima de 24 °C) e **quais ambientes são climatizados** — por ambiente da planta (vale para todos os pavimentos) ou, no modo caixa, por pavimento. Todos nascem climatizados. Ambiente não climatizado fica sem sistema e sem termostato, e a temperatura dele evolui livre (T031).
 - **Abordagem Técnica:** Sistema de ar ideal (`Ideal Loads`), ideal para cálculo puro das cargas térmicas horárias sem vincular a um fabricante ou ciclo de refrigeração específico.
 - **Objetos Gerados no epJSON:**
   - `ZoneHVAC:IdealLoadsAirSystem`;
   - `ZoneHVAC:EquipmentList` e `ZoneHVAC:EquipmentConnections`;
   - `ThermostatSetpoint:DualSetpoint`;
   - `ZoneControl:Thermostat`.
+  - Os objetos por zona (sistema, lista, conexões e controle) só existem nas zonas climatizadas. O termostato e as agendas ficam mesmo sem nenhuma zona climatizada: são a faixa de conforto que o modo Resultados usa.
 
 #### Página 6 — Resultados e Saídas
 

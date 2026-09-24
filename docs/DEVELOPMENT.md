@@ -276,6 +276,28 @@ troca de preset. O smoke test `CASE=apartamento` usa dois pavimentos, ambientes
 adjacentes, janela PVC e porta interna semi-oca entre zonas.
 
 
+### Ambientes não climatizados (T031)
+
+A página "Uso e climatização" lista os ambientes da planta — ou os pavimentos, no modo caixa — e
+cada um pode ser desmarcado. A resposta guarda só os **desmarcados**, em `hvac.unconditioned`,
+por chave estável (`ambiente:<id do ambiente>` ou `pavimento:<índice>`, em
+`src/generators/conditioningKeys.ts`): o padrão continua sendo tudo climatizado, autosave antigo
+não muda de sentido e ambiente novo nasce climatizado. Chave de ambiente apagado é ignorada.
+
+Os geradores de geometria marcam cada `ZoneInfo` com a chave (`conditioningKey`), e
+`generateHvac` pula a zona não climatizada: sem `ZoneHVAC:IdealLoadsAirSystem`, lista,
+conexões nem `ZoneControl:Thermostat`. **A zona continua com as cargas internas**, porque elas
+vão pela `ZoneList` de todas as zonas. `ThermostatSetpoint:DualSetpoint` e as agendas de
+setpoint ficam mesmo sem nenhuma zona climatizada — `core/results/setpoints.ts` lê delas a faixa
+de conforto. Sem nenhuma zona climatizada, os medidores `DistrictHeatingWater:Facility` e
+`DistrictCooling:Facility` do preset `conta` não existem, e o EnergyPlus avisa (aviso, não erro).
+
+Conferido no EnergyPlus 26.1 local (`CASE=planta-garagem-livre`, ano inteiro em Florianópolis),
+com sala climatizada e garagem livre lado a lado: o ar da sala fica em 18–26 °C em todas as
+8 760 h; o da garagem vai de 12,7 a 30,9 °C, fora da faixa em 2 182 h. A temperatura
+**operativa** da sala sai da faixa em algumas horas mesmo climatizada — ela inclui a radiação das
+superfícies, e o sistema ideal controla o ar.
+
 ### Simulação pela API de homologação
 
 O botão **Simular modelo** (ícone de executar no cabeçalho e ação na revisão)
