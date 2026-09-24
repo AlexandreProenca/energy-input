@@ -4,9 +4,10 @@ import { NGINX_ROUTES_FILE, nginxPattern, nginxRoutesMap } from '../nginxRoutes'
 import { DENIED_BY_DESIGN, SIMULATION_ROUTES } from '../simulationRoutes';
 
 /**
- * O mapa de rotas do nginx é gerado da mesma lista que o proxy de desenvolvimento usa (T027,
- * ADR-0003). Com a chave da API injetada no servidor, uma rota que o nginx deixasse passar a
- * mais seria acesso à conta do dono da chave — por isso a divergência reprova aqui.
+ * O mapa de rotas do nginx é gerado da mesma lista que o proxy de desenvolvimento usa (T027).
+ * Desde a T032 (ADR-0004) o proxy repassa o token de quem entrou, e não uma chave própria; mas a
+ * lista continua sendo a superfície que este aplicativo usa, e os dois proxies precisam concordar
+ * sobre ela — inclusive sobre quais rotas recebem o cookie de sessão.
  */
 describe('o arquivo versionado', () => {
   it('é exatamente o que o gerador produz', () => {

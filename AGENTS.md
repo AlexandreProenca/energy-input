@@ -157,13 +157,14 @@ Documentação e mensagens em **pt-BR**.
   `npm run schema`.
 - **`src/core/` não depende de React nem de UI.** Regras de epJSON, geometria,
   sincronização de respostas, validação e climas são funções puras e determinísticas.
-- **Nenhum segredo no bundle nem versionado.** A chave da API de simulação,
-  `SIMULATION_API_TOKEN`, existe **só no ambiente do servidor**: o do proxy Vite em
-  desenvolvimento (`.env.local`) e o do contêiner em produção. Nunca com prefixo `VITE_`, nunca
-  no bundle, nunca no contexto de build do Docker. A interface não pede nem guarda credencial.
-  Um proxy que injeta a chave precisa recusar rota fora da lista, método fora de GET/POST e
-  pedido de outra origem, e só a entrega a `localhost`/`127.0.0.1` ou a hosts declarados
-  ([ADR-0003](docs/adr/0003-chave-da-api-no-ambiente-do-servidor.md)).
+- **Nenhum segredo no bundle, versionado ou em armazenamento do navegador.** Cada pessoa entra
+  com e-mail e senha; o **token de acesso vive só na memória da aba** e o refresh token só em
+  cookie `HttpOnly` — nunca em `localStorage` nem `sessionStorage`, e a senha não sai do
+  componente da tela de login. Os proxies não têm credencial própria: repassam o `Authorization`
+  do navegador e, só nas rotas de sessão, o cookie; recusam rota fora da lista, método fora de
+  GET/POST e pedido de outra origem ([ADR-0004](docs/adr/0004-login-de-usuario-e-token-na-memoria.md)).
+  `SIMULATION_API_TOKEN` existe só para scripts em Node, nunca com prefixo `VITE_`, nunca no
+  bundle nem no contexto de build do Docker.
 - **Proteção contra perda de dados do usuário (`planWizardSync`).** Nunca sobrescrever
   silenciosamente objetos epJSON editados ou criados manualmente no Modo Especialista
   ou Editor 3D quando o Assistente for executado. Se houver divergência, acione o

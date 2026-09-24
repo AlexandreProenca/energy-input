@@ -1,7 +1,7 @@
 /**
  * Gera o mapa de rotas permitidas do nginx a partir de `scripts/simulationRoutes.ts`.
  *
- * Uma fonte só para os dois proxies (T027, ADR-0003): o do `npm run dev` usa a lista direto; o
+ * Uma fonte só para os dois proxies (T027; ADR-0004 desde a T032): o do `npm run dev` usa a lista direto; o
  * nginx de produção recebe este mapa, versionado em `docker/simulation-routes.conf`. O teste
  * `scripts/__tests__/nginxRoutes.test.ts` reprova se o arquivo versionado divergir do que este
  * gerador produz — mexer na lista sem regenerar não passa.

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, BarChart3, Ban, Check, Download, Loader2, MapPin, Play, RefreshCw, RotateCcw, Square, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Ban, Check, Download, Loader2, LogIn, MapPin, Play, RefreshCw, RotateCcw, Square, X } from 'lucide-react';
 import { Button, Callout, Dialog, Field, cx, fmt } from '@/ui/primitives';
 import { useDocumentStore } from '@/store/documentStore';
 import { useUiStore } from '@/store/uiStore';
@@ -10,6 +10,7 @@ import {
 } from '@/core/simulation/acompanhamento';
 import { SimulationApi, terminal, type Weather } from './api';
 import { useSimulationStore } from './simulationStore';
+import { useAuthStore } from '@/features/auth/authStore';
 
 const STATUS: Record<string, string> = { queued: 'Na fila', running: 'Simulando', succeeded: 'Concluída', failed: 'Falhou', cancelled: 'Cancelada', timeout: 'Tempo limite excedido' };
 /** Raio da busca de clima em volta do modelo. O mesmo padrão do serviço. */
@@ -23,6 +24,7 @@ const RAIO_KM = 100;
  */
 export function SimulationDialog() {
   const s = useSimulationStore();
+  const sessao = useAuthStore(state => state.estado);
   const doc = useDocumentStore(state => state.doc);
   const validation = useValidation();
   const [engines, setEngines] = useState<string[]>([]);
@@ -88,10 +90,13 @@ export function SimulationDialog() {
     // Fechar volta à vista de acompanhamento: uma execução aberta por outro caminho (pelo ID,
     // no modo Resultados) não pode ficar escondida atrás do formulário na próxima abertura.
     if (!s.open) { tentou.current = false; setFormulario(false); return; }
+    // Sem sessão não há o que conectar (T032). Quando a pessoa entra, com o diálogo ainda aberto
+    // atrás da tela de login, a conexão acontece aqui.
+    if (sessao !== 'autenticado') { tentou.current = false; setConnected(false); setEngines([]); return; }
     if (tentou.current) return;
     tentou.current = true;
     void connect();
-  }, [s.open]);
+  }, [s.open, sessao]);
   const search = (more = false) => perform(async () => {
     const data = await api().weather(city.trim(), more ? cursor ?? undefined : undefined);
     setWeather(previous => more ? [...previous, ...data.itens] : data.itens);
@@ -112,7 +117,15 @@ export function SimulationDialog() {
   const semSucesso = !!s.simulation && terminal(s.simulation.status) && s.simulation.status !== 'succeeded';
 
   return <Dialog open={s.open} onClose={() => s.setOpen(false)} title={acompanhando ? 'Acompanhar simulação' : 'Simular modelo'} icon={<Play size={18} />} size="xl">
-    <div className="space-y-5">
+    {sessao !== 'autenticado' ? <div className="space-y-4">
+      {sessao === 'verificando'
+        ? <p role="status" className="flex items-center gap-2 text-sm text-brand-700"><Loader2 className="animate-spin" size={16} /> Verificando sua sessão…</p>
+        : <>
+          <p className="text-sm text-slate-600">Para simular, entre com o e-mail e a senha da sua conta. A simulação, o modelo enviado e os resultados ficam na sua organização.</p>
+          <Button variant="primary" icon={<LogIn size={16} />} onClick={() => useAuthStore.getState().abrirLogin()}>Entrar</Button>
+          <p className="text-xs text-slate-500">O arquivo continua disponível em Baixar, sem conta.</p>
+        </>}
+    </div> : <div className="space-y-5">
       {(error || s.error) && <Callout tone="error">{error || s.error}
         {!connected && !working && <Button size="sm" className="ml-2" onClick={() => void connect()}>Tentar de novo</Button>}
       </Callout>}
@@ -231,7 +244,7 @@ export function SimulationDialog() {
           <p className="text-xs text-slate-500">Os links expiram. Gere outro se necessário.</p>
         </div></details>}
       </section>}
-    </div>
+    </div>}
   </Dialog>;
 }
 

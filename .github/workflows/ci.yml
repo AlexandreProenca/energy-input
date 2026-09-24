@@ -61,10 +61,11 @@ jobs:
         run: npm test
 
       - name: Build do bundle estático (Vite)
-        # Canário (T027): a chave da API vive em SIMULATION_API_TOKEN, no ambiente do servidor.
-        # O build roda com um valor falso nessa variável — e em .env.local, que o Vite também
-        # lê — e reprova se ele aparecer no bundle. O Vite só expõe variáveis `VITE_`, e é
-        # exatamente essa garantia que este passo trava.
+        # Canário (T027): desde a T032 a interface usa o token de quem entrou, mas
+        # SIMULATION_API_TOKEN continua existindo no .env.local para os scripts em Node. O build
+        # roda com um valor falso nessa variável — e em .env.local, que o Vite também lê — e
+        # reprova se ele aparecer no bundle. O Vite só expõe variáveis `VITE_`, e é exatamente
+        # essa garantia que este passo trava.
         env:
           SIMULATION_API_TOKEN: canario-da-chave-nao-pode-ir-para-o-bundle
         run: |
@@ -146,67 +147,40 @@ jobs:
             *) echo "::error::Rota permitida respondeu $codigo, e não 401: o pedido não chegou ao serviço."; exit 1 ;;
           esac
 
-      - name: Verificar as defesas do proxy com a chave no servidor (T027)
+      - name: Verificar as defesas e o repasse de credencial do proxy (T027, T032)
         run: |
           set -euo pipefail
-          # Com a chave da API injetada pelo nginx, o proxy precisa recusar o que o proxy de
-          # desenvolvimento recusa: rota fora da lista, método fora de GET/POST, outra origem.
-          # Estas recusas acontecem no nginx, antes do upstream — independem de o serviço de
+          # As recusas acontecem no nginx, antes do upstream — independem de o serviço de
           # simulação estar no ar, e por isso são portão, não aviso.
           c() { curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$@"; }
           SIM=sim_01M2KXB9D4TQ7F3S0YJ8N5VZQK
           falhou=0
           confere() { if [ "$2" != "$3" ]; then echo "::error::$1: esperado $3, veio $2"; falhou=1; else echo "ok  $1 -> $2"; fi; }
           confere "rota fora da lista"      "$(c http://127.0.0.1:8080/simulation-api/v1/api-keys)" 404
+          confere "token de chave de API"   "$(c -X POST http://127.0.0.1:8080/simulation-api/v1/auth/token)" 404
           confere "conteúdo de modelo"      "$(c http://127.0.0.1:8080/simulation-api/v1/models/mdl_01M2KXAZ9WQK8YT4N6P0R2S5V7/content)" 404
           confere "travessia no artefato"   "$(c --path-as-is http://127.0.0.1:8080/simulation-api/v1/simulations/$SIM/artifacts/..%2f..%2fetc%2fpasswd)" 404
           confere "método DELETE"           "$(c -X DELETE http://127.0.0.1:8080/simulation-api/v1/simulations/$SIM)" 405
           confere "pedido de outra origem"  "$(c -H 'Origin: http://evil.example' http://127.0.0.1:8080/simulation-api/v1/engines)" 403
+          confere "renovação de outra origem" "$(c -X POST -H 'Origin: http://evil.example' http://127.0.0.1:8080/simulation-api/v1/auth/refresh)" 403
           [ "$falhou" = 0 ]
 
-          # A chave só vai para localhost e para os hosts declarados. Conferido na configuração
-          # que o nginx carrega, porque o cabeçalho enviado ao upstream não é observável daqui.
-          docker run -d --name energy-input-chave -e SIMULATION_API_TOKEN=canario-ci \
-            -e SIMULATION_TOKEN_HOSTS=energia.exemplo energy-input:local-test >/dev/null
+          # A configuração que o nginx carrega: o Authorization é o do navegador, o cookie só
+          # passa nas rotas de sessão, e o caminho dele é reescrito para o do proxy. Nenhuma
+          # credencial vem do ambiente — nem com SIMULATION_API_TOKEN definido no contêiner.
+          docker run -d --name energy-input-sem-chave -e SIMULATION_API_TOKEN=canario-ci energy-input:local-test >/dev/null
           sleep 3
-          conf="$(docker exec energy-input-chave nginx -T 2>/dev/null)"
-          echo "$conf" | grep -q '1 "Bearer canario-ci";' || { echo "::error::a chave não entrou no mapa de autorização"; exit 1; }
-          echo "$conf" | grep -q 'energia.exemplo 1;' || { echo "::error::o host declarado não entrou no mapa"; exit 1; }
-          echo "$conf" | grep -A3 'map $host $host_recebe_chave' | grep -q 'default 0;' || { echo "::error::host não declarado estaria recebendo a chave"; exit 1; }
-          docker rm -f energy-input-chave >/dev/null
-
-          # Chave com caractere que quebraria a configuração: o contêiner não sobe. Em segundo
-          # plano e conferido pelo estado — em primeiro plano, um contêiner que subisse por
-          # engano travaria o CI até estourar o tempo, em vez de reprovar.
-          docker run -d --name energy-input-chave-ruim -e 'SIMULATION_API_TOKEN=abc";x' energy-input:local-test >/dev/null
-          sleep 3
-          if [ "$(docker inspect -f '{{.State.Running}}' energy-input-chave-ruim)" = true ]; then
-            echo "::error::o contêiner subiu com uma chave que injeta configuração"; exit 1
-          fi
-          docker logs energy-input-chave-ruim 2>&1 | grep -q "caracteres fora" || { echo "::error::a recusa não explicou o motivo"; exit 1; }
-          # `=` só vale no fim, como no b64token da RFC 6750.
-          docker run -d --name energy-input-chave-igual -e 'SIMULATION_API_TOKEN=abc=def' energy-input:local-test >/dev/null
-          sleep 3
-          if [ "$(docker inspect -f '{{.State.Running}}' energy-input-chave-igual)" = true ]; then
-            echo "::error::o contêiner aceitou '=' no meio da chave"; exit 1
-          fi
-          # Host que não é nome de host, ou que é palavra reservada do `map` do nginx.
-          for host in default hostnames .. -mal 'a;b'; do
-            docker run -d --name energy-input-host-ruim -e SIMULATION_API_TOKEN=abc -e "SIMULATION_TOKEN_HOSTS=$host" energy-input:local-test >/dev/null
-            sleep 3
-            if [ "$(docker inspect -f '{{.State.Running}}' energy-input-host-ruim)" = true ]; then
-              echo "::error::o contêiner aceitou '$host' em SIMULATION_TOKEN_HOSTS"; exit 1
-            fi
-            docker logs energy-input-host-ruim 2>&1 | grep -q "host inválido" || { echo "::error::a recusa de '$host' não explicou o motivo"; exit 1; }
-            docker rm -f energy-input-host-ruim >/dev/null
-          done
-          docker rm -f energy-input-chave-igual >/dev/null
-          docker rm -f energy-input-chave-ruim >/dev/null
-          echo "Defesas do proxy conferidas."
+          conf="$(docker exec energy-input-sem-chave nginx -T 2>/dev/null)"
+          echo "$conf" | grep -q 'proxy_set_header Authorization $http_authorization;' || { echo "::error::o Authorization não é o do navegador"; exit 1; }
+          echo "$conf" | grep -q 'proxy_set_header Cookie $cookie_para_o_servico;' || { echo "::error::o cookie não passa pelo mapa das rotas de sessão"; exit 1; }
+          echo "$conf" | grep -q 'proxy_cookie_path /v1/auth /simulation-api/v1/auth;' || { echo "::error::o caminho do cookie de sessão não é reescrito"; exit 1; }
+          if echo "$conf" | grep -q 'canario-ci'; then echo "::error::uma credencial do ambiente foi parar na configuração"; exit 1; fi
+          docker rm -f energy-input-sem-chave >/dev/null
+          echo "Defesas e repasse de credencial conferidos."
 
       - name: Limpar container
         if: always()
-        run: docker rm -f energy-input-ci energy-input-chave energy-input-chave-ruim energy-input-chave-igual energy-input-host-ruim || true
+        run: docker rm -f energy-input-ci energy-input-sem-chave || true
 
   publicar_imagem:
     name: Publicar imagem no GHCR

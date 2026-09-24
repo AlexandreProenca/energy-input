@@ -56,8 +56,9 @@ SIMULATION_ID=sim_… npx tsx scripts/capture-results-fixtures.ts  # recaptura a
 SPA 100% client-side (React 18 + TS + Vite 6 + Zustand + Tailwind). Não há backend: o único
 componente de servidor é o proxy `/simulation-api/v1/*` → `https://homolog.ee.dev.br` —
 `scripts/simulationProxy.ts` (plugin Vite) em desenvolvimento e `docker/nginx.conf` no contêiner.
-Os dois injetam a chave do ambiente e usam a mesma lista de rotas
-(`scripts/simulationRoutes.ts`; o mapa do nginx é gerado por `npm run nginx-routes`).
+Os dois repassam o token de quem entrou — e o cookie de renovação, só nas rotas de sessão — e
+usam a mesma lista de rotas (`scripts/simulationRoutes.ts`; o mapa do nginx é gerado por
+`npm run nginx-routes`). O login depende de eng-energy-plus#146 (ADR-0004).
 
 **Uma única fonte da verdade reativa:** o documento epJSON em `store/documentStore.ts`
 (com undo/redo e coalescência de 800 ms). Três modos de edição escrevem no mesmo documento —
@@ -141,11 +142,11 @@ Alias `@/` → `src/`.
 - **`schema/<versão>/Energy+.schema.epJSON` é vendorizado do release oficial do EnergyPlus e
   nunca é editado à mão.** Use `npm run fetch-schema`; o derivado servido é gerado por
   `npm run schema`.
-- **Nenhum segredo no bundle.** `SIMULATION_API_TOKEN` existe só no ambiente do servidor — o do
-  proxy Vite (`.env.local`) e o do contêiner —, nunca com prefixo `VITE_`, nunca no bundle nem no
-  contexto de build. A interface não pede credencial. Proxy que injeta a chave recusa rota fora
-  da lista, método fora de GET/POST e outra origem, e só a entrega a localhost ou a hosts
-  declarados (ADR-0003).
+- **Nenhum segredo no bundle nem em armazenamento do navegador.** Login com e-mail e senha; o
+  token de acesso só na memória da aba (`features/auth/authStore.ts`), o refresh token só em
+  cookie HttpOnly. Os proxies não têm credencial: repassam a do navegador e recusam rota fora da
+  lista, método fora de GET/POST e outra origem (ADR-0004). `SIMULATION_API_TOKEN` é só dos
+  scripts em Node, nunca com prefixo `VITE_`.
 - **Marca:** o produto é **Energy Input** ("Arquivos epJSON para EnergyPlus"). Nunca
   "EnergyPlus API" nem a marca do EnergyPlus como nome próprio.
 - **Doc de tarefa concluída em `docs/tasks/` é histórico** — não reescreva para refletir o presente.

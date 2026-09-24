@@ -1,10 +1,18 @@
-/** Opt-in live integration check. Sends only a generated test model, never the user's document. */
+/**
+ * Opt-in live integration check. Sends only a generated test model, never the user's document.
+ *
+ * Desde a T032 (ADR-0004) o proxy não tem credencial própria: o script manda a sua, de
+ * SIMULATION_API_TOKEN — um token de acesso ou uma chave de API de integração —, e o proxy a
+ * repassa.
+ */
 import { randomUUID } from 'node:crypto';
 import { defaultAnswers } from '../src/generators/answers';
 import { generateDocument } from '../src/generators/compose';
 import { templates } from '../src/templates';
 import { SimulationApi, terminal } from '../src/features/simulation/api';
-const api = new SimulationApi('', 'http://127.0.0.1:5173/simulation-api/v1');
+const token = process.env.SIMULATION_API_TOKEN?.trim();
+if (!token) throw new Error('Defina SIMULATION_API_TOKEN (token de acesso ou chave de API de integração).');
+const api = new SimulationApi(token, 'http://127.0.0.1:5173/simulation-api/v1');
 const a = defaultAnswers();
 a.project.buildingName = 'Validação da integração Energy Input'; a.runPeriod.mode = 'designDays';
 const engines = await api.engines();

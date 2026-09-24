@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { BarChart3, CalendarClock, CircleSlash, Hourglass, Play, Search } from 'lucide-react';
+import { BarChart3, CalendarClock, CircleSlash, Hourglass, Loader2, LogIn, Play, Search } from 'lucide-react';
 import { isSimulationId } from '@/core/ids';
 import { Button, Callout, Field } from '@/ui/primitives';
 import { useSimulationStore } from '@/features/simulation/simulationStore';
+import { useAuthStore } from '@/features/auth/authStore';
 import { estadoDoPainel, semAnoCompleto } from './estado';
 import { ConsumoPanel } from './panels/ConsumoPanel';
 import { TemperaturaPanel } from './panels/TemperaturaPanel';
@@ -90,8 +91,25 @@ function ConsultarPorId({ compacto = false }: { compacto?: boolean }) {
 export default function ResultsShell() {
   const simulation = useSimulationStore((s) => s.simulation);
   const summary = useSimulationStore((s) => s.summary);
+  const sessao = useAuthStore((s) => s.estado);
 
   const estado = estadoDoPainel(simulation);
+
+  // 0. Sem sessão (T032): os resultados são da organização de quem entrou.
+  if (sessao !== 'autenticado') {
+    return (
+      <div className="mx-auto max-w-[1440px] px-4 py-6">
+        <Vazio icon={sessao === 'verificando' ? <Loader2 size={22} className="animate-spin" /> : <LogIn size={22} />} title={sessao === 'verificando' ? 'Verificando sua sessão…' : 'Entre para ver resultados'}>
+          {sessao === 'anonimo' && <>
+            As simulações e os resultados ficam na sua organização, no serviço de simulação.
+            <div className="mt-5 flex justify-center">
+              <Button variant="primary" onClick={() => useAuthStore.getState().abrirLogin()}><LogIn size={15} /> Entrar</Button>
+            </div>
+          </>}
+        </Vazio>
+      </div>
+    );
+  }
 
   // 1. Nenhuma execução nesta sessão.
   if (estado === 'sem-execucao' || !simulation) {

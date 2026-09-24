@@ -321,7 +321,7 @@ O produto permite alternar livremente entre o Assistente, o Editor 3D e o Modo E
    - Diálogo em duas vistas. **Configurar:** conecta sozinho ao abrir e já traz escolhidos o motor compatível e o clima do catálogo mais próximo do `Site:Location` do modelo (até 100 km); o usuário confere e clica em **Simular**. **Acompanhar:** linha do tempo Envio → Fila → EnergyPlus → Resultados; ao concluir, **Analisar resultados** leva ao modo Resultados (§4.6); em falha, o diagnóstico do EnergyPlus e **Ajustar o modelo**. Diagnóstico, eventos e arquivos da execução ficam recolhidos na mesma vista.
 
 2. **Fluxo de Integração RESTful (`https://homolog.ee.dev.br/v1`):**
-   - **Autenticação:** Token Bearer vindo da variável de ambiente `SIMULATION_API_TOKEN`, injetado pelo proxy do servidor — o do Vite em desenvolvimento e o do contêiner em produção. A interface não pede credencial.
+   - **Autenticação:** tela de login com e-mail e senha (`POST /v1/auth/login`); o token Bearer é o da pessoa, com o tenant e os escopos do papel dela, e vive só na memória da aba. A renovação é por refresh token em cookie HttpOnly (`/v1/auth/refresh`), inclusive ao recarregar a página; `/v1/auth/logout` encerra. Conta em mais de uma organização escolhe em qual entrar. Criar e baixar epJSON não exige conta; simular e ver resultados, sim (T032, [ADR-0004](adr/0004-login-de-usuario-e-token-na-memoria.md); depende de eng-energy-plus#146).
    - **Catálogo de Motores:** Consulta a `/engines` para selecionar versões compatíveis do EnergyPlus (ex.: 26.1.0).
    - **Upload de Modelo:** Envio multipart (`file`) para `/models`, obtendo o identificador do modelo e versão.
    - **Despacho de Simulação:** Requisição `POST /simulations` com o `versao.id`, `engine_id`, `weather_id` (ou upload de EPW) e cabeçalho de proteção `Idempotency-Key`.
@@ -364,7 +364,7 @@ Quarto item do cabeçalho, carregado sob demanda. **Lê** resultados de uma exec
 ### 5.3 Segurança e Privacidade
 
 - **Privacidade por Padrão:** Nenhum arquivo epJSON criado ou aberto pelo usuário é transmitido para servidores de terceiros a menos que o usuário clique explicitamente em "Simular modelo".
-- **Isolamento de Credenciais:** A chave da API de simulação existe só no ambiente do servidor (`SIMULATION_API_TOKEN`, no proxy de desenvolvimento e no contêiner). O navegador nunca a recebe nem a digita, e ela nunca vai para o bundle nem para logs ([ADR-0003](adr/0003-chave-da-api-no-ambiente-do-servidor.md)).
+- **Isolamento de Credenciais:** Cada pessoa entra com a própria conta. O token de acesso vive só na memória da aba, o refresh token só em cookie HttpOnly, e nenhuma credencial vai para `localStorage`, `sessionStorage`, bundle ou logs. Os proxies não guardam credencial ([ADR-0004](adr/0004-login-de-usuario-e-token-na-memoria.md)).
 - **Proxy Seguro:** Proxy reverso local no Vite e no Nginx elimina necessidades de CORS e oculta URLs sensíveis.
 
 ### 5.4 Confiabilidade e Tolerância a Falhas

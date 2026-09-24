@@ -1,15 +1,11 @@
 services:
   web:
     build: .
-    # Só no próprio computador: a chave da API é injetada pelo proxy do contêiner, e quem
-    # alcançasse a porta usaria a conta do dono da chave (ADR-0003).
+    # Só no próprio computador por padrão. O contêiner não guarda credencial desde a T032
+    # (ADR-0004) — cada pessoa entra com a própria conta —, então publicar em outro endereço é
+    # decisão de implantação, com TLS na frente: o cookie de sessão é `Secure`.
     ports:
       - "127.0.0.1:8080:80"
-    # A mesma chave do `npm run dev`. Opcional: sem o arquivo, o contêiner sobe e o serviço
-    # de simulação responde 401.
-    env_file:
-      - path: .env.local
-        required: false
     restart: unless-stopped
 
-# docker run -d --name energy-input -p 127.0.0.1:8080:80 -e SIMULATION_API_TOKEN=… ghcr.io/alexandreproenca/energy-input:<versão>
+# docker run -d --name energy-input -p 127.0.0.1:8080:80 ghcr.io/alexandreproenca/energy-input:<versão>

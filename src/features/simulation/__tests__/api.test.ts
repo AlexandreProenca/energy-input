@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SimulationApi, SimulationApiError, terminal } from '../api';
-afterEach(() => vi.unstubAllGlobals());
+import { SimulationApi, SimulationApiError, terminal, usarCredencial } from '../api';
+afterEach(() => { vi.unstubAllGlobals(); usarCredencial(undefined); });
 describe('cliente da API de simulação', () => {
   it('envia multipart com file e Bearer, sem definir boundary manualmente', async () => {
     const fetch = vi.fn(async () => Response.json({ versao: { id: 'version' } })); vi.stubGlobal('fetch', fetch);
@@ -12,21 +12,60 @@ describe('cliente da API de simulação', () => {
     const file = (init.body as FormData).get('file') as File;
     expect(file.name.toLowerCase()).toBe('modelo.epjson'); expect(await file.text()).toBe('{"Building":{}}');
   });
-  it('sem chave, o navegador não manda autorização — o proxy a injeta do ambiente (T027)', async () => {
-    // É o caminho do app desde a T027: a chave mora em SIMULATION_API_TOKEN, no servidor, e o
-    // cliente é construído sem ela. Um cabeçalho vindo do navegador seria sinal de que alguma
-    // credencial voltou a passar pela interface.
+  it('no navegador, manda o token da sessão (T032)', async () => {
     const fetch = vi.fn(async () => Response.json({ engines: [] })); vi.stubGlobal('fetch', fetch);
+    usarCredencial({ token: () => 'token-da-sessao', renovar: async () => false });
+    await new SimulationApi().engines();
+    const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer token-da-sessao');
+  });
+
+  it('sem sessão, não manda autorização nenhuma', async () => {
+    const fetch = vi.fn(async () => Response.json({ engines: [] })); vi.stubGlobal('fetch', fetch);
+    usarCredencial({ token: () => undefined, renovar: async () => false });
     await new SimulationApi().engines();
     const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
     expect(new Headers(init.headers).has('Authorization')).toBe(false);
   });
 
-  it('o 401 diz onde configurar a chave, e não pede para digitá-la', async () => {
+  it('com token vencido, renova uma vez e repete o pedido com o token novo', async () => {
+    let token = 'vencido';
+    const fetch = vi.fn(async (_url: string, init: RequestInit) =>
+      new Headers(init.headers).get('Authorization') === 'Bearer novo' ? Response.json({ engines: [], default: '' }) : Response.json({}, { status: 401 }));
+    vi.stubGlobal('fetch', fetch);
+    const renovar = vi.fn(async () => { token = 'novo'; return true; });
+    usarCredencial({ token: () => token, renovar });
+    await expect(new SimulationApi().engines()).resolves.toEqual({ engines: [], default: '' });
+    expect(renovar).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('não entra em laço quando a renovação não resolve', async () => {
+    // Renovar "com sucesso" e o serviço seguir recusando (papel mudou, relógio errado): uma
+    // repetição só, e o 401 chega a quem chamou.
+    const fetch = vi.fn(async () => Response.json({}, { status: 401 })); vi.stubGlobal('fetch', fetch);
+    const renovar = vi.fn(async () => true);
+    usarCredencial({ token: () => 't', renovar });
+    const erro = await new SimulationApi().engines().catch((e) => e);
+    expect(erro.status).toBe(401);
+    expect(erro.message).toMatch(/Entre de novo/);
+    expect(renovar).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('token passado por script não tenta renovar pela sessão do navegador', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({}, { status: 401 })));
+    const renovar = vi.fn(async () => true);
+    usarCredencial({ token: () => 'sessao', renovar });
+    await new SimulationApi('token-do-script').engines().catch(() => undefined);
+    expect(renovar).not.toHaveBeenCalled();
+  });
+
+  it('o 401 pede para entrar de novo, e não fala mais em chave no servidor', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ detail: 'x' }, { status: 401 })));
     const erro = await new SimulationApi().engines().catch((e) => e);
-    expect(erro.message).toContain('SIMULATION_API_TOKEN');
-    expect(erro.message).not.toMatch(/digite|informe a chave|configure a conexão/i);
+    expect(erro.message).toMatch(/Entre de novo com seu e-mail e senha/);
+    expect(erro.message).not.toContain('SIMULATION_API_TOKEN');
   });
   it('preserva chave idempotente e versão imutável ao retomar a mesma requisição', async () => {
     const fetch = vi.fn(async () => Response.json({ id: 'sim-test', status: 'queued' })); vi.stubGlobal('fetch', fetch);
@@ -45,9 +84,9 @@ describe('cliente da API de simulação', () => {
   });
   it('explica 401 e falha de rede sem expor credenciais', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })));
-    // A mensagem mudou na T027 (a chave vem do ambiente do servidor); o que este teste
-    // protege continua: a credencial nunca aparece na mensagem.
-    await expect(new SimulationApi('segredo').engines()).rejects.toThrow('SIMULATION_API_TOKEN');
+    // A mensagem mudou na T027 e na T032; o que este teste protege continua: a credencial nunca
+    // aparece na mensagem.
+    await expect(new SimulationApi('segredo').engines()).rejects.toThrow('Entre de novo');
     await expect(new SimulationApi('segredo').engines()).rejects.not.toThrow('segredo');
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('segredo'); }));
     await expect(new SimulationApi('segredo').engines()).rejects.toBeInstanceOf(SimulationApiError);

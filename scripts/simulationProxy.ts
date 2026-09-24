@@ -1,9 +1,15 @@
 import type { Plugin } from 'vite';
-import { loadEnv } from 'vite';
 import { isAllowedSimulationRoute } from './simulationRoutes';
+import { reescreverCookie, rotaDeSessao } from './cookieDeSessao';
 
 const UPSTREAM = 'https://homolog.ee.dev.br';
-/** Same-origin transport; the optional server credential is restricted to loopback development. */
+/**
+ * Transporte de mesma origem para o serviço de simulação.
+ *
+ * Desde a T032 (ADR-0004) o proxy **não tem credencial própria**: repassa o `Authorization` do
+ * navegador — o token da pessoa que entrou — e, só nas rotas de sessão, o cookie do refresh
+ * token. As recusas continuam: rota fora da lista, método fora de GET/POST e outra origem.
+ */
 export function simulationProxy(): Plugin {
   const install: NonNullable<Plugin['configureServer']> = server => {
     server.middlewares.use('/simulation-api', async (req, res) => {
@@ -13,15 +19,10 @@ export function simulationProxy(): Plugin {
       const origin = req.headers.origin;
       try {
         if (origin && new URL(origin).host !== req.headers.host) return fail(403, 'Origem não permitida.');
-        let auth = req.headers.authorization;
-        const host = (req.headers.host ?? '').split(':')[0];
-        const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress ?? '');
-        if (!auth && loopback && ['localhost', '127.0.0.1'].includes(host)) {
-          const token = loadEnv(server.config.mode, process.cwd(), 'SIMULATION_').SIMULATION_API_TOKEN ?? process.env.SIMULATION_API_TOKEN;
-          if (token) auth = `Bearer ${token.trim().replace(/^Bearer\s+/i, '')}`;
-        }
+        const sessao = rotaDeSessao(req.url);
         const headers = new Headers();
-        if (auth) headers.set('Authorization', auth);
+        if (req.headers.authorization) headers.set('Authorization', req.headers.authorization);
+        if (sessao && req.headers.cookie) headers.set('Cookie', req.headers.cookie);
         for (const name of ['content-type', 'idempotency-key']) if (req.headers[name]) headers.set(name, String(req.headers[name]));
         const chunks: Buffer[] = []; let size = 0;
         for await (const chunk of req) { size += chunk.length; if (size > 50 * 1024 * 1024) return fail(413, 'Arquivo acima de 50 MB.'); chunks.push(Buffer.from(chunk)); }
@@ -35,6 +36,12 @@ export function simulationProxy(): Plugin {
         res.statusCode = response.status;
         for (const name of ['content-type', 'retry-after', 'x-cache', 'idempotency-replayed']) {
           const value = response.headers.get(name); if (value) res.setHeader(name, value);
+        }
+        if (sessao) {
+          // `getSetCookie` separa os cabeçalhos certo; `get('set-cookie')` os junta por vírgula,
+          // o que quebra no `Expires=…, 23 Sep …`. O fallback é para Node sem o método.
+          const cookies = typeof response.headers.getSetCookie === 'function' ? response.headers.getSetCookie() : [response.headers.get('set-cookie')].filter((c): c is string => !!c);
+          if (cookies.length) res.setHeader('Set-Cookie', cookies.map(reescreverCookie));
         }
         res.end(Buffer.from(await response.arrayBuffer()));
       } catch { fail(502, 'Não foi possível conectar ao serviço de simulação.'); }

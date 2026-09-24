@@ -1,6 +1,6 @@
 # ADR-0003: A chave da API de simulação mora no ambiente do servidor
 
-- **Status:** Aceita
+- **Status:** Substituída pela [ADR-0004](0004-login-de-usuario-e-token-na-memoria.md) (T032)
 - **Data:** 2026-09-23
 - **Contexto da decisão:** T027 ([`../backlog.md`](../backlog.md))
 - **Decidida por:** dono do produto ("a chave da API deve ser configurada via variável de ambiente")
