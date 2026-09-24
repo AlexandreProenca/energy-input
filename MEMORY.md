@@ -11,7 +11,7 @@ paramos, no que já esbarramos, e o que não deve ser redescoberto do zero.
 
 ## Onde paramos
 
-**Versão 0.1.0, 398 testes.** Quatro modos: Assistente (7 páginas, T026), Editor 3D e
+**Versão 0.1.0, 412 testes.** Quatro modos: Assistente (7 páginas, T026), Editor 3D e
 Especialista **escrevem** no documento; **Resultados** lê execuções concluídas e não
 escreve.
 
@@ -27,8 +27,8 @@ escreve.
 Fora das fases: **T016** (execução no serviço), **T017–T020** (CI e revisão por IA) e **T023**
 (referência órfã no sync), **T024** (janelas acompanham o vidro), **T025** (várias zonas), **T026**
 (assistente em 7 páginas), **T027** (chave da API no ambiente do servidor, [ADR-0003](docs/adr/0003-chave-da-api-no-ambiente-do-servidor.md)),
-**T028** (diálogo de simulação conecta sozinho, acompanha e leva aos resultados) e **T029–T030**
-(revisão por IA) concluídas; **T021** e **T022** são do serviço, não deste repositório, e ficam
+**T028** (diálogo de simulação conecta sozinho, acompanha e leva aos resultados), **T029–T030**
+(revisão por IA) e **T031** (escolher quais ambientes são climatizados) concluídas; **T021** e **T022** são do serviço, não deste repositório, e ficam
 no backlog para não se perderem.
 
 **A execução no serviço voltou a funcionar em 23/09** (T016), e a primeira simulação chegou ao
@@ -230,6 +230,18 @@ fazia isso e foi reescrita antes do commit.
 
 ---
 
+### Ambiente não climatizado ainda recebe as cargas do uso
+
+Desde a T031 o ambiente desmarcado fica sem sistema e sem termostato e evolui livre — conferido
+no EnergyPlus local: sala em 18–26 °C o ano todo, garagem de 12,7 a 30,9 °C. Mas pessoas,
+iluminação e equipamentos vão para **todas** as zonas pela `ZoneList`, então a garagem livre fica
+mais quente do que ficaria. A escolha guarda só os **desmarcados** (`hvac.unconditioned`), por
+chave: `ambiente:<id>` sai quando o ambiente some; `pavimento:<i>` fica, porque o índice volta.
+O ambiente inicial da planta tem id fixo (`initial-room`), o único que se repete. A temperatura
+**operativa** da sala climatizada sai da faixa em algumas horas: o sistema ideal controla o ar.
+
+---
+
 ## Resolvidas — não redescobrir
 
 | O que era | Onde foi resolvido |
@@ -269,6 +281,9 @@ modelos **gerados por este aplicativo**:
   `main`, a revisão leu uma resposta que citava a regex com `\|\1` — compatível, mas uma
   aprovação não mostra se o reparo foi usado. A próxima reprovação por formato traz o
   diagnóstico que responde.
+- **Cargas internas por ambiente.** Hoje o uso vale para todas as zonas; um ambiente livre
+  (garagem, depósito) recebe as cargas da sala. Separar é escolher uso por ambiente — decisão de
+  produto (T031).
 - **O caminho de falha do diálogo de simulação** (T028) não teve execução real com falha; está
   só nos testes do módulo puro.
 - **Estabilidade de `TabelaDeResultados.columns[].key`** (ex.: `end_use::Heating::Electricity`)
