@@ -145,6 +145,16 @@ Cinco achados. **Três aceitos**, dois declinados:
 | A reescrita do caminho ampliaria o escopo do cookie | **declinado** — o sufixo é preservado (`/v1/auth/` vira `/simulation-api/v1/auth/`), e o escopo é o mesmo |
 | O mapa do cookie usa `$uri` | **declinado** — `$uri` é o caminho decodificado e normalizado, o mesmo que o mapa de rotas usa: `auth/../engines` vira `/engines` e não recebe cookie |
 
+Numa segunda rodada, cinco achados, **todos declinados**:
+
+| Achado | Veredito |
+|---|---|
+| A âncora do mapa `$sessao_sem_origem` não se aplicaria, e `/auth/loginx` viraria rota de sessão | **não acontece** — o texto casado é `"$uri\|$http_origin"`; com `Origin` vazio, `\|$` exige que a rota termine logo antes da barra, e `/auth/loginx` nem passa pela lista (404) |
+| A reescrita pegaria `Path=/v1/auth/token` | **declinado** — só respostas das três rotas de sessão são reescritas, e a reescrita mapeia o mesmo caminho para o proxy, sem ampliar |
+| No Vite, `req.url` poderia vir com o prefixo e o cookie não seria tratado | **conferido no servidor de desenvolvimento** — vem sem prefixo: `refresh` sem `Origin` dá "Origem não informada", que só sai quando a rota é reconhecida como de sessão, e com `Origin` o pedido chega ao serviço |
+| A repetição no 401 reenviaria um corpo multipart já consumido | **não acontece** — `FormData` e texto não são consumidos pelo `fetch`, que os serializa a cada envio; o cliente não manda stream |
+| Os dois mapas do nginx poderiam divergir na normalização | **declinado** — os dois usam o mesmo `$uri` |
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
