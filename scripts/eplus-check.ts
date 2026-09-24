@@ -93,6 +93,21 @@ const cases: [string, (a: WizardAnswers) => void][] = [
     ] };
     a.windows = { ...a.windows, automatic: true, glazingId: 'pvc_4mm' };
   }],
+  // T031: ambiente sem climatização fica sem sistema nem termostato e evolui livre.
+  ['planta-garagem-livre', (a) => {
+    a.location.cityId = 'sc-florianopolis';
+    a.geometry = { ...a.geometry, mode: 'plan', floors: 1, rooms: [
+      { id: 'sala', name: 'Sala', points: [[0, 0], [5, 0], [5, 4], [0, 4]] },
+      { id: 'garagem', name: 'Garagem', points: [[5, 0], [8, 0], [8, 4], [5, 4]] },
+    ] };
+    a.windows.automatic = true;
+    a.hvac = { ...a.hvac, unconditioned: ['ambiente:garagem'] };
+  }],
+  ['sem-climatizacao', (a) => {
+    a.runPeriod.mode = 'designDays';
+    a.geometry.floors = 2;
+    a.hvac = { ...a.hvac, unconditioned: ['pavimento:0', 'pavimento:1'] };
+  }],
   ['padrao', () => {}],
   ['escritorio-3pav-isolado', (a) => {
     a.geometry.floors = 3;

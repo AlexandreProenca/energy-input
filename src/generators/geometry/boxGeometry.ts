@@ -1,4 +1,5 @@
 import type { EpJsonFragment } from '@/core/epjson/types';
+import { chaveDoPavimento } from '../conditioningKeys';
 
 /*
  * Box ("shoebox") geometry: rectangular footprint, N stacked floors, one
@@ -57,6 +58,8 @@ export interface ZoneInfo {
   zOrigin: number;
   floorArea: number;
   walls: WallInfo[];
+  /** Chave da escolha de climatização (`conditioning.ts`): o pavimento, ou o ambiente da planta. */
+  conditioningKey?: string;
 }
 
 export interface BoxGeometryResult {
@@ -191,7 +194,7 @@ export function generateBoxGeometry(p: BoxGeometryParams): BoxGeometryResult {
       };
     }
 
-    zoneInfos.push({ name: zn, floorIndex: i, zOrigin: z0, floorArea: round(W * D), walls });
+    zoneInfos.push({ name: zn, floorIndex: i, zOrigin: z0, floorArea: round(W * D), walls, conditioningKey: chaveDoPavimento(i) });
   }
 
   return {

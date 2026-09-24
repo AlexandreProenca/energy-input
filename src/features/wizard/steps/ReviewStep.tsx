@@ -3,6 +3,7 @@ import { CheckCircle2, Code2, Copy, Download, ExternalLink, Pencil, Play, Termin
 import { byId, templates } from '@/templates';
 import { WIZARD_STEPS, type WizardStepId } from '@/generators/answers';
 import { locationDisplayName } from '@/generators/location';
+import { resumoDaClimatizacao } from '@/generators/conditioning';
 import { useGeneration } from '@/hooks/useGeneration';
 import { useValidation } from '@/hooks/useValidation';
 import { useDocumentStore } from '@/store/documentStore';
@@ -107,7 +108,7 @@ export function ReviewStep() {
         </SummaryRow>
         <SummaryRow step="hvac">
           Sistema ideal: aquece abaixo de {fmt(a.hvac.heatingSetpoint)} °C e resfria acima de {fmt(a.hvac.coolingSetpoint)} °C
-          {a.hvac.setbackEnabled ? ', com controle afrouxado fora do horário de uso.' : ', o tempo todo.'}
+          {a.hvac.setbackEnabled ? ', com controle afrouxado fora do horário de uso' : ', o tempo todo'}; {resumoDaClimatizacao(a.geometry, a.hvac)}.
         </SummaryRow>
         <SummaryRow step="outputs">Relatório resumido{outputs.length ? ` + ${outputs.join(', ')}` : ''}.</SummaryRow>
       </ul>

@@ -99,6 +99,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T028 | Acompanhamento da simulação e "Analisar resultados" | T027 |
 | [x] | T029 | Revisão por IA reprovava com a resposta cortada pelo limite de tokens | T020 |
 | [x] | T030 | Revisão por IA: escape inválido e diagnóstico que distingue as causas | T029 |
+| [x] | T031 | Escolher quais ambientes são climatizados | — |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -673,3 +674,9 @@ inválido — o PR cita regex do nginx com `\|` e `\1`. A barra que não começa
 ser dobrada quando a resposta não decodifica, e o log diz se o JSON decodifica, onde está o erro de
 sintaxe e as chaves de topo, sem repetir conteúdo. A causa só se confirma na próxima execução.
 
+#### T031 · Escolher quais ambientes são climatizados — **concluída**
+
+Entregue em [`docs/tasks/T031-ambientes-nao-climatizados.md`](tasks/T031-ambientes-nao-climatizados.md).
+A página "Uso e climatização" lista os ambientes da planta (ou os pavimentos, no modo caixa), e o
+desmarcado fica sem sistema e sem termostato: a temperatura dele evolui livre. Fica para depois:
+cargas internas por ambiente — a garagem livre ainda recebe as cargas do uso.

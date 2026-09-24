@@ -3,6 +3,7 @@ import type { BuildingUseTemplate } from '@/templates/buildingUses/types';
 import type { ZoneInfo } from './geometry/boxGeometry';
 import type { WizardAnswers } from './answers';
 import { LIMITS, SCHEDULES, compactSchedule, constantRules, mapRules } from './schedules';
+import { climatizado } from './conditioning';
 
 export const THERMOSTAT_NAME = 'Termostato de duplo setpoint';
 
@@ -10,6 +11,11 @@ export const THERMOSTAT_NAME = 'Termostato de duplo setpoint';
  * Step 8 — ZoneHVAC:IdealLoadsAirSystem per zone with its equipment list,
  * node connections and a dual-setpoint thermostat. Models the thermal load,
  * not real equipment performance.
+ *
+ * Só nas zonas climatizadas (T031): a não climatizada fica sem sistema e sem
+ * `ZoneControl:Thermostat`, e a temperatura dela evolui livre. O termostato e as agendas
+ * continuam no documento mesmo sem nenhuma zona climatizada — são a faixa de conforto que o
+ * modo Resultados usa para contar horas fora dela (`core/results/setpoints.ts`).
  */
 export function generateHvac(zones: ZoneInfo[], hvac: WizardAnswers['hvac'], use: BuildingUseTemplate): EpJsonFragment {
   const occupied = use.schedules.occupancy;
@@ -23,7 +29,7 @@ export function generateHvac(zones: ZoneInfo[], hvac: WizardAnswers['hvac'], use
   const connections: Record<string, EpObject> = {};
   const controls: Record<string, EpObject> = {};
 
-  for (const z of zones) {
+  for (const z of zones.filter((zona) => climatizado(zona.conditioningKey, hvac))) {
     const idealName = `${z.name} Sistema ideal`;
     const supply = `${z.name} Nó de insuflamento`;
     const exhaust = `${z.name} Nó de exaustão`;
@@ -67,6 +73,15 @@ export function generateHvac(zones: ZoneInfo[], hvac: WizardAnswers['hvac'], use
     };
   }
 
+  // Sem zona climatizada, os tipos de sistema ficam fora: tipo vazio no epJSON não tem por que
+  // existir, e o termostato e as agendas continuam (ver o comentário da função).
+  const porZona = Object.fromEntries(Object.entries({
+    'ZoneControl:Thermostat': controls,
+    'ZoneHVAC:IdealLoadsAirSystem': ideal,
+    'ZoneHVAC:EquipmentList': lists,
+    'ZoneHVAC:EquipmentConnections': connections,
+  }).filter(([, objetos]) => Object.keys(objetos).length > 0));
+
   return {
     'Schedule:Compact': {
       [SCHEDULES.heating]: compactSchedule(LIMITS.temperature, heatingRules),
@@ -80,9 +95,6 @@ export function generateHvac(zones: ZoneInfo[], hvac: WizardAnswers['hvac'], use
         cooling_setpoint_temperature_schedule_name: SCHEDULES.cooling,
       },
     },
-    'ZoneControl:Thermostat': controls,
-    'ZoneHVAC:IdealLoadsAirSystem': ideal,
-    'ZoneHVAC:EquipmentList': lists,
-    'ZoneHVAC:EquipmentConnections': connections,
+    ...porZona,
   };
 }

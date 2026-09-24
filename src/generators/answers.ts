@@ -68,6 +68,11 @@ export interface WizardAnswers {
     heatingSetpoint: number;
     coolingSetpoint: number;
     setbackEnabled: boolean;
+    /**
+     * Ambientes **sem** climatização, pelas chaves de `conditioning.ts`. Ausente ou vazio: todos
+     * climatizados (T031).
+     */
+    unconditioned?: string[];
   };
   outputs: {
     selected: string[];
