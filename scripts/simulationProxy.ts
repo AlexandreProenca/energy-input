@@ -1,6 +1,6 @@
 import type { Plugin } from 'vite';
 import { isAllowedSimulationRoute } from './simulationRoutes';
-import { reescreverCookie, rotaDeSessao } from './cookieDeSessao';
+import { origemExigida, reescreverCookie, rotaDeSessao, separarSetCookie } from './cookieDeSessao';
 
 const UPSTREAM = 'https://homolog.ee.dev.br';
 /**
@@ -19,6 +19,7 @@ export function simulationProxy(): Plugin {
       const origin = req.headers.origin;
       try {
         if (origin && new URL(origin).host !== req.headers.host) return fail(403, 'Origem não permitida.');
+        if (origemExigida(req.url, origin)) return fail(403, 'Origem não informada.');
         const sessao = rotaDeSessao(req.url);
         const headers = new Headers();
         if (req.headers.authorization) headers.set('Authorization', req.headers.authorization);
@@ -40,7 +41,7 @@ export function simulationProxy(): Plugin {
         if (sessao) {
           // `getSetCookie` separa os cabeçalhos certo; `get('set-cookie')` os junta por vírgula,
           // o que quebra no `Expires=…, 23 Sep …`. O fallback é para Node sem o método.
-          const cookies = typeof response.headers.getSetCookie === 'function' ? response.headers.getSetCookie() : [response.headers.get('set-cookie')].filter((c): c is string => !!c);
+          const cookies = typeof response.headers.getSetCookie === 'function' ? response.headers.getSetCookie() : separarSetCookie(response.headers.get('set-cookie') ?? '');
           if (cookies.length) res.setHeader('Set-Cookie', cookies.map(reescreverCookie));
         }
         res.end(Buffer.from(await response.arrayBuffer()));

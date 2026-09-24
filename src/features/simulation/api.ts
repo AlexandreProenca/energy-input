@@ -82,9 +82,9 @@ export class SimulationApi {
       throw new SimulationApiError('Não foi possível acessar a simulação. Confira a conexão e tente novamente.', 0);
     }
     // Token vencido entre a renovação agendada e o pedido — aba suspensa, notebook fechado: uma
-    // renovação e uma repetição, nunca mais que isso. Só com a sessão do navegador; o token de um
-    // script não tem como renovar.
-    if (response.status === 401 && !repetido && !this.token.trim() && provedor && await provedor.renovar()) {
+    // renovação e uma repetição, nunca mais que isso. Só com a sessão do navegador e só se um
+    // token foi mandado: sem sessão não há o que renovar, e o token de um script não renova.
+    if (response.status === 401 && !repetido && credencial && !this.token.trim() && provedor && await provedor.renovar()) {
       return this.request<T>(path, init, true);
     }
     if (!response.ok) {

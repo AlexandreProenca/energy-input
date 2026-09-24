@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reescreverCookie, rotaDeSessao } from '../cookieDeSessao';
+import { origemExigida, reescreverCookie, rotaDeSessao, separarSetCookie } from '../cookieDeSessao';
 
 describe('cookie de sessão pelo proxy de desenvolvimento', () => {
   it('leva o caminho do serviço para o do proxy, e mantém os atributos de segurança', () => {
@@ -19,5 +19,17 @@ describe('cookie de sessão pelo proxy de desenvolvimento', () => {
   it('só as rotas de sessão levam cookie', () => {
     for (const rota of ['/v1/auth/login', '/v1/auth/refresh', '/v1/auth/logout']) expect(rotaDeSessao(rota), rota).toBe(true);
     for (const rota of ['/v1/engines', '/v1/auth/token', '/v1/auth/loginx', '/v1/simulations', undefined]) expect(rotaDeSessao(rota), String(rota)).toBe(false);
+  });
+
+  it('separa cookies juntos por vírgula sem cortar o Expires', () => {
+    expect(separarSetCookie('a=1; Path=/v1/auth; Expires=Thu, 01 Jan 2099 00:00:00 GMT; HttpOnly, b=2; Path=/'))
+      .toEqual(['a=1; Path=/v1/auth; Expires=Thu, 01 Jan 2099 00:00:00 GMT; HttpOnly', 'b=2; Path=/']);
+    expect(separarSetCookie('')).toEqual([]);
+  });
+
+  it('as rotas de sessão exigem Origin; as demais, não', () => {
+    expect(origemExigida('/v1/auth/refresh', undefined)).toBe(true);
+    expect(origemExigida('/v1/auth/refresh', 'http://localhost:5173')).toBe(false);
+    expect(origemExigida('/v1/engines', undefined)).toBe(false);
   });
 });

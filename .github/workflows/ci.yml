@@ -163,6 +163,7 @@ jobs:
           confere "método DELETE"           "$(c -X DELETE http://127.0.0.1:8080/simulation-api/v1/simulations/$SIM)" 405
           confere "pedido de outra origem"  "$(c -H 'Origin: http://evil.example' http://127.0.0.1:8080/simulation-api/v1/engines)" 403
           confere "renovação de outra origem" "$(c -X POST -H 'Origin: http://evil.example' http://127.0.0.1:8080/simulation-api/v1/auth/refresh)" 403
+          confere "renovação sem Origin"    "$(c -X POST http://127.0.0.1:8080/simulation-api/v1/auth/refresh)" 403
           [ "$falhou" = 0 ]
 
           # A configuração que o nginx carrega: o Authorization é o do navegador, o cookie só

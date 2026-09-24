@@ -106,21 +106,21 @@ versões de modelo passam a ser da organização de quem entrou.
 - `scripts/simulation-api-check.ts`: manda o próprio token.
 - Documentação listada no escopo.
 - Testes: `src/core/auth/__tests__/sessao.test.ts` (novo, 10), `src/features/auth/__tests__/
-  authStore.test.ts` (novo, 12), `scripts/__tests__/cookieDeSessao.test.ts` (novo, 4) e
-  `api.test.ts` (reescrito para a sessão: +4).
+  authStore.test.ts` (novo, 12), `scripts/__tests__/cookieDeSessao.test.ts` (novo, 6) e
+  `api.test.ts` (reescrito para a sessão: +5).
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 442 testes (eram 412; +30 nesta tarefa)
+- [x] `npm test` — 445 testes (eram 412; +33 nesta tarefa, 3 da revisão do PR)
 - [x] `npm run build`
 - [x] **Nenhuma credencial em armazenamento:** o teste do store entra, renova e confere que nem o
       token nem a senha aparecem em `localStorage`, `sessionStorage` ou no estado.
 - [x] **Contêiner, as verificações do CI rodadas localmente:** sem token e com token falso, 401
       do serviço; rota fora da lista, `/auth/token`, `DELETE`, outra origem e `refresh` de outra
-      origem recusados no nginx (404, 404, 405, 403, 403); a configuração carregada repassa o
+      origem recusados no nginx (404, 404, 405, 403, 403), e `refresh` sem `Origin` também (403); a configuração carregada repassa o
       `Authorization` do navegador, o cookie só pelo mapa das rotas de sessão e reescreve o
       caminho; `SIMULATION_API_TOKEN` definido no contêiner não aparece na configuração.
 - [x] **No navegador:** ao abrir, o app tenta renovar (`/auth/refresh` → 404, porque o serviço
@@ -130,6 +130,20 @@ versões de modelo passam a ser da organização de quem entrou.
 - [ ] **Login real, renovação e saída contra o serviço:** dependem da #146. O formulário não foi
       enviado no navegador — nem com credencial de teste — e o fluxo está nos testes do store,
       contra o contrato da issue.
+
+---
+
+## 5.1 Revisão do PR
+
+Cinco achados. **Três aceitos**, dois declinados:
+
+| Achado | Veredito |
+|---|---|
+| Pedido sem `Origin` numa rota de sessão chegaria ao serviço com o cookie | **aceito** — o navegador sempre manda `Origin` em POST, e o `SameSite=Strict` já barraria o cookie vindo de outro site; ainda assim, as três rotas de sessão passaram a exigir `Origin` nos dois proxies (403), com teste e verificação no CI |
+| O 401 tentaria renovar mesmo sem sessão | **aceito** — não era laço (a renovação é única e a repetição, uma só), mas era uma chamada inútil a cada pedido recusado. Só renova quem mandou token |
+| O fallback de `Set-Cookie` juntaria vários cookies num só | **aceito** — o Node 18 do projeto já tem `getSetCookie`, mas o fallback agora separa pela vírgula seguida de `nome=`, sem cortar o `Expires` |
+| A reescrita do caminho ampliaria o escopo do cookie | **declinado** — o sufixo é preservado (`/v1/auth/` vira `/simulation-api/v1/auth/`), e o escopo é o mesmo |
+| O mapa do cookie usa `$uri` | **declinado** — `$uri` é o caminho decodificado e normalizado, o mesmo que o mapa de rotas usa: `auth/../engines` vira `/engines` e não recebe cookie |
 
 ---
 

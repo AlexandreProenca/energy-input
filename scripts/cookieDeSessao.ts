@@ -22,3 +22,19 @@ export function reescreverCookie(setCookie: string): string {
     .map((parte) => (/^path=/i.test(parte) && parte.slice(5).startsWith(CAMINHO_NO_SERVICO) ? `Path=${CAMINHO_NO_PROXY}${parte.slice(5 + CAMINHO_NO_SERVICO.length)}` : parte))
     .join('; ');
 }
+
+/**
+ * Separa um `Set-Cookie` que chegou com vários cookies juntos por vírgula — o que
+ * `headers.get('set-cookie')` devolve em runtime sem `getSetCookie`. A vírgula de `Expires=Thu,
+ * 01 Jan …` não separa nada: só separa a vírgula seguida de um novo `nome=`.
+ */
+export function separarSetCookie(junto: string): string[] {
+  return junto.split(/,(?=\s*[^;,=\s]+=)/).map((c) => c.trim()).filter(Boolean);
+}
+
+/**
+ * As rotas de sessão exigem `Origin`. O navegador sempre o manda em POST, inclusive de mesma
+ * origem; pedido sem ele numa rota que recebe o cookie de renovação não veio desta página. É
+ * defesa somada ao `SameSite=Strict` e ao `Content-Type: application/json` do serviço.
+ */
+export const origemExigida = (url: string | undefined, origin: string | undefined): boolean => rotaDeSessao(url) && !origin;

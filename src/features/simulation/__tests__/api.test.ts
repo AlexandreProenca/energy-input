@@ -53,6 +53,16 @@ describe('cliente da API de simulação', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('sem sessão, o 401 não tenta renovar', async () => {
+    // Achado da revisão do PR: renovar sem ter mandado token é uma chamada inútil ao serviço a
+    // cada pedido recusado.
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({}, { status: 401 })));
+    const renovar = vi.fn(async () => true);
+    usarCredencial({ token: () => undefined, renovar });
+    await new SimulationApi().engines().catch(() => undefined);
+    expect(renovar).not.toHaveBeenCalled();
+  });
+
   it('token passado por script não tenta renovar pela sessão do navegador', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({}, { status: 401 })));
     const renovar = vi.fn(async () => true);
