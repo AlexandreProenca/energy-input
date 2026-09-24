@@ -114,7 +114,7 @@ versões de modelo passam a ser da organização de quem entrou.
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 445 testes (eram 412; +33 nesta tarefa, 3 da revisão do PR)
+- [x] `npm test` — 446 testes (eram 412; +34 nesta tarefa, 3 da revisão do PR e 1 do homolog)
 - [x] `npm run build`
 - [x] **Nenhuma credencial em armazenamento:** o teste do store entra, renova e confere que nem o
       token nem a senha aparecem em `localStorage`, `sessionStorage` ou no estado.
@@ -181,6 +181,22 @@ em todas as rotas tiraria do serviço a proteção CSRF delas — foi conferido 
 `Bearer` no cabeçalho, que outra página não consegue anexar. Os demais repetiam rodadas
 anteriores (o `if` do nginx com `"0"` é falso, e `/engines` sem `Origin` responde 401 do
 serviço, não 403) ou tratavam de URL que a lista de rotas já recusa (`/auth/login/`).
+
+---
+
+## 5.3 Contra o homolog, depois do deploy da T069 (v0.1.20)
+
+Sem credencial nenhuma — só o que qualquer cliente vê:
+
+- `openapi.json` publica `/v1/auth/login`, `/refresh` e `/logout`;
+- `refresh` sem cookie: 401, e o serviço limpa `simulation_refresh`. **Pelo proxy do Vite e pelo
+  nginx, o `Set-Cookie` volta com `Path=/simulation-api/v1/auth`**, com `HttpOnly`, `Secure` e
+  `SameSite=strict` preservados;
+- `logout` pelo nginx, com `Origin` do aplicativo: **204** — a correção do `Origin`/`Referer`
+  (§5.2) funciona; sem ela seria 403;
+- `refresh` de outra origem direto no serviço: 403; `/engines` sem token: 401;
+- login com corpo vazio: 422, que o aplicativo tratava como indisponibilidade genérica. Passou a
+  dizer "Confira o e-mail digitado." — o único campo que o serviço valida no formato.
 
 ---
 

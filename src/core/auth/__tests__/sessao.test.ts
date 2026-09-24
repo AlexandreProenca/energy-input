@@ -51,6 +51,12 @@ describe('recusa do login', () => {
     expect(lerRecusa(429, null, 0)).toMatchObject({ esperarSegundos: 60 });
   });
 
+  it('422 aponta o e-mail, que é o que o serviço valida no formato', () => {
+    // Visto no homolog (T069): corpo sem e-mail válido responde 422 com `errors[].field`.
+    expect(lerRecusa(422, { errors: [{ field: 'email', message: 'value is not a valid email address' }] }, 0))
+      .toEqual({ tipo: 'credenciais', mensagem: 'Confira o e-mail digitado.' });
+  });
+
   it('404 é o serviço sem login ainda; o resto é indisponibilidade', () => {
     expect(lerRecusa(404, null, 0).mensagem).toMatch(/ainda não oferece login/);
     expect(lerRecusa(0, null, 0).mensagem).toMatch(/sem resposta/);

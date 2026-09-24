@@ -69,6 +69,8 @@ export function lerRecusa(status: number, corpo: unknown, retryAfter: number): R
     const segundos = retryAfter > 0 ? retryAfter : 60;
     return { tipo: 'muitas-tentativas', mensagem: `Muitas tentativas. Tente de novo em ${segundos < 120 ? `${segundos} s` : `${Math.ceil(segundos / 60)} min`}.`, esperarSegundos: segundos };
   }
+  // 422 é o formato do pedido — na prática, um e-mail que o serviço não aceita como e-mail.
+  if (status === 422) return { tipo: 'credenciais', mensagem: 'Confira o e-mail digitado.' };
   if (status === 404) return { tipo: 'indisponivel', mensagem: 'O serviço de simulação ainda não oferece login com e-mail e senha.' };
   return { tipo: 'indisponivel', mensagem: `Não foi possível entrar agora (HTTP ${status || 'sem resposta'}). Tente de novo em instantes.` };
 }
