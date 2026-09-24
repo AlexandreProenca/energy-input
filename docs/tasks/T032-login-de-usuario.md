@@ -157,6 +157,26 @@ Numa segunda rodada, cinco achados, **todos declinados**:
 
 ---
 
+## 5.2 Conferência contra o serviço integrado (T069)
+
+A eng-energy-plus#146 foi entregue na T069 (PR #147 do serviço). Conferido contra o
+`docs/openapi.json` e o código dela, **antes** do deploy no homolog:
+
+- Login, 401 único, 409 com `tenants[{id,nome}]`, 429, `refresh`/`logout` com JSON `{}` e o 204
+  do `logout` batem com `lerSessao`, `lerRecusa` e o `authStore`. A resposta 200 é
+  `access_token`, `token_type`, `expires_in`, `scope`, `usuario{id,nome,email,papel}` e
+  `tenant{id,nome}`.
+- O cookie é `simulation_refresh`, `Path=/v1/auth`, `HttpOnly`, `Secure`, `SameSite=Strict` — o
+  caminho que os proxies reescrevem.
+- **Defeito encontrado do nosso lado:** o serviço também confere `Origin`/`Referer` contra o
+  `Host` em `refresh` e `logout`, e aceita quando os dois faltam. O proxy do Vite monta os
+  cabeçalhos do zero e não os repassa; **o nginx repassava**, com `Origin: localhost:8080`
+  contra `Host: homolog.ee.dev.br` — renovar e sair dariam 403, e a sessão cairia a cada 15
+  minutos. O nginx agora limpa os dois, e o CI confere. A origem continua conferida no proxy,
+  contra o host do aplicativo.
+
+---
+
 ## 6. Observações / armadilhas para tarefas futuras
 
 **Este PR só é integrado depois da eng-energy-plus#146 em produção.** Integrado antes, ninguém
@@ -168,3 +188,8 @@ fixtures reais, a lição da T025.
 
 **Safari e cookie `Secure` em `http://localhost`.** Chrome e Firefox aceitam; o Safari pode
 recusar, e aí a sessão não sobrevive ao recarregar no contêiner local.
+
+**Limite de tentativas por IP atrás do proxy.** O serviço limita login por e-mail e por IP, e
+todo login feito por este aplicativo chega do IP do proxy. Numa instalação local não importa;
+numa compartilhada, várias pessoas dividiriam o limite de IP, a menos que o serviço passe a
+confiar no `X-Forwarded-For` deste nginx.

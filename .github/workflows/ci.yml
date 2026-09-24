@@ -175,6 +175,9 @@ jobs:
           echo "$conf" | grep -q 'proxy_set_header Authorization $http_authorization;' || { echo "::error::o Authorization não é o do navegador"; exit 1; }
           echo "$conf" | grep -q 'proxy_set_header Cookie $cookie_para_o_servico;' || { echo "::error::o cookie não passa pelo mapa das rotas de sessão"; exit 1; }
           echo "$conf" | grep -q 'proxy_cookie_path /v1/auth /simulation-api/v1/auth;' || { echo "::error::o caminho do cookie de sessão não é reescrito"; exit 1; }
+          # O serviço compara Origin/Referer com o Host de homolog; repassados, renovar e sair dariam 403.
+          echo "$conf" | grep -q 'proxy_set_header Origin "";' || { echo "::error::o nginx repassa Origin ao serviço"; exit 1; }
+          echo "$conf" | grep -q 'proxy_set_header Referer "";' || { echo "::error::o nginx repassa Referer ao serviço"; exit 1; }
           if echo "$conf" | grep -q 'canario-ci'; then echo "::error::uma credencial do ambiente foi parar na configuração"; exit 1; fi
           docker rm -f energy-input-sem-chave >/dev/null
           echo "Defesas e repasse de credencial conferidos."

@@ -21,6 +21,9 @@ export function simulationProxy(): Plugin {
         if (origin && new URL(origin).host !== req.headers.host) return fail(403, 'Origem não permitida.');
         if (origemExigida(req.url, origin)) return fail(403, 'Origem não informada.');
         const sessao = rotaDeSessao(req.url);
+        // Headers novos, e não os do navegador: o serviço confere `Origin`/`Referer` contra o
+        // próprio `Host` em `refresh` e `logout`, e os do aplicativo dariam 403 (eng-energy-plus
+        // T069). A origem já foi conferida acima, contra o host do aplicativo.
         const headers = new Headers();
         if (req.headers.authorization) headers.set('Authorization', req.headers.authorization);
         if (sessao && req.headers.cookie) headers.set('Cookie', req.headers.cookie);
