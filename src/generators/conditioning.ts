@@ -46,3 +46,19 @@ export function resumoDaClimatizacao(g: WizardAnswers['geometry'], hvac: WizardA
   if (fora.length === ambientes.length) return `nenhum ${unidade === 'ambientes' ? 'ambiente' : 'pavimento'} climatizado — o edifício evolui livre`;
   return `${ambientes.length - fora.length} de ${ambientes.length} ${unidade} climatizados; sem climatização: ${fora.map((a) => a.nome).join(', ')}`;
 }
+
+/**
+ * Marca ou desmarca um ambiente e devolve a nova lista de desmarcados.
+ *
+ * Limpa as sobras **só do mesmo tipo** de chave: um ambiente apagado da planta sai da lista, mas
+ * os pavimentos desmarcados no modo caixa ficam guardados enquanto o usuário experimenta a planta
+ * — voltar ao modo caixa não pode esquecer a escolha.
+ */
+export function alternarClimatizacao(g: WizardAnswers['geometry'], unconditioned: string[] | undefined, chave: string, ligado: boolean): string[] {
+  const existentes = new Set(ambientesClimatizaveis(g).map((a) => a.chave));
+  const tipo = (c: string) => c.slice(0, c.indexOf(':') + 1);
+  const doModo = tipo(g.mode === 'plan' ? chaveDoAmbiente('x') : chaveDoPavimento(0));
+  const fora = new Set((unconditioned ?? []).filter((c) => tipo(c) !== doModo || existentes.has(c)));
+  if (ligado) fora.delete(chave); else fora.add(chave);
+  return [...fora];
+}

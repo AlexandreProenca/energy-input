@@ -84,7 +84,7 @@ e a temperatura dele segue o clima.
 ## 4. Alterações realizadas
 
 - `src/generators/conditioning.ts` e `conditioningKeys.ts`: novos — ambientes climatizáveis,
-  chaves, `climatizado`, `resumoDaClimatizacao`.
+  chaves, `climatizado`, `alternarClimatizacao`, `resumoDaClimatizacao`.
 - `src/generators/answers.ts`: `hvac.unconditioned`.
 - `src/generators/geometry/boxGeometry.ts` e `floorPlan.ts`: `ZoneInfo.conditioningKey`.
 - `src/generators/hvac.ts`: só zonas climatizadas; sem tipos vazios.
@@ -93,14 +93,14 @@ e a temperatura dele segue o clima.
 - `src/features/wizard/steps/ReviewStep.tsx`: o resumo.
 - `scripts/eplus-check.ts`: dois cenários.
 - `docs/PRD.md` (página 5) e `docs/DEVELOPMENT.md` (Ambientes não climatizados).
-- Testes: `src/generators/__tests__/conditioning.test.ts` (novo, 10).
+- Testes: `src/generators/__tests__/conditioning.test.ts` (novo, 12).
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 408 testes (eram 398; +10 nesta tarefa)
+- [x] `npm test` — 410 testes (eram 398; +12 nesta tarefa, 2 da revisão do PR)
 - [x] `npm run build`
 - [x] **Prova negativa:** sem o filtro em `generateHvac`, 4 dos 10 testes reprovam.
 - [x] **Sincronização:** desmarcar remove os objetos do sistema do documento sem conflito e sem
@@ -111,6 +111,20 @@ e a temperatura dele segue o clima.
       primeiro tira os quatro objetos do sistema (99 → 95), o arquivo continua válido, e a
       Revisão diz "2 de 3 pavimentos climatizados; sem climatização: Pavimento 1". Remarcar volta
       a 99.
+
+---
+
+## 5.1 Revisão do PR
+
+Cinco achados. **Um aceito**, quatro declinados:
+
+| Achado | Veredito |
+|---|---|
+| Mexer na planta descartava os pavimentos desmarcados no modo caixa, e voltar a ele esquecia a escolha | **aceito** — a limpeza de sobras passou a valer só para chaves do mesmo tipo. A lógica saiu do componente para `alternarClimatizacao`, com teste |
+| Concordância da frase da Revisão | **declinado** — os casos citados no próprio achado dão a frase certa; os quatro estão no teste |
+| Tirar os tipos vazios deixaria referência órfã | **declinado** — só ficam vazios sem nenhuma zona climatizada, e aí nada aponta para eles; o teste desse caso confere as referências cruzadas |
+| Zona com chave de ambiente apagado, "por cache" | **declinado** — a geração não tem cache: a zona só existe se o ambiente existe |
+| Ambiente de área zero na lista | **declinado** — a validação da planta já recusa área abaixo de 0,01 m², antes da T031 |
 
 ---
 

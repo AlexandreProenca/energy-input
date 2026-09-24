@@ -5,7 +5,7 @@ import { planWizardSync } from '@/core/sync/wizardSync';
 import { templates } from '@/templates';
 import { defaultAnswers, type WizardAnswers } from '../answers';
 import { generateDocument } from '../compose';
-import { ambientesClimatizaveis, chaveDoAmbiente, chaveDoPavimento, climatizado, resumoDaClimatizacao } from '../conditioning';
+import { alternarClimatizacao, ambientesClimatizaveis, chaveDoAmbiente, chaveDoPavimento, climatizado, resumoDaClimatizacao } from '../conditioning';
 import { THERMOSTAT_NAME } from '../hvac';
 import type { PlanRoom } from '../geometry/floorPlan';
 
@@ -107,6 +107,27 @@ describe('sincronização com o documento', () => {
 
     const remarcado = planWizardSync(desmarcado.next, antes, desmarcado.owned, 'overwrite');
     expect(zonasComSistema(remarcado.next)).toHaveLength(4);
+  });
+});
+
+describe('marcar e desmarcar', () => {
+  it('desmarca e remarca um ambiente', () => {
+    const g = planta().geometry;
+    const fora = alternarClimatizacao(g, undefined, chaveDoAmbiente('Garagem'), false);
+    expect(fora).toEqual([chaveDoAmbiente('Garagem')]);
+    expect(alternarClimatizacao(g, fora, chaveDoAmbiente('Garagem'), true)).toEqual([]);
+  });
+
+  it('limpa ambiente apagado, mas guarda a escolha do outro modo', () => {
+    // Achado da revisão do PR: a primeira versão descartava os pavimentos desmarcados no modo
+    // caixa ao mexer na planta, e voltar ao modo caixa esquecia a escolha.
+    const g = planta().geometry;
+    const antes = [chaveDoAmbiente('Apagado'), chaveDoPavimento(0)];
+    expect(alternarClimatizacao(g, antes, chaveDoAmbiente('Sala'), false).sort())
+      .toEqual([chaveDoAmbiente('Sala'), chaveDoPavimento(0)].sort());
+    const caixa = { ...g, mode: 'box' as const };
+    expect(alternarClimatizacao(caixa, [chaveDoPavimento(7), chaveDoAmbiente('Sala')], chaveDoPavimento(1), false).sort())
+      .toEqual([chaveDoAmbiente('Sala'), chaveDoPavimento(1)].sort());
   });
 });
 

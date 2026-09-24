@@ -4,7 +4,7 @@ import { useWizardStore } from '@/store/wizardStore';
 import { Callout, Field, Toggle, fmt } from '@/ui/primitives';
 import { NumberInput } from '@/ui/NumberInput';
 import { ChoiceCard, SectionTitle, useStepAnswers } from './common';
-import { ambientesClimatizaveis, climatizado } from '@/generators/conditioning';
+import { alternarClimatizacao, ambientesClimatizaveis, climatizado } from '@/generators/conditioning';
 
 function ComfortBar({ heating, cooling }: { heating: number; cooling: number }) {
   const min = 10;
@@ -42,13 +42,7 @@ export function HvacStep() {
   const geometry = useWizardStore((s) => s.answers.geometry);
   const ambientes = ambientesClimatizaveis(geometry);
   const climatizados = ambientes.filter((a) => climatizado(a.chave, hvac));
-  const alternar = (chave: string, ligado: boolean) => {
-    // Guarda só as chaves que ainda existem: um ambiente apagado da planta não deixa resto.
-    const existentes = new Set(ambientes.map((a) => a.chave));
-    const fora = new Set((hvac.unconditioned ?? []).filter((c) => existentes.has(c)));
-    if (ligado) fora.delete(chave); else fora.add(chave);
-    update({ unconditioned: [...fora] });
-  };
+  const alternar = (chave: string, ligado: boolean) => update({ unconditioned: alternarClimatizacao(geometry, hvac.unconditioned, chave, ligado) });
 
   return (
     <div className="space-y-8">
