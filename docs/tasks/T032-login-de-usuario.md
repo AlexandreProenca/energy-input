@@ -175,6 +175,13 @@ A eng-energy-plus#146 foi entregue na T069 (PR #147 do serviço). Conferido cont
   minutos. O nginx agora limpa os dois, e o CI confere. A origem continua conferida no proxy,
   contra o host do aplicativo.
 
+Revisão desta correção: cinco achados, **todos declinados**. O novo — limpar `Origin`/`Referer`
+em todas as rotas tiraria do serviço a proteção CSRF delas — foi conferido no código da T069: só
+`refresh` e `logout` usam `Origin` (`_exigir_mesma_origem`); as outras rotas autenticam por
+`Bearer` no cabeçalho, que outra página não consegue anexar. Os demais repetiam rodadas
+anteriores (o `if` do nginx com `"0"` é falso, e `/engines` sem `Origin` responde 401 do
+serviço, não 403) ou tratavam de URL que a lista de rotas já recusa (`/auth/login/`).
+
 ---
 
 ## 6. Observações / armadilhas para tarefas futuras
