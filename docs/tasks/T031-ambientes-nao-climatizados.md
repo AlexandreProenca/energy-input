@@ -130,9 +130,13 @@ Numa segunda rodada, **um achado procedente em parte**: a chave de pavimento é 
 índice volta. Ir de três para dois pavimentos e mexer na lista esquecia o terceiro; voltar a três
 o trazia climatizado — mas só se o usuário tivesse mexido na lista no meio, o que tornava o
 resultado dependente da ordem dos cliques. A regra passou a seguir a natureza de cada chave: a de
-ambiente fica enquanto o ambiente existir na planta (o id é UUID e nunca volta), a de pavimento
+ambiente fica enquanto o ambiente existir na planta (o id de ambiente desenhado é UUID e não volta), a de pavimento
 fica sempre, e o resto — autosave corrompido, apontado no mesmo parecer — sai. Declinados, por
 repetirem a primeira rodada: tipos vazios e referência órfã, e a concordância da frase da Revisão.
+
+A terceira rodada não trouxe achado procedente: o principal supunha que o modo caixa apaga os
+ambientes da planta — não apaga, só muda `mode`, e o teste cobre esse caso. A Revisão descrever
+só a geometria atual é de propósito; os demais repetiam rodadas anteriores.
 
 ---
 
@@ -146,3 +150,8 @@ setpoints precisa saber disso.
 **Ambiente livre ainda recebe as cargas do uso.** Uma garagem sem climatização continua com
 pessoas, iluminação e equipamentos da sala, e fica mais quente do que ficaria de verdade. Enquanto
 não houver uso por ambiente, o resultado dela é um limite superior.
+
+**O ambiente inicial da planta tem id fixo, `initial-room`.** Os desenhados recebem UUID. Se o
+usuário desmarcar o ambiente inicial, apagá-lo sem mexer na lista e depois a planta for recriada
+do zero, o novo ambiente inicial herda o "sem climatização". É raro e aparece na lista, mas é o
+único id que volta.

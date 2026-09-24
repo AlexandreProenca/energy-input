@@ -51,8 +51,9 @@ export function resumoDaClimatizacao(g: WizardAnswers['geometry'], hvac: WizardA
  * Marca ou desmarca um ambiente e devolve a nova lista de desmarcados.
  *
  * O que sobra de escolhas antigas segue a natureza de cada chave:
- * - **ambiente** fica enquanto o ambiente existir na planta, em qualquer modo. O id é um UUID e
- *   nunca volta: ambiente apagado é sobra, e alternar para o modo caixa não esquece a escolha;
+ * - **ambiente** fica enquanto o ambiente existir na planta, em qualquer modo — o modo caixa não
+ *   apaga `rooms`. O id de ambiente desenhado é UUID e não volta, então ambiente apagado é sobra.
+ *   A exceção é o ambiente inicial da planta, `initial-room`, recriado com o mesmo id;
  * - **pavimento** fica sempre. O índice volta quando o número de pavimentos volta, e o terceiro
  *   pavimento desmarcado continua desmarcado depois de ir a dois e voltar a três;
  * - qualquer outra coisa (autosave corrompido) sai.
