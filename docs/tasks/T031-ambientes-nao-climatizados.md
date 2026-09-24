@@ -52,8 +52,8 @@ e a temperatura dele segue o clima.
 
 - **A chave é o id do ambiente, não o nome da zona.** O nome da zona muda quando o ambiente é
   renomeado ou quando muda o número de pavimentos; o id da planta não. No modo caixa, a chave é o
-  índice do pavimento. Chave de ambiente apagado é ignorada, e a lista limpa essas sobras na
-  próxima mudança.
+  índice do pavimento. Chave de ambiente apagado é ignorada na geração, e a lista a limpa na
+  próxima mudança; a de pavimento fica, porque o índice volta (§5.1).
 
 - **A escolha fica na climatização, não na geometria.** Climatizar é decisão sobre o sistema, e a
   página "Uso e climatização" é onde o usuário decide as temperaturas. A geometria continua só
@@ -93,14 +93,14 @@ e a temperatura dele segue o clima.
 - `src/features/wizard/steps/ReviewStep.tsx`: o resumo.
 - `scripts/eplus-check.ts`: dois cenários.
 - `docs/PRD.md` (página 5) e `docs/DEVELOPMENT.md` (Ambientes não climatizados).
-- Testes: `src/generators/__tests__/conditioning.test.ts` (novo, 12).
+- Testes: `src/generators/__tests__/conditioning.test.ts` (novo, 14).
 
 ---
 
 ## 5. Verificação e testes
 
 - [x] `npm run typecheck`
-- [x] `npm test` — 410 testes (eram 398; +12 nesta tarefa, 2 da revisão do PR)
+- [x] `npm test` — 412 testes (eram 398; +14 nesta tarefa, 4 da revisão do PR)
 - [x] `npm run build`
 - [x] **Prova negativa:** sem o filtro em `generateHvac`, 4 dos 10 testes reprovam.
 - [x] **Sincronização:** desmarcar remove os objetos do sistema do documento sem conflito e sem
@@ -125,6 +125,14 @@ Cinco achados. **Um aceito**, quatro declinados:
 | Tirar os tipos vazios deixaria referência órfã | **declinado** — só ficam vazios sem nenhuma zona climatizada, e aí nada aponta para eles; o teste desse caso confere as referências cruzadas |
 | Zona com chave de ambiente apagado, "por cache" | **declinado** — a geração não tem cache: a zona só existe se o ambiente existe |
 | Ambiente de área zero na lista | **declinado** — a validação da planta já recusa área abaixo de 0,01 m², antes da T031 |
+
+Numa segunda rodada, **um achado procedente em parte**: a chave de pavimento é um índice, e o
+índice volta. Ir de três para dois pavimentos e mexer na lista esquecia o terceiro; voltar a três
+o trazia climatizado — mas só se o usuário tivesse mexido na lista no meio, o que tornava o
+resultado dependente da ordem dos cliques. A regra passou a seguir a natureza de cada chave: a de
+ambiente fica enquanto o ambiente existir na planta (o id é UUID e nunca volta), a de pavimento
+fica sempre, e o resto — autosave corrompido, apontado no mesmo parecer — sai. Declinados, por
+repetirem a primeira rodada: tipos vazios e referência órfã, e a concordância da frase da Revisão.
 
 ---
 

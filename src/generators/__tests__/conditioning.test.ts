@@ -125,9 +125,21 @@ describe('marcar e desmarcar', () => {
     const antes = [chaveDoAmbiente('Apagado'), chaveDoPavimento(0)];
     expect(alternarClimatizacao(g, antes, chaveDoAmbiente('Sala'), false).sort())
       .toEqual([chaveDoAmbiente('Sala'), chaveDoPavimento(0)].sort());
+    // No modo caixa, os ambientes da planta continuam em `rooms`: a escolha deles fica.
     const caixa = { ...g, mode: 'box' as const };
-    expect(alternarClimatizacao(caixa, [chaveDoPavimento(7), chaveDoAmbiente('Sala')], chaveDoPavimento(1), false).sort())
+    expect(alternarClimatizacao(caixa, [chaveDoAmbiente('Sala')], chaveDoPavimento(1), false).sort())
       .toEqual([chaveDoAmbiente('Sala'), chaveDoPavimento(1)].sort());
+  });
+
+  it('guarda o pavimento que deixou de existir, porque ele volta com o mesmo índice', () => {
+    // Segunda rodada da revisão: ir de 3 para 2 pavimentos e mexer na lista esquecia o terceiro.
+    const a = defaultAnswers(); const g = { ...a.geometry, floors: 2 };
+    expect(alternarClimatizacao(g, [chaveDoPavimento(2)], chaveDoPavimento(0), false).sort())
+      .toEqual([chaveDoPavimento(0), chaveDoPavimento(2)].sort());
+  });
+
+  it('descarta o que não é chave conhecida', () => {
+    expect(alternarClimatizacao(planta().geometry, ['lixo', 'pavimento:x'], chaveDoAmbiente('Sala'), false)).toEqual([chaveDoAmbiente('Sala')]);
   });
 });
 
