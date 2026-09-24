@@ -48,18 +48,31 @@ export const isSeriesExpired = (e: unknown): boolean => e instanceof SimulationA
  */
 export const seriesCandidates = (e: unknown): SeriesCandidate[] =>
   e instanceof SimulationApiError && e.status === 422 ? parseSeriesCandidates(e.problem) : [];
+/**
+ * De onde vem o token no navegador (T032, ADR-0004): a sessão de quem entrou. O `authStore` se
+ * registra aqui; este módulo não o importa, para não carregar a sessão em scripts de Node.
+ */
+export interface ProvedorDeCredencial {
+  token(): string | undefined;
+  /** Tenta renovar pelo cookie. `true` se há um token novo para repetir o pedido. */
+  renovar(): Promise<boolean>;
+}
+let provedor: ProvedorDeCredencial | undefined;
+export function usarCredencial(p: ProvedorDeCredencial | undefined) { provedor = p; }
+
 export class SimulationApi {
   /**
-   * `token` existe só para scripts em Node que falam direto com o serviço
-   * (`scripts/capture-results-fixtures.ts`). O app no navegador nunca o passa: a chave fica no
-   * ambiente do servidor, e o proxy a injeta (T027, ADR-0003).
+   * `token` existe só para scripts em Node (`scripts/capture-results-fixtures.ts`,
+   * `scripts/simulation-api-check.ts`). No navegador ninguém o passa: o token é o da sessão, pelo
+   * `ProvedorDeCredencial` (T032, ADR-0004).
    */
   constructor(private token = '', private base = '/simulation-api/v1') {}
-  async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  async request<T>(path: string, init: RequestInit = {}, repetido = false): Promise<T> {
     let response: Response;
+    const credencial = this.token.trim() || provedor?.token() || '';
     try {
       const headers = new Headers(init.headers);
-      if (this.token.trim()) headers.set('Authorization', `Bearer ${this.token.trim().replace(/^Bearer\s+/i, '')}`);
+      if (credencial) headers.set('Authorization', `Bearer ${credencial.replace(/^Bearer\s+/i, '')}`);
       // O timeout continua valendo sempre; um `signal` do chamador é somado a ele, para que
       // cancelar uma carga não desligue a proteção contra requisição pendurada.
       const timeout = AbortSignal.timeout(60_000);
@@ -68,12 +81,18 @@ export class SimulationApi {
     } catch {
       throw new SimulationApiError('Não foi possível acessar a simulação. Confira a conexão e tente novamente.', 0);
     }
+    // Token vencido entre a renovação agendada e o pedido — aba suspensa, notebook fechado: uma
+    // renovação e uma repetição, nunca mais que isso. Só com a sessão do navegador e só se um
+    // token foi mandado: sem sessão não há o que renovar, e o token de um script não renova.
+    if (response.status === 401 && !repetido && credencial && !this.token.trim() && provedor && await provedor.renovar()) {
+      return this.request<T>(path, init, true);
+    }
     if (!response.ok) {
       const body = (await response.json().catch(() => ({}))) as ApiProblem;
       const fields = Array.isArray(body.errors) ? body.errors.map((e: { field?: string; message?: string }) => `${e.field ?? ''}: ${e.message ?? ''}`).join('; ') : '';
-      // A chave vem do ambiente do servidor desde a T027: 401 quer dizer que ela não foi
-      // configurada, está errada ou expirou — e a correção é lá, não na interface.
-      const message = response.status === 401 ? 'A chave da API de simulação não está configurada no servidor, ou foi recusada. Defina SIMULATION_API_TOKEN no ambiente do servidor — no .env.local, para npm run dev e docker compose — e reinicie.'
+      // Desde a T032 o 401 quer dizer sessão ausente ou vencida sem renovação possível: a correção
+      // é entrar de novo. O 403 é o papel da pessoa, que o serviço explica no `detail`.
+      const message = response.status === 401 ? 'Sua sessão terminou. Entre de novo com seu e-mail e senha.'
         : response.status === 410 ? 'A série horária desta simulação expirou. O resumo permanente continua disponível.'
         : typeof body.detail === 'string' ? body.detail : `A API recusou a solicitação (HTTP ${response.status}).`;
       // O corpo inteiro viaja junto: achatá-lo na mensagem perderia as candidatas do 422,

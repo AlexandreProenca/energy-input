@@ -19,11 +19,9 @@ COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 # Rotas permitidas do proxy de simulação, geradas de scripts/simulationRoutes.ts. O nome
 # começa por 00- para o mapa existir antes de default.conf, que o usa.
 COPY docker/simulation-routes.conf /etc/nginx/conf.d/00-simulation-routes.conf
-# A chave da API vem do ambiente do contêiner, na inicialização — nunca da imagem. O script
-# roda também aqui, sem chave, para a imagem ter uma configuração válida desde o build
-# (`nginx -t` e o healthcheck não dependem de a variável existir).
-COPY --chmod=755 docker/entrypoint.d/15-chave-da-simulacao.sh /docker-entrypoint.d/
-RUN SIMULATION_API_TOKEN= /docker-entrypoint.d/15-chave-da-simulacao.sh && nginx -t
+# Sem credencial na imagem nem no ambiente: cada pessoa entra com e-mail e senha (T032,
+# ADR-0004), e o proxy repassa o token dela.
+RUN nginx -t
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80

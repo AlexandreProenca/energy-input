@@ -83,7 +83,7 @@ Editor completo e de baixo nível governado pelo **JSON Schema oficial** do Ener
 - Conexão direta com a API de homologação (`https://homolog.ee.dev.br/v1`).
 - Upload multipart do modelo epJSON, seleção de versões compatíveis do motor EnergyPlus e arquivos climáticos EPW.
 - Acompanhamento reativo de status (`queued`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`), exibição de logs/erros e download de artefatos gerados.
-- A chave da API vem da variável de ambiente `SIMULATION_API_TOKEN`, no servidor; a interface não pede credencial.
+- Login com e-mail e senha da conta no serviço: simulações, estudos e versões ficam na organização (tenant) de quem entrou. O token fica só na memória da aba e é renovado por cookie HttpOnly; recarregar a página não pede login. Criar e baixar epJSON não exige conta.
 
 ### 📊 Modo 4: Resultados
 
@@ -110,7 +110,7 @@ Para humanos e agentes de IA que contribuem neste repositório, os seguintes pri
 3. **Proteção contra perda de dados (`planWizardSync`):**
    - O assistente nunca sobrescreve silenciosamente objetos customizados pelo usuário no Modo Especialista ou 3D. Quando há divergência de intenção, o diálogo de resolução de conflitos deve ser disparado. Objetos novos criados pelo usuário nunca são apagados.
 4. **Nenhum segredo em bundle nem em storage persistente:**
-   - A chave `SIMULATION_API_TOKEN` existe só no ambiente do servidor — o do proxy do Vite (`.env.local`) e o do contêiner — e nunca com prefixo `VITE_`. O proxy do contêiner só a entrega a `localhost`, recusa rotas fora da lista e pedidos de outra origem ([ADR-0003](docs/adr/0003-chave-da-api-no-ambiente-do-servidor.md)).
+   - Nenhuma credencial em `localStorage`/`sessionStorage`: o token de acesso vive na memória da aba e o refresh token em cookie HttpOnly. Os proxies não têm credencial própria; recusam rotas fora da lista, métodos fora de GET/POST e pedidos de outra origem ([ADR-0004](docs/adr/0004-login-de-usuario-e-token-na-memoria.md)).
 5. **Conformidade de Marca:**
    - O nome oficial do produto é **Energy Input** ("Arquivos epJSON para EnergyPlus"). Nunca utilize "EnergyPlus API" como nome comercial (cláusula 4 da licença do EnergyPlus).
 

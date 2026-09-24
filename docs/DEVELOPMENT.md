@@ -90,22 +90,15 @@ All variants (1–3 floors, all presets, per-facade windows, setbacks, year-wrap
 Build multi-stage: `node:20-alpine` gera o `dist/` (schema + typecheck + build do Vite), servido depois por `nginx:1.27-alpine`. A imagem final não carrega Node nem `node_modules` — só os arquivos estáticos e o nginx (~56 MB).
 
 ```bash
-docker compose up --build       # http://localhost:8080, com a chave do .env.local
+docker compose up --build       # http://localhost:8080
 # ou, sem compose:
 docker build -t energy-input .
-docker run -p 127.0.0.1:8080:80 -e SIMULATION_API_TOKEN=… energy-input
+docker run -p 127.0.0.1:8080:80 energy-input
 ```
 
-**Variáveis de ambiente** (T027, ADR-0003) — lidas na inicialização por
-`docker/entrypoint.d/15-chave-da-simulacao.sh`, nunca embutidas na imagem:
-
-| Variável | Para quê |
-| --- | --- |
-| `SIMULATION_API_TOKEN` | chave da API de simulação; sem ela o serviço responde 401 |
-| `SIMULATION_TOKEN_HOSTS` | hosts, além de localhost, que recebem a chave. **Todo visitante desses hosts simula na conta do dono da chave** |
-
-A porta é publicada só em `127.0.0.1`. Chave com caracteres fora de `[A-Za-z0-9._~+/=-]` impede o
-contêiner de subir, porque quebraria a configuração do nginx.
+**O contêiner não tem credencial nem variável de ambiente** desde a T032 (ADR-0004): cada pessoa
+entra com a própria conta, e o nginx repassa o token dela. A porta é publicada só em `127.0.0.1`
+por padrão; em outro endereço, ponha TLS na frente — o cookie de renovação é `Secure`.
 
 Não há backend: é um SPA estático atrás de um nginx que também faz o proxy da API, e o schema do EnergyPlus é gerado dentro da imagem a partir de `schema/26.1/Energy+.schema.epJSON` (por isso esse arquivo vendorizado precisa estar no contexto de build). `docker/nginx.conf` cuida de gzip, cache longo e imutável para `/assets/*` (nomes com hash do Vite), cache curto com revalidação para `/schema/*` e `no-cache` para `index.html`, além de um fallback de SPA (`try_files … /index.html`) — hoje sem uso real, já que não há roteamento client-side, mas inofensivo e já pronto caso isso mude.
 
@@ -331,20 +324,29 @@ ou upload EPW com licença declarada. `design_day` dispensa EPW. Os resultados
 incluem summary, errors, logs e artifacts. Um erro em um desses recursos não
 esconde os demais. Também é possível consultar uma execução pelo ID.
 
-**A chave da API vem do ambiente do servidor** (T027,
-[ADR-0003](adr/0003-chave-da-api-no-ambiente-do-servidor.md)). Copie `.env.example` para
-`.env.local` e configure `SIMULATION_API_TOKEN`: o `npm run dev` e o `docker compose up` leem o
-mesmo arquivo. A interface não pede credencial. Os dois proxies — o middleware do Vite e o nginx
-do contêiner — fazem as mesmas coisas:
+**Login de usuário** (T032, [ADR-0004](adr/0004-login-de-usuario-e-token-na-memoria.md);
+contrato em eng-energy-plus#146). A tela de login troca e-mail e senha por um token em
+`POST /v1/auth/login`; o `authStore` (`src/features/auth/`) o guarda **só em memória** e o
+registra no cliente da API (`usarCredencial`). O refresh token vem em cookie HttpOnly e renova a
+sessão um minuto antes de o token vencer, ao abrir o app e uma vez ao receber 401 — uma
+renovação por vez, porque o serviço rotaciona o cookie e trata reuso como roubo. Sair, ou entrar
+em outra organização, esquece a execução acompanhada. As decisões puras (ler a sessão,
+classificar a recusa, quando renovar) estão em `src/core/auth/sessao.ts`.
 
-- injetam a chave só em pedido para `localhost`/`127.0.0.1` (no contêiner, também para os hosts
-  de `SIMULATION_TOKEN_HOSTS`), o que barra *DNS rebinding*;
+Os dois proxies — o middleware do Vite e o nginx do contêiner — fazem as mesmas coisas:
+
+- repassam o `Authorization` do navegador; **não têm credencial própria**;
+- repassam o cookie só nas rotas de sessão (`/auth/login|refresh|logout`), reescrevendo o
+  caminho dele de `/v1/auth` para `/simulation-api/v1/auth` (`scripts/cookieDeSessao.ts` no
+  Vite, `proxy_cookie_path` no nginx);
 - recusam rota fora da lista de `scripts/simulationRoutes.ts` (404), método fora de GET/POST
-  (405) e pedido de outra origem (403). O mapa do nginx é **gerado** dessa lista
-  (`npm run nginx-routes`) e um teste reprova se divergir.
+  (405) e pedido de outra origem (403) — a origem protege o cookie, que o navegador anexa
+  sozinho. O mapa do nginx é **gerado** dessa lista (`npm run nginx-routes`) e um teste
+  reprova se divergir.
 
-Nunca use `VITE_` para segredos: o Vite embute essas variáveis no bundle. O CI roda o build com
-uma chave falsa no ambiente e reprova se ela aparecer no `dist/`.
+`SIMULATION_API_TOKEN` ficou só para os scripts em Node (`simulation-api-check.ts`,
+`capture-results-fixtures.ts`). Nunca use `VITE_` para segredos: o CI roda o build com um valor
+falso nessa variável e reprova se ele aparecer no `dist/`.
 
 O proxy `/simulation-api/v1` elimina a dependência de CORS no serviço. Em
 downloads, transforma o 302 em `{download_url}`; o navegador abre o link

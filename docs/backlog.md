@@ -100,6 +100,7 @@ anterior a este épico; ela precisa ficar escrita, não ser "corrigida" por enga
 | [x] | T029 | Revisão por IA reprovava com a resposta cortada pelo limite de tokens | T020 |
 | [x] | T030 | Revisão por IA: escape inválido e diagnóstico que distingue as causas | T029 |
 | [x] | T031 | Escolher quais ambientes são climatizados | — |
+| [ ] | T032 | Login de usuário, no lugar da chave por variável de ambiente — **ADR** | eng-energy-plus#146 |
 | [x] | T017 | CI: o teste de contêiner não exercita o proxy de simulação | T002 |
 
 ---
@@ -680,3 +681,12 @@ Entregue em [`docs/tasks/T031-ambientes-nao-climatizados.md`](tasks/T031-ambient
 A página "Uso e climatização" lista os ambientes da planta (ou os pavimentos, no modo caixa), e o
 desmarcado fica sem sistema e sem termostato: a temperatura dele evolui livre. Fica para depois:
 cargas internas por ambiente — a garagem livre ainda recebe as cargas do uso.
+
+#### T032 · Login de usuário, no lugar da chave por variável de ambiente — **aguarda o serviço**
+
+Doc em [`docs/tasks/T032-login-de-usuario.md`](tasks/T032-login-de-usuario.md);
+[ADR-0004](adr/0004-login-de-usuario-e-token-na-memoria.md). Tela de login com e-mail e senha,
+token só em memória, renovação por cookie HttpOnly, proxies sem credencial. Implementada e
+testada contra o contrato de **AlexandreProenca/eng-energy-plus#146**; só é integrada quando o
+serviço publicar o login — antes disso ninguém simularia. Depois dela, as telas de estudos e de
+versões (Fase 3, T012–T015).

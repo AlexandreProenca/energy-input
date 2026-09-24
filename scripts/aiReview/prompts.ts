@@ -22,7 +22,7 @@ export const SYSTEM_PROMPT = [
   "tolerâncias (0.1 mm), pareamento mútuo e inversão de camadas em paredes/lajes entre zonas.\n",
   "4. INTEGRIDADE DE DADOS E SINCRONIZAÇÃO (planWizardSync): Nunca sobrescrever edições manuais ",
   "silenciosamente sem acionar diálogo de conflito; manter integridade referencial ao renomear objetos.\n",
-  "5. SEGURANÇA E SEGREDO: Credenciais (ex: SIMULATION_API_TOKEN) NUNCA devem entrar no bundle ",
+  "5. SEGURANÇA E SEGREDO: Credenciais (ex: SIMULATION_API_TOKEN, o token de sessão) NUNCA devem entrar no bundle ",
   "(sem prefixo VITE_ para segredos) nem em localStorage. Dados enviados à API de homologação ",
   "devem ser sanitizados.\n",
   "6. TIPAGEM E CORRETUDE REACT/ZUSTAND: Sem 'any' injustificado, sem loops de re-render, sem ",

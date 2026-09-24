@@ -6,6 +6,16 @@ versionamento conforme [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Alterado — segurança
+
+- **Login com e-mail e senha no lugar da chave da API no servidor.** Cada pessoa entra com a
+  própria conta, e simulações, estudos e versões ficam na organização dela. O token vive só na
+  memória da aba e é renovado por cookie HttpOnly, e recarregar a página não pede login. Os
+  proxies deixam de ter credencial e de ler `SIMULATION_API_TOKEN`; o contêiner não tem mais
+  variáveis de ambiente. Criar e baixar epJSON continua sem conta. Depende de
+  AlexandreProenca/eng-energy-plus#146. [ADR-0004](docs/adr/0004-login-de-usuario-e-token-na-memoria.md).
+  (`Refs: T032`)
+
 ### Adicionado
 
 - **Escolher quais ambientes são climatizados**, na página "Uso e climatização": cada ambiente

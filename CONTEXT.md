@@ -311,9 +311,7 @@ Start by:
 
 ### Simular no serviço de homologação
 
-Use **Simular modelo** no cabeçalho ou na revisão. Configure
-`SIMULATION_API_TOKEN` em `.env.local` para desenvolvimento local (veja
-`.env.example`), clique em **Conectar à API**, selecione o motor e o clima
-e envie o modelo. O painel acompanha o status, mostra resultados e erros,
-permite cancelar e oferece os arquivos produzidos. Em produção, a chave ou
-token é informado no painel e permanece somente em memória.
+Use **Simular modelo** no cabeçalho ou na revisão. Sem sessão, o painel pede
+login com e-mail e senha (T032, ADR-0004). Com sessão, ele conecta sozinho,
+traz o motor e o clima escolhidos e acompanha a execução até **Analisar
+resultados**.

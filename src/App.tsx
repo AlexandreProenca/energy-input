@@ -13,6 +13,9 @@ import { Toasts } from '@/ui/Toasts';
 import { WizardShell } from '@/features/wizard/WizardShell';
 import { useSimulationStore } from '@/features/simulation/simulationStore';
 import { ConflictDialog } from '@/features/wizard/ConflictDialog';
+import { useAuthStore } from '@/features/auth/authStore';
+import { LoginScreen } from '@/features/auth/LoginScreen';
+import { Conta } from '@/features/auth/Conta';
 
 const SimulationDialog = lazy(() => import('@/features/simulation/SimulationDialog').then(m => ({ default: m.SimulationDialog })));
 const ExpertShell = lazy(() => import('@/features/expert/ExpertShell'));
@@ -88,6 +91,7 @@ function Header() {
             <span className="hidden sm:inline">Baixar</span>
           </Button>
           {version && <span className="ml-2 hidden rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-500 lg:inline">E+ {version}</span>}
+          <div className="ml-1 border-l border-slate-200 pl-2"><Conta /></div>
         </div>
       </div>
       <Dialog
@@ -146,6 +150,8 @@ export function App() {
 
   useEffect(() => {
     void useSchemaStore.getState().load();
+    // Recupera a sessão pelo cookie de renovação, se houver: recarregar a página não pede login.
+    void useAuthStore.getState().iniciar();
   }, []);
 
   useEffect(() => {
@@ -199,6 +205,7 @@ export function App() {
         </Suspense>
       )}
       <Suspense fallback={null}><SimulationDialog /></Suspense>
+      <LoginScreen />
       <ConflictDialog />
       <Toasts />
     </div>

@@ -5,13 +5,11 @@
  * controle de segurança sem teste é uma suposição. Ele decide quais rotas do serviço de
  * simulação o `npm run dev` repassa — **e apenas o `npm run dev`**.
  *
- * **Vale também para o nginx de produção** desde a T027 (ADR-0003): com a chave da API
- * injetada no servidor, repassar qualquer rota daria a quem alcançasse o proxy a conta
- * inteira do dono da chave. O mapa do nginx (`docker/simulation-routes.conf`) é **gerado**
- * desta lista por `scripts/nginxRoutes.ts`, e um teste reprova se os dois divergirem.
- *
- * Antes da T027 a assimetria era deliberada — produção repassava tudo porque a credencial era
- * a de cada navegador. A chave no servidor derrubou essa premissa.
+ * **Vale também para o nginx de produção** desde a T027: o mapa do nginx
+ * (`docker/simulation-routes.conf`) é **gerado** desta lista por `scripts/nginxRoutes.ts`, e um
+ * teste reprova se os dois divergirem. Desde a T032 (ADR-0004) a credencial é de novo a de cada
+ * navegador — o token da pessoa que entrou —, mas a lista continua: é a superfície do serviço que
+ * este aplicativo usa, e nada além dela precisa passar.
  *
  * O import aqui é relativo de propósito: `vite.config.ts` carrega este módulo através de
  * `simulationProxy.ts`, e o esbuild resolve a config **antes** de existir o `resolve.alias`
@@ -43,6 +41,12 @@ const Q = QUERY_SUFFIX;
  * a superfície do proxy — dos dois proxies, desde a T027 — veja em `DENIED_BY_DESIGN` o que ficou de fora e por quê.
  */
 export const SIMULATION_ROUTES = [
+  // Sessão da pessoa (T032, ADR-0004): e-mail e senha trocados por token, renovação e saída.
+  // O refresh token vai em cookie HttpOnly, e só estas três rotas o recebem.
+  `/v1/auth/login`,
+  `/v1/auth/refresh`,
+  `/v1/auth/logout`,
+
   // Catálogos.
   `/v1/engines`,
   `/v1/weather${Q}`,
@@ -89,9 +93,9 @@ export const SIMULATION_ROUTES = [
  * - `…/studies/*​/iterations*`: o modo de estudo adotado é `parametric` (backlog E1). O modo
  *   iterativo edita materiais pela API, o que criaria uma segunda fonte da verdade ao lado
  *   do documento em memória.
- * - `/v1/auth/*` e `/v1/api-keys*`: emitir ou revogar credencial pelo navegador contraria a
- *   regra de que a chave existe só no ambiente do servidor (AGENTS.md §7, ADR-0003) — e, com a
- *   chave injetada pelo proxy, abriria ao navegador a gestão das chaves do dono da conta.
+ * - `/v1/auth/token`, `/v1/auth/jwks.json` e `/v1/api-keys*`: o navegador entra com e-mail e
+ *   senha (`/v1/auth/login`). Trocar ou gerir chave de API é coisa de integração, não desta
+ *   interface (ADR-0004).
  * - `/v1/webhooks*`: configuração persistente no serviço, sem interface que a gerencie.
  * - `/v1/usage`: exige escopo `admin:billing`.
  * - `/v1/properties/*`: psicrometria e fluidos, fora do escopo do produto.
